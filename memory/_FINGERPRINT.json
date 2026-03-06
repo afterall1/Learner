@@ -1,0 +1,86 @@
+{
+  "version": "1.0.0",
+  "generatedAt": "2026-03-06T00:37:54.963Z",
+  "projectVersion": "v0.7.0",
+  "sourceHashes": {
+    "src/types/index.ts": "839c5e0a1dc98019",
+    "src/types/trading-slot.ts": "61c7ed64286070fb",
+    "src/lib/engine/strategy-dna.ts": "a71ca856de3f9986",
+    "src/lib/engine/evaluator.ts": "599610956cef55fe",
+    "src/lib/engine/evolution.ts": "970613afe1aeb6b2",
+    "src/lib/engine/brain.ts": "731a6333d58d5ec0",
+    "src/lib/engine/walk-forward.ts": "4986dda259068caf",
+    "src/lib/engine/monte-carlo.ts": "34faa9bed09f7b9d",
+    "src/lib/engine/regime-detector.ts": "14de1d5c5e26722c",
+    "src/lib/engine/overfitting-detector.ts": "1c0ba7c0bb8f19ef",
+    "src/lib/engine/island.ts": "6962f4f930612665",
+    "src/lib/engine/cortex.ts": "b6133c91083ab471",
+    "src/lib/engine/meta-evolution.ts": "aefa961905c6fd28",
+    "src/lib/engine/migration.ts": "be26a436baafcb32",
+    "src/lib/engine/capital-allocator.ts": "18938886803a9624",
+    "src/lib/risk/manager.ts": "24d087cca6775fcf",
+    "src/lib/store/index.ts": "acbd81e787b44e5e",
+    "src/app/page.tsx": "9e3c90508961a678",
+    "src/app/globals.css": "e0c3b301066c6fa3",
+    "src/app/layout.tsx": "b7c900afea5bfe7e"
+  },
+  "memoryHashes": {
+    "memory/overview.md": "e5accb229fe1c571",
+    "memory/active_context.md": "916c97618d5e3a42",
+    "memory/architecture/system_design.md": "86a92645ca8a3caf",
+    "memory/file_map.md": "fc96816d5a0a77c8",
+    "memory/changelog.md": "6abe0e7aa65d3d86",
+    "memory/_SYNC_CHECKLIST.md": "4423c6efe2083f0c"
+  },
+  "lineCounts": {
+    "src/types/index.ts": 575,
+    "src/types/trading-slot.ts": 97,
+    "src/lib/engine/strategy-dna.ts": 372,
+    "src/lib/engine/evaluator.ts": 257,
+    "src/lib/engine/evolution.ts": 466,
+    "src/lib/engine/brain.ts": 617,
+    "src/lib/engine/walk-forward.ts": 250,
+    "src/lib/engine/monte-carlo.ts": 245,
+    "src/lib/engine/regime-detector.ts": 391,
+    "src/lib/engine/overfitting-detector.ts": 328,
+    "src/lib/engine/island.ts": 609,
+    "src/lib/engine/cortex.ts": 568,
+    "src/lib/engine/meta-evolution.ts": 571,
+    "src/lib/engine/migration.ts": 304,
+    "src/lib/engine/capital-allocator.ts": 233,
+    "src/lib/risk/manager.ts": 266,
+    "src/lib/store/index.ts": 475,
+    "src/app/page.tsx": 1299,
+    "src/app/globals.css": 1311,
+    "src/app/layout.tsx": 28
+  },
+  "crossRefStatus": {
+    "src/lib/engine/meta-evolution.ts": {
+      "memory/overview.md": true,
+      "memory/file_map.md": true,
+      "memory/architecture/system_design.md": true
+    },
+    "src/lib/engine/island.ts": {
+      "memory/file_map.md": true,
+      "memory/architecture/system_design.md": true
+    },
+    "src/lib/engine/cortex.ts": {
+      "memory/file_map.md": true,
+      "memory/architecture/system_design.md": true,
+      "memory/active_context.md": true
+    },
+    "src/app/page.tsx": {
+      "memory/overview.md": true,
+      "memory/file_map.md": true
+    },
+    "src/app/globals.css": {
+      "memory/file_map.md": true
+    }
+  },
+  "structuralIntegrity": {
+    "sourceFilesPresent": 20,
+    "sourceFilesTotal": 20,
+    "memoryFilesPresent": 6,
+    "memoryFilesTotal": 6
+  }
+}
