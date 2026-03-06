@@ -572,3 +572,115 @@ export const DEFAULT_META_EVOLUTION_CONFIG: MetaEvolutionConfig = {
   stabilityGuardGenerations: 5,
   maxMetaGenerations: 50,
 };
+
+// ─── Signal Engine Types ─────────────────────────────────────
+
+export enum TradeSignalAction {
+  LONG = 'LONG',
+  SHORT = 'SHORT',
+  HOLD = 'HOLD',
+  EXIT_LONG = 'EXIT_LONG',
+  EXIT_SHORT = 'EXIT_SHORT',
+}
+
+export interface SignalResult {
+  triggered: boolean;
+  confidence: number;           // 0-1 how strongly the signal triggered
+  indicatorValues: Record<string, number>;  // Snapshot of all calculated indicator values
+}
+
+export interface TradeSignal {
+  action: TradeSignalAction;
+  confidence: number;           // 0-1 composite signal strength
+  reason: string;               // Human-readable explanation
+  indicators: Record<string, number>;  // Indicator values at signal time
+  strategyId: string;
+  slotId: string;
+  timestamp: number;
+}
+
+// ─── Connection & Data Health ────────────────────────────────
+
+export enum ConnectionStatus {
+  DISCONNECTED = 'DISCONNECTED',
+  CONNECTING = 'CONNECTING',
+  CONNECTED = 'CONNECTED',
+  RECONNECTING = 'RECONNECTING',
+  CIRCUIT_OPEN = 'CIRCUIT_OPEN',   // Max reconnects exhausted — manual intervention needed
+}
+
+export interface DataHealth {
+  slotId: string;
+  lastCandleTime: number;        // Timestamp of last received closed candle
+  expectedInterval: number;      // Expected ms between candles
+  missedCandles: number;         // Count of missing candles since last received
+  isStale: boolean;              // true if data is older than 2x expected interval
+  lastUpdated: number;
+}
+
+// ─── Paper Trading Configuration ─────────────────────────────
+
+export interface PaperTradeConfig {
+  slippagePercent: number;       // 0.0002 = 0.02%
+  takerFeePercent: number;       // 0.0004 = 0.04%
+  makerFeePercent: number;       // 0.0002 = 0.02%
+  enableSlippage: boolean;
+  enableFees: boolean;
+  maxOpenPositions: number;      // Per-island concurrent position limit
+}
+
+export const DEFAULT_PAPER_TRADE_CONFIG: PaperTradeConfig = {
+  slippagePercent: 0.0002,
+  takerFeePercent: 0.0004,
+  makerFeePercent: 0.0002,
+  enableSlippage: true,
+  enableFees: true,
+  maxOpenPositions: 1,
+};
+
+// ─── Exchange Symbol Information ─────────────────────────────
+
+export interface ExchangeSymbolInfo {
+  symbol: string;
+  pricePrecision: number;        // Decimal places for price
+  quantityPrecision: number;     // Decimal places for quantity
+  minQuantity: number;           // Minimum order quantity
+  stepSize: number;              // Quantity increment step
+  tickSize: number;              // Price increment step
+  minNotional: number;           // Minimum order value in USDT
+  maxLeverage: number;           // Maximum allowed leverage
+}
+
+// ─── Binance WebSocket Event Types ───────────────────────────
+
+export interface BinanceKlineEvent {
+  e: 'kline';
+  E: number;                     // Event time
+  s: string;                     // Symbol
+  k: {
+    t: number;                   // Kline start time
+    T: number;                   // Kline close time
+    s: string;                   // Symbol
+    i: string;                   // Interval
+    o: string;                   // Open price
+    c: string;                   // Close price
+    h: string;                   // High price
+    l: string;                   // Low price
+    v: string;                   // Base asset volume
+    x: boolean;                  // Is this kline closed?
+    q: string;                   // Quote asset volume
+    n: number;                   // Number of trades
+  };
+}
+
+export interface BinanceMiniTickerEvent {
+  e: '24hrMiniTicker';
+  E: number;                     // Event time
+  s: string;                     // Symbol
+  c: string;                     // Close price
+  o: string;                     // Open price
+  h: string;                     // High price
+  l: string;                     // Low price
+  v: string;                     // Total traded base asset volume
+  q: string;                     // Total traded quote asset volume
+}

@@ -24,6 +24,8 @@ import {
     IslandSnapshot,
     IslandAllocation,
     MigrationEvent,
+    ConnectionStatus,
+    DataHealth,
 } from '@/types';
 import { TradingSlot } from '@/types/trading-slot';
 import { AIBrain, BrainSnapshot } from '@/lib/engine/brain';
@@ -423,6 +425,7 @@ interface MarketStoreState {
 
     // Actions
     updateTicker: (tick: MarketTick) => void;
+    updateTickers: (ticks: MarketTick[]) => void;
     setSelectedPair: (pair: string) => void;
     setAvailablePairs: (pairs: string[]) => void;
 }
@@ -436,6 +439,16 @@ export const useMarketStore = create<MarketStoreState>()((set) => ({
         set((s) => {
             const newTickers = new Map(s.tickers);
             newTickers.set(tick.symbol, tick);
+            return { tickers: newTickers };
+        });
+    },
+
+    updateTickers: (ticks) => {
+        set((s) => {
+            const newTickers = new Map(s.tickers);
+            for (const tick of ticks) {
+                newTickers.set(tick.symbol, tick);
+            }
             return { tickers: newTickers };
         });
     },
@@ -472,3 +485,48 @@ export const useDashboardConfigStore = create<DashboardConfigState>()(
         }
     )
 );
+
+// ─── Market Data Store (Connection & Health) ─────────────────
+
+interface MarketDataStoreState {
+    connectionStatus: ConnectionStatus;
+    dataHealth: DataHealth[];
+    activeSubscriptions: string[];
+    lastConnectedAt: number | null;
+    reconnectAttempts: number;
+    isLiveMode: boolean;
+
+    // Actions
+    setConnectionStatus: (status: ConnectionStatus) => void;
+    setDataHealth: (health: DataHealth[]) => void;
+    setActiveSubscriptions: (subs: string[]) => void;
+    setLiveMode: (isLive: boolean) => void;
+}
+
+export const useMarketDataStore = create<MarketDataStoreState>()((set) => ({
+    connectionStatus: ConnectionStatus.DISCONNECTED,
+    dataHealth: [],
+    activeSubscriptions: [],
+    lastConnectedAt: null,
+    reconnectAttempts: 0,
+    isLiveMode: false,
+
+    setConnectionStatus: (status) => {
+        set((s) => ({
+            connectionStatus: status,
+            lastConnectedAt: status === ConnectionStatus.CONNECTED
+                ? Date.now()
+                : s.lastConnectedAt,
+            reconnectAttempts: status === ConnectionStatus.CONNECTED
+                ? 0
+                : status === ConnectionStatus.RECONNECTING
+                    ? s.reconnectAttempts + 1
+                    : s.reconnectAttempts,
+        }));
+    },
+
+    setDataHealth: (health) => set({ dataHealth: health }),
+    setActiveSubscriptions: (subs) => set({ activeSubscriptions: subs }),
+    setLiveMode: (isLive) => set({ isLiveMode: isLive }),
+}));
+

@@ -5,7 +5,7 @@ import {
   Brain, Activity, BarChart3, Shield,
   Play, Pause,
   ArrowUpRight, ArrowDownRight, Dna, GitBranch, AlertTriangle,
-  ChevronRight, Wallet,
+  ChevronRight, Wallet, Wifi, WifiOff,
   History, Radio, Network, Zap
 } from 'lucide-react';
 import {
@@ -14,7 +14,7 @@ import {
 } from 'recharts';
 import {
   BrainState, LogLevel, StrategyStatus, TradeDirection,
-  TradeStatus, Timeframe, IndicatorType,
+  TradeStatus, Timeframe, IndicatorType, ConnectionStatus,
 } from '@/types';
 import type {
   StrategyDNA, Trade, BrainLog, EvolutionGeneration,
@@ -22,6 +22,7 @@ import type {
 } from '@/types';
 import { generateRandomStrategy } from '@/lib/engine/strategy-dna';
 import { evaluatePerformance, calculateFitnessScore } from '@/lib/engine/evaluator';
+import { useMarketStore, useMarketDataStore } from '@/lib/store';
 
 // ═══════════════════════════════════════════════════════════════
 // DEMO DATA GENERATORS — Simulation engine for realistic data
@@ -851,19 +852,86 @@ function TradeHistoryPanel({ trades }: { trades: Trade[] }) {
 }
 
 // ═══════════════════════════════════════════════════════════════
-// DASHBOARD PANEL: Market Overview
+// CONNECTION STATUS INDICATOR
 // ═══════════════════════════════════════════════════════════════
 
-function MarketOverviewPanel({ tickers }: { tickers: MarketTick[] }) {
+function ConnectionStatusBadge() {
+  const connectionStatus = useMarketDataStore((s) => s.connectionStatus);
+  const isLiveMode = useMarketDataStore((s) => s.isLiveMode);
+
+  const statusConfig: Record<ConnectionStatus, { label: string; color: string; icon: typeof Wifi }> = {
+    [ConnectionStatus.DISCONNECTED]: { label: 'Demo Mode', color: 'var(--text-muted)', icon: WifiOff },
+    [ConnectionStatus.CONNECTING]: { label: 'Connecting...', color: 'var(--warning)', icon: Wifi },
+    [ConnectionStatus.CONNECTED]: { label: 'Live', color: 'var(--success)', icon: Wifi },
+    [ConnectionStatus.RECONNECTING]: { label: 'Reconnecting...', color: 'var(--warning)', icon: Wifi },
+    [ConnectionStatus.CIRCUIT_OPEN]: { label: 'Disconnected', color: 'var(--danger)', icon: WifiOff },
+  };
+
+  const config = statusConfig[connectionStatus];
+  const Icon = config.icon;
+
+  return (
+    <div style={{
+      display: 'flex',
+      alignItems: 'center',
+      gap: 6,
+      padding: '4px 10px',
+      borderRadius: 'var(--radius-sm)',
+      background: `${config.color}15`,
+      border: `1px solid ${config.color}30`,
+      fontSize: '0.7rem',
+      fontWeight: 600,
+      color: config.color,
+      letterSpacing: '0.02em',
+    }}>
+      <Icon size={12} />
+      {config.label}
+      {connectionStatus === ConnectionStatus.CONNECTING && (
+        <span style={{ animation: 'pulse-glow 1.5s ease-in-out infinite' }}>●</span>
+      )}
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════
+// DASHBOARD PANEL: Market Overview (Live + Demo fallback)
+// ═══════════════════════════════════════════════════════════════
+
+function MarketOverviewPanel({ tickers: demoTickers }: { tickers: MarketTick[] }) {
+  const liveTickers = useMarketStore((s) => s.tickers);
+  const isLive = useMarketDataStore((s) => s.connectionStatus === ConnectionStatus.CONNECTED);
+
+  // Use live tickers if connected, otherwise fall back to demo data
+  const displayTickers = useMemo(() => {
+    if (isLive && liveTickers.size > 0) {
+      return Array.from(liveTickers.values());
+    }
+    return demoTickers;
+  }, [isLive, liveTickers, demoTickers]);
+
   return (
     <div className="glass-card glass-card-accent accent-cyan col-4 stagger-in stagger-8">
       <div className="card-header">
         <div className="card-title"><Activity size={18} /> Market</div>
-        <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>Binance Futures</span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <span style={{
+            fontSize: '0.6rem',
+            padding: '2px 6px',
+            borderRadius: 'var(--radius-sm)',
+            background: isLive ? 'var(--success)15' : 'var(--text-muted)15',
+            color: isLive ? 'var(--success)' : 'var(--text-muted)',
+            fontWeight: 600,
+            letterSpacing: '0.05em',
+            textTransform: 'uppercase',
+          }}>
+            {isLive ? '● Live' : '○ Demo'}
+          </span>
+          <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>Binance Futures</span>
+        </div>
       </div>
       <div className="card-body" style={{ padding: '8px 12px' }}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-          {tickers.map((tick) => (
+          {displayTickers.map((tick) => (
             <div key={tick.symbol}
               style={{
                 display: 'flex',
@@ -1253,6 +1321,7 @@ export default function DashboardPage() {
           </div>
         </div>
         <div className="header-actions">
+          <ConnectionStatusBadge />
           <BrainStateIndicator state={brainState} />
           <div style={{ display: 'flex', gap: 8 }}>
             {brainState === BrainState.IDLE && (
