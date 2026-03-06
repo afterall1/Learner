@@ -201,3 +201,14 @@ metaEngine.hyperDnaToFitnessWeights(hyperDna) → FitnessWeights
 - `src/types/index.ts` → HyperDNA, MetaFitnessRecord, MetaEvolutionConfig interfaces
 - `src/lib/engine/island.ts` → Island with HyperDNA support (constructor, replace, tracking)
 - `src/lib/engine/cortex.ts` → Meta-evolution cycle orchestration (spawn, evaluate, crossover, replace)
+
+---
+
+## 🔗 Cross-References
+
+| Related Skill | Relationship | When to Co-Activate |
+|--------------|-------------|---------------------|
+| `evolution-engine` | Controlled system | GA² HyperDNA controls evolution parameters |
+| `performance-analysis` | Input | Fitness weight genes affect scoring formula |
+| `anti-overfitting-validation` | Input | Validation pass rate feeds meta-fitness |
+| `backtesting-simulation` | Evaluation | Backtest results drive meta-fitness improvement rate |

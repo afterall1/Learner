@@ -4,6 +4,136 @@ All notable changes to this project are documented here.
 
 ---
 
+## [v0.12.0] — 2026-03-06
+
+### Added
+- **Trade Forensics Engine (Phase 12)**
+  - `src/lib/engine/trade-forensics.ts` — 3-layer forensics (~620 lines)
+    - `TradeBlackBox`: Flight recorder with 8 event types, MFE/MAE tracking
+    - `ForensicAnalyzer`: Post-trade autopsy, 3 efficiency scores, 4-factor Bayesian attribution
+    - `TradeForensicsEngine`: Lifecycle orchestrator, query API, stats aggregation
+  - `src/lib/engine/forensic-learning.ts` — Closed-loop learning (~310 lines)
+    - `ForensicLearningEngine`: Bayesian belief aggregation, fitness modifiers (±10), DNA matching, decay
+  - `src/types/index.ts` — +135 lines: TradeEventType, TradeLifecycleEvent, CausalFactorType/CausalFactor, TradeLessonType/TradeLesson, TradeForensicReport
+
+### Changed
+- `src/lib/engine/island.ts` — Integrated TradeForensicsEngine + ForensicLearningEngine (tickAll, openBlackBox, closeAndAnalyze, lesson ingestion, 2 accessors)
+- `src/lib/engine/evaluator.ts` — `calculateFitnessScore()` now accepts ForensicLearningEngine + MarketRegime (closed-loop feedback)
+
+### Build Status
+- ✅ `npx next build` — zero errors
+
+## [v0.11.0] — 2026-03-06
+
+### Added
+- **Markov Regime Transition Intelligence — MRTI (Phase 11)**
+  - `src/lib/engine/regime-intelligence.ts` — Predictive regime engine (~530 lines)
+    - `TransitionMatrix`: 5×5 Markov chain with Laplace smoothing
+    - `EarlyWarningDetector`: 4 leading signals (ADX slope, ATR acceleration, duration exhaustion, confidence decay)
+    - `RegimeIntelligence`: Orchestrator → HOLD / PREPARE / SWITCH recommendations
+  - `.agent/skills/regime-intelligence/SKILL.md` — New skill (~130 lines)
+
+### Changed
+- `src/lib/engine/regime-detector.ts` — Exported `calculateADX()` and `calculateATR()` for MRTI
+- `src/lib/engine/strategy-roster.ts` — Added `preWarmForRegime()` and `hasCoverageForRegime()` for predictive pre-warming
+- `src/lib/engine/island.ts` — MRTI auto-calibration (200+ candles), `handleRegimeForecast()`, proactive SWITCH logic
+- `src/lib/engine/cortex.ts` — `evaluateGlobalRegimeRisk()` (macro consensus), `adjustAllocationsForRegimeForecast()` (risk-weighted capital)
+
+### Build Status
+- ✅ `npx next build` — zero errors
+
+## [v0.10.0] — 2026-03-06
+
+### Added
+- **Backtesting Simulation Engine (Phase 10)**
+  - `src/lib/engine/market-simulator.ts` — Realistic execution modeling (~280 lines)
+    - ATR-adaptive slippage (volatility-scaled, 2bps base)
+    - Binance Futures taker commission (0.04% default)
+    - Almgren-Chriss square-root market impact model
+    - Intra-candle SL/TP detection (conservative: SL wins ties)
+    - Direction-aware fill simulation (LONG/SHORT asymmetry)
+    - Position quantity and SL/TP level calculation utilities
+  - `src/lib/engine/backtester.ts` — Multi-candle simulation engine (~570 lines)
+    - Complete simulation loop: candle iteration → SL/TP check → signal evaluation → execution → equity tracking
+    - `IndicatorCache` class (**PFLM Innovation**): pre-computes indicator values once, shares across population
+    - `runBacktest()`: full simulation with equity curve, regime tagging, fee tracking
+    - `batchBacktest()`: evaluates entire population with shared indicator cache → O(N+M) vs O(N×M)
+    - `quickFitness()`: lean mode (no equity curve/regime tagging) for rapid GA fitness evaluation
+    - Regime-partitioned trade tagging via regime-detector integration
+
+### Changed
+- `src/lib/engine/evaluator.ts` — Exported `calculateNoveltyBonus()` for backtesting engine access
+
+### Build Status
+- ✅ `npx next build` — zero errors
+
+---
+
+## [v0.9.0] — 2026-03-06
+
+### Added
+- **Advanced Strategy Genome Architecture (Phase 9)**
+  - `src/lib/engine/microstructure-genes.ts` — Microstructure gene engine (~380 lines)
+    - Volume Profile: POC detection, bucket concentration analysis
+    - Volume Acceleration: spike detection, accumulation/distribution
+    - Candle Anatomy: body:wick ratios, shadow dominance, evolvable thresholds
+    - Range Expansion/Contraction: ATR sequence detection
+    - Absorption Detection: whale activity (large candle + small net movement)
+  - `src/lib/engine/price-action-genes.ts` — Price action gene engine (~400 lines)
+    - 10 parameterized candlestick formations with EVOLVABLE detection thresholds
+    - Structural Break: N-bar high/low detection
+    - Swing Sequence: HH/HL and LH/LL analysis
+    - Compression/Breakout: narrowing range → breakout detection
+    - Gap Analysis: ATR-normalized gap detection
+  - `src/lib/engine/composite-functions.ts` — **KEY INNOVATION**: Mathematical evolution (~310 lines)
+    - 9 operations: ADD, SUBTRACT, MULTIPLY, DIVIDE, MAX, MIN, ABS_DIFF, RATIO, NORMALIZE_DIFF
+    - 4 normalization methods: none, percentile, z_score, min_max
+    - Inputs: any indicator, raw price field, or other gene output
+  - `src/lib/engine/directional-change.ts` — **RADICAL INNOVATION**: Event-based analysis (~350 lines)
+    - Kampouridis's Directional Change framework
+    - Evolved θ% reversal threshold per strategy
+    - DC events: upturn, downturn, upward/downward overshoot
+    - DC-derived indicators: trendRatio, avgMagnitude, oscillationCount, upturnRatio
+
+### Changed
+- **Type System** — +220 lines: 5 new enums, 8 new interfaces, StrategyDNA extended with optional advanced gene arrays, PatternType extended with 4 new pattern types
+- **strategy-dna.ts** — Advanced gene integration: 40% injection in genesis, crossover blending, mutation perturbation/injection, `calculateStructuralComplexity()`, `crossoverAdvancedGenes()`, `mutateAdvancedGenes()`
+- **evaluator.ts** — `calculateNoveltyBonus()`: up to +8 fitness points for advanced gene usage, decaying over 200 generations
+- **signal-engine.ts** — `calculateAdvancedSignals()`: central integration computing all advanced gene signals with aggregate bias + confidence scoring
+- **experience-replay.ts** — MICROSTRUCTURE_COMBO + COMPOSITE_FUNCTION pattern extraction
+
+### Build Status
+✅ Passing (zero errors)
+
+---
+
+## [v0.8.0] — 2026-03-06
+
+### Added
+- **Evolution Pipeline Dashboard (Phase 8)**
+  - New `/pipeline` route with dedicated `page.tsx` (~1400 lines)
+  - Pipeline Flow Visualizer: 7-stage animated horizontal flow (Genesis → Evolve) with per-stage live stats
+  - Generation Fitness Tracker: dual-axis area chart (best/avg fitness) with validation markers
+  - 4-Gate Validation Viewer: animated sequential gate reveal with PROMOTED/RETIRED verdict
+  - Strategy Roster Radar: 5-regime radar chart + top 5 strategy list with state emojis
+  - Experience Replay Heatmap: 5 regimes × 3 pattern types confidence grid
+  - Live Pipeline State Machine: auto-cycling demo engine with per-stage timing
+  - Navigation tabs (Dashboard ↔ Pipeline) on both pages
+- **Strategy Archaeology (Phase 8.5 — Radical Innovation)**
+  - Gene Lineage Tree: 6-generation family tree with origin tracking (🎲/🔮/✂️/🔀/⭐)
+  - Gene Survival Heatmap: 10 genes × 14 generations grid, persistent genes glow
+  - Decision Explainer: regime change event cards with cause-chains and rejected alternatives
+  - ADR-005: Strategy Archaeology — Explainable AI for Genetic Strategy Evolution
+
+### Changed
+- `globals.css` — +620 lines (now ~1960 lines: pipeline stages, connectors, archaeology panels)
+- `page.tsx` (main) — +10 lines (navigation tabs)
+
+### Build Status
+✅ Passing (zero errors)
+
+---
+
 ## [v0.7.0] — 2026-03-06
 
 ### Added

@@ -14,6 +14,26 @@ import {
     StrategyStatus,
     RiskGenes,
 } from '@/types';
+import {
+    generateRandomMicrostructureGene,
+    crossoverMicrostructureGene,
+    mutateMicrostructureGene,
+} from './microstructure-genes';
+import {
+    generateRandomPriceActionGene,
+    crossoverPriceActionGene,
+    mutatePriceActionGene,
+} from './price-action-genes';
+import {
+    generateRandomCompositeGene,
+    crossoverCompositeGene,
+    mutateCompositeGene,
+} from './composite-functions';
+import {
+    generateRandomDCGene,
+    crossoverDCGene,
+    mutateDCGene,
+} from './directional-change';
 
 // ─── Random Utility Helpers ──────────────────────────────────
 
@@ -163,10 +183,14 @@ export function generateRandomStrategy(generation: number = 0): StrategyDNA {
 
     const riskGenes = generateRiskGenes();
 
-    return {
+    // ─── Phase 9: Advanced Gene Injection ─────────────────────
+    // 40% chance to include advanced genes in random strategies.
+    // This lets the GA explore structural innovation alongside
+    // standard indicator-based strategies.
+    const strategy: StrategyDNA = {
         id: uuidv4(),
         name: generateStrategyName(),
-        slotId: '',  // Set by Island on creation
+        slotId: '',
         generation,
         parentIds: [],
         createdAt: Date.now(),
@@ -193,6 +217,35 @@ export function generateRandomStrategy(generation: number = 0): StrategyDNA {
             validation: null,
         },
     };
+
+    // Inject advanced genes (each type has independent 40% chance)
+    if (Math.random() < 0.4) {
+        strategy.microstructureGenes = [
+            generateRandomMicrostructureGene(),
+            ...(Math.random() < 0.3 ? [generateRandomMicrostructureGene()] : []),
+        ];
+    }
+    if (Math.random() < 0.4) {
+        strategy.priceActionGenes = [
+            generateRandomPriceActionGene(),
+            ...(Math.random() < 0.3 ? [generateRandomPriceActionGene()] : []),
+        ];
+    }
+    if (Math.random() < 0.35) {
+        strategy.compositeGenes = [
+            generateRandomCompositeGene(),
+        ];
+    }
+    if (Math.random() < 0.25) {
+        strategy.dcGenes = [
+            generateRandomDCGene(),
+        ];
+    }
+
+    // Calculate structural complexity
+    strategy.metadata.structuralComplexity = calculateStructuralComplexity(strategy);
+
+    return strategy;
 }
 
 /**
@@ -245,6 +298,11 @@ export function crossover(parentA: StrategyDNA, parentB: StrategyDNA, generation
 
     child.metadata.mutationHistory = ['crossover'];
     child.metadata.validation = null;
+
+    // ─── Phase 9: Crossover advanced genes from parents ──────
+    crossoverAdvancedGenes(child, parentA, parentB);
+    child.metadata.structuralComplexity = calculateStructuralComplexity(child);
+
     return child;
 }
 
@@ -330,6 +388,10 @@ export function mutate(strategy: StrategyDNA, mutationRate: number = 0.3): Strat
         }
     }
 
+    // ─── Phase 9: Mutate advanced genes ───────────────────────
+    mutateAdvancedGenes(mutated, mutationRate, mutations);
+    mutated.metadata.structuralComplexity = calculateStructuralComplexity(mutated);
+
     mutated.metadata.mutationHistory = [...strategy.metadata.mutationHistory, `mutate:[${mutations.join(',')}]`];
     mutated.name = generateStrategyName();
     return mutated;
@@ -368,4 +430,170 @@ export function deserializeStrategy(json: string): StrategyDNA {
         throw new Error('Invalid Strategy DNA structure');
     }
     return parsed;
+}
+
+// ─── Phase 9: Advanced Gene Helpers ──────────────────────────
+
+/**
+ * Calculate the structural complexity of a strategy genome.
+ * Measures how many different gene families are active (0-1 scale).
+ * Used for novelty bonus in the evaluator.
+ */
+export function calculateStructuralComplexity(strategy: StrategyDNA): number {
+    let familyCount = 0;
+    const maxFamilies = 5; // indicator, microstructure, priceAction, composite, dc
+
+    if (strategy.indicators.length > 0) familyCount++;
+    if (strategy.microstructureGenes && strategy.microstructureGenes.length > 0) familyCount++;
+    if (strategy.priceActionGenes && strategy.priceActionGenes.length > 0) familyCount++;
+    if (strategy.compositeGenes && strategy.compositeGenes.length > 0) familyCount++;
+    if (strategy.dcGenes && strategy.dcGenes.length > 0) familyCount++;
+
+    return Math.round((familyCount / maxFamilies) * 100) / 100;
+}
+
+/**
+ * Crossover advanced gene arrays from two parents into a child.
+ */
+function crossoverAdvancedGenes(
+    child: StrategyDNA,
+    parentA: StrategyDNA,
+    parentB: StrategyDNA,
+): void {
+    // Microstructure genes
+    const microA = parentA.microstructureGenes ?? [];
+    const microB = parentB.microstructureGenes ?? [];
+    if (microA.length > 0 || microB.length > 0) {
+        const allMicro = [...microA, ...microB];
+        if (microA.length > 0 && microB.length > 0) {
+            child.microstructureGenes = [crossoverMicrostructureGene(randomPick(microA), randomPick(microB))];
+        } else {
+            child.microstructureGenes = [{ ...randomPick(allMicro) }];
+        }
+    }
+
+    // Price action genes
+    const paA = parentA.priceActionGenes ?? [];
+    const paB = parentB.priceActionGenes ?? [];
+    if (paA.length > 0 || paB.length > 0) {
+        const allPA = [...paA, ...paB];
+        if (paA.length > 0 && paB.length > 0) {
+            child.priceActionGenes = [crossoverPriceActionGene(randomPick(paA), randomPick(paB))];
+        } else {
+            child.priceActionGenes = [{ ...randomPick(allPA) }];
+        }
+    }
+
+    // Composite genes
+    const compA = parentA.compositeGenes ?? [];
+    const compB = parentB.compositeGenes ?? [];
+    if (compA.length > 0 || compB.length > 0) {
+        if (compA.length > 0 && compB.length > 0) {
+            child.compositeGenes = [crossoverCompositeGene(randomPick(compA), randomPick(compB))];
+        } else {
+            const allComp = [...compA, ...compB];
+            child.compositeGenes = [JSON.parse(JSON.stringify(randomPick(allComp)))];
+        }
+    }
+
+    // DC genes
+    const dcA = parentA.dcGenes ?? [];
+    const dcB = parentB.dcGenes ?? [];
+    if (dcA.length > 0 || dcB.length > 0) {
+        if (dcA.length > 0 && dcB.length > 0) {
+            child.dcGenes = [crossoverDCGene(randomPick(dcA), randomPick(dcB))];
+        } else {
+            const allDC = [...dcA, ...dcB];
+            child.dcGenes = [JSON.parse(JSON.stringify(randomPick(allDC)))];
+        }
+    }
+}
+
+/**
+ * Mutate advanced gene arrays on a strategy.
+ * Can add, remove, or modify advanced genes.
+ */
+function mutateAdvancedGenes(
+    strategy: StrategyDNA,
+    rate: number,
+    mutations: string[],
+): void {
+    // Mutate existing microstructure genes
+    if (strategy.microstructureGenes) {
+        strategy.microstructureGenes = strategy.microstructureGenes.map(g => {
+            if (Math.random() < rate) {
+                mutations.push('mutate:microstructure');
+                return mutateMicrostructureGene(g, rate);
+            }
+            return g;
+        });
+    }
+    // Chance to add new microstructure gene
+    if (Math.random() < rate * 0.15) {
+        if (!strategy.microstructureGenes) strategy.microstructureGenes = [];
+        if (strategy.microstructureGenes.length < 2) {
+            strategy.microstructureGenes.push(generateRandomMicrostructureGene());
+            mutations.push('+microstructure');
+        }
+    }
+
+    // Mutate existing price action genes
+    if (strategy.priceActionGenes) {
+        strategy.priceActionGenes = strategy.priceActionGenes.map(g => {
+            if (Math.random() < rate) {
+                mutations.push('mutate:priceAction');
+                return mutatePriceActionGene(g, rate);
+            }
+            return g;
+        });
+    }
+    if (Math.random() < rate * 0.15) {
+        if (!strategy.priceActionGenes) strategy.priceActionGenes = [];
+        if (strategy.priceActionGenes.length < 2) {
+            strategy.priceActionGenes.push(generateRandomPriceActionGene());
+            mutations.push('+priceAction');
+        }
+    }
+
+    // Mutate existing composite genes
+    if (strategy.compositeGenes) {
+        strategy.compositeGenes = strategy.compositeGenes.map(g => {
+            if (Math.random() < rate) {
+                mutations.push('mutate:composite');
+                return mutateCompositeGene(g, rate);
+            }
+            return g;
+        });
+    }
+    if (Math.random() < rate * 0.12) {
+        if (!strategy.compositeGenes) strategy.compositeGenes = [];
+        if (strategy.compositeGenes.length < 2) {
+            strategy.compositeGenes.push(generateRandomCompositeGene());
+            mutations.push('+composite');
+        }
+    }
+
+    // Mutate existing DC genes
+    if (strategy.dcGenes) {
+        strategy.dcGenes = strategy.dcGenes.map(g => {
+            if (Math.random() < rate) {
+                mutations.push('mutate:dc');
+                return mutateDCGene(g, rate);
+            }
+            return g;
+        });
+    }
+    if (Math.random() < rate * 0.10) {
+        if (!strategy.dcGenes) strategy.dcGenes = [];
+        if (strategy.dcGenes.length < 2) {
+            strategy.dcGenes.push(generateRandomDCGene());
+            mutations.push('+dc');
+        }
+    }
+
+    // Remove empty arrays
+    if (strategy.microstructureGenes?.length === 0) delete strategy.microstructureGenes;
+    if (strategy.priceActionGenes?.length === 0) delete strategy.priceActionGenes;
+    if (strategy.compositeGenes?.length === 0) delete strategy.compositeGenes;
+    if (strategy.dcGenes?.length === 0) delete strategy.dcGenes;
 }

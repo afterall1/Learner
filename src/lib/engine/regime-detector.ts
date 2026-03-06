@@ -210,7 +210,7 @@ export function classifyTradeRegime(
  * ADX measures trend strength regardless of direction.
  * ADX > 25 = trending, < 20 = ranging.
  */
-function calculateADX(candles: OHLCV[], period: number): number {
+export function calculateADX(candles: OHLCV[], period: number): number {
     if (candles.length < period * 2) return 15; // Default to low/ranging
 
     const trueRanges: number[] = [];
@@ -257,7 +257,7 @@ function calculateADX(candles: OHLCV[], period: number): number {
 /**
  * Calculate Average True Range (ATR) for volatility measurement.
  */
-function calculateATR(candles: OHLCV[], period: number): number {
+export function calculateATR(candles: OHLCV[], period: number): number {
     if (candles.length < period + 1) return 0;
 
     const trueRanges: number[] = [];

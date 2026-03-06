@@ -2,8 +2,9 @@
 // Learner: Performance Evaluator — Multi-Metric Strategy Scoring
 // ============================================================
 
-import { Trade, PerformanceMetrics, TradeStatus, StrategyDNA } from '@/types';
+import { Trade, PerformanceMetrics, TradeStatus, StrategyDNA, MarketRegime } from '@/types';
 import { calculateComplexityPenalty } from './overfitting-detector';
+import { ForensicLearningEngine } from './forensic-learning';
 
 /**
  * Calculate comprehensive performance metrics from a set of completed trades.
@@ -95,10 +96,16 @@ export function evaluatePerformance(trades: Trade[]): PerformanceMetrics {
  *
  * Optionally applies a complexity penalty (Occam's Razor) when a strategy
  * is provided — simpler strategies receive a bonus.
+ *
+ * Phase 12.1: When a ForensicLearningEngine and regime are provided,
+ * applies learned fitness modifiers from trade forensic lessons.
+ * This CLOSES the feedback loop: Trades → Lessons → Beliefs → Fitness.
  */
 export function calculateFitnessScore(
     metrics: PerformanceMetrics,
-    strategy?: StrategyDNA
+    strategy?: StrategyDNA,
+    forensicLearning?: ForensicLearningEngine,
+    regime?: MarketRegime,
 ): number {
     if (metrics.totalTrades < 30) return 0; // Min 30 trades for statistical significance
 
@@ -134,7 +141,52 @@ export function calculateFitnessScore(
     // Apply complexity penalty if strategy is provided
     const complexityMultiplier = strategy ? calculateComplexityPenalty(strategy) : 1.0;
 
-    return Math.round(Math.max(0, Math.min(100, compositeScore * complexityMultiplier)));
+    let adjustedScore = compositeScore * complexityMultiplier;
+
+    // ─── Phase 9: Structural Novelty Bonus ───────────────────
+    // Strategies using advanced gene families get a bonus that
+    // incentivizes the GA to explore microstructure, price action,
+    // composite functions, and directional changes.
+    // The bonus decays over generations as advanced genes become common.
+    if (strategy) {
+        adjustedScore += calculateNoveltyBonus(strategy);
+    }
+
+    // ─── Phase 12.1: Forensic Learning Modifier ──────────────
+    // The CLOSED LOOP: trade lessons → beliefs → fitness modifier.
+    // Positive modifier = strategy DNA matches proven-good patterns.
+    // Negative modifier = strategy DNA matches proven-bad patterns.
+    if (strategy && forensicLearning && regime && forensicLearning.hasLearned()) {
+        const forensicModifier = forensicLearning.calculateForensicModifier(strategy, regime);
+        adjustedScore += forensicModifier;
+    }
+
+    return Math.round(Math.max(0, Math.min(100, adjustedScore)));
+}
+
+/**
+ * Calculate a novelty bonus for strategies using advanced (Phase 9) genes.
+ * Each advanced gene family contributes a small bonus (0-2 points each).
+ * Maximum total bonus: ~8 points. Decays over generations.
+ */
+export function calculateNoveltyBonus(strategy: StrategyDNA): number {
+    let bonus = 0;
+    const generationDecay = Math.max(0.2, 1 - (strategy.generation / 200)); // Decays from gen 0→200
+
+    if (strategy.microstructureGenes && strategy.microstructureGenes.length > 0) {
+        bonus += 2 * generationDecay;
+    }
+    if (strategy.priceActionGenes && strategy.priceActionGenes.length > 0) {
+        bonus += 2 * generationDecay;
+    }
+    if (strategy.compositeGenes && strategy.compositeGenes.length > 0) {
+        bonus += 2 * generationDecay;
+    }
+    if (strategy.dcGenes && strategy.dcGenes.length > 0) {
+        bonus += 2 * generationDecay;
+    }
+
+    return Math.round(bonus * 100) / 100;
 }
 
 /**

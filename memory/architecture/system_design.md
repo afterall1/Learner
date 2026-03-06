@@ -12,8 +12,17 @@ graph TD
     subgraph "Layer 2: Core Engine"
         DNA[strategy-dna.ts]
         EVAL[evaluator.ts]
+        SIG[signal-engine.ts]
         EVO[evolution.ts]
         BRAIN[brain.ts]
+        REPLAY[experience-replay.ts]
+    end
+
+    subgraph "Layer 2a: Advanced Genes"
+        MICRO[microstructure-genes.ts]
+        PA[price-action-genes.ts]
+        COMP[composite-functions.ts]
+        DC[directional-change.ts]
     end
 
     subgraph "Layer 2b: Anti-Overfitting"
@@ -41,6 +50,7 @@ graph TD
 
     subgraph "Layer 5: Presentation"
         PAGE[app/page.tsx]
+        PIPELINE[app/pipeline/page.tsx]
         CSS[app/globals.css]
         LAYOUT[app/layout.tsx]
     end
@@ -52,14 +62,26 @@ graph TD
     T --> RISK
     T --> STORE
     T --> PAGE
+    T --> SIG
     TS --> ISLAND
     TS --> CORTEX
     TS --> MIG
+
+    MICRO --> DNA
+    PA --> DNA
+    COMP --> DNA
+    DC --> DNA
+    MICRO --> SIG
+    PA --> SIG
+    COMP --> SIG
+    DC --> SIG
 
     DNA --> EVO
     EVAL --> EVO
     EVAL --> BRAIN
     EVO --> BRAIN
+    SIG --> BRAIN
+    REPLAY --> BRAIN
 
     WFA --> BRAIN
     MC --> BRAIN
@@ -81,6 +103,8 @@ graph TD
     CORTEX --> STORE
     STORE --> PAGE
     CSS --> PAGE
+    CSS --> PIPELINE
+    STORE --> PIPELINE
 end
 ```
 
@@ -110,14 +134,24 @@ Cortex (Orchestrator)
 
 ```
 Random Genesis → [Strategy DNA Pool] (tagged with slotId)
+     │  (40% chance: advanced genes injected per family)
+     │  ├─ Microstructure genes (volume profile, absorption)
+     │  ├─ Price Action genes (parameterized patterns)
+     │  ├─ Composite Function genes (math evolution)
+     │  └─ Directional Change genes (event-based θ)
                         ↓
               Paper Trade Each Strategy (30+ trades)
                         ↓
               Collect Trade Results + Regime Tags
                         ↓
-         Evaluate Performance (Complexity-Penalized Fitness)
+     Evaluate Performance (Complexity-Penalized + Novelty Bonus)
+                        ↓
+         ├─ Complexity Penalty (Occam's Razor)
+         └─ Novelty Bonus (+8 max for advanced genes, decays over 200 gens)
                         ↓
      Tournament Selection → Crossover → Mutation (Adaptive Rate)
+         ├─ Standard gene crossover/mutation
+         └─ Advanced gene crossover/mutation/injection
                         ↓
               New Generation Created (Deflated Fitness Applied)
                         ↓
@@ -186,16 +220,56 @@ Entry Signal Triggered → Risk Manager validates trade (GLOBAL)
 
 ```
 Cortex → CortexSnapshot → useCortexStore → Multi-island dashboard (future)
-AIBrain → BrainSnapshot  → useBrainStore  → Current 8-panel dashboard
+AIBrain → BrainSnapshot  → useBrainStore  → Current 9-panel dashboard
                                               ├── PortfolioOverview
                                               ├── ActiveStrategyPanel
                                               ├── RiskGauge
                                               ├── PerformanceChartPanel
                                               ├── EvolutionTimelinePanel
                                               ├── BrainMonitorPanel
-                                              ├── CortexNeuralMapPanel (← NEW: live island visualization)
+                                              ├── CortexNeuralMapPanel
                                               ├── TradeHistoryPanel
                                               └── MarketOverviewPanel
+```
+
+### 8. Pipeline Dashboard Data Flow (`/pipeline`)
+
+```
+Demo Data Generators / Future: Cortex State
+         ↓
+PipelineStateMachine (auto-cycling demo engine)
+         ↓
+7-Stage Pipeline Flow → per-stage stats (pop, trades, fitness, gates, roster)
+         ↓
+├── GenerationFitnessPanel ← GenerationData[]
+├── ValidationGatePanel ← GateResult[] (animated reveal)
+├── StrategyRosterPanel ← RosterEntry[] → RadarChart + List
+├── ExperienceReplayPanel ← ReplayCell[] → Regime×Pattern heatmap
+├── GeneLineagePanel ← LineageNode[] → Family tree by generation
+├── GeneSurvivalPanel ← SurvivalRow[] → Gene×Generation persistence grid
+└── DecisionExplainerPanel ← DecisionEvent[] → Regime change reasoning
+```
+
+### 9. Strategy Archaeology Data Flow
+
+```
+Evolution Engine tracks gene persistence across generations
+         ↓
+Gene Lineage: strategy origin (random/seeded/crossover/mutation)
+         ↓
+Gene Survival: which gene configs survive across generations
+         ↓
+              ┌── persistenceScore ≥ 60% → 🔥 Proven Gene (persistent glow)
+              └── persistenceScore < 60% → normal cell
+         ↓
+Decision Explainer: regime change triggers
+         ↓
+  ┌── Bayesian confidence score of each Roster strategy
+  ├── Past performance in target regime
+  ├── Gene provenance (proven genes from Survival Heatmap)
+  └── Rejected alternatives with rejection reasons
+         ↓
+  Explainable decision: "AI chose X because..."
 ```
 
 ### 8. Meta-Evolution (GA²) Data Flow
@@ -278,9 +352,53 @@ Risk Manager checks (GLOBALLY):
 | **Deflated Sharpe** | `monte-carlo.ts` | Corrects for multiple-testing bias across generations |
 | **Walk-Forward** | `walk-forward.ts` | Validates out-of-sample performance to prevent curve fitting |
 | **Regime Memory** | `evolution.ts` | Tracks which gene configs excel per market regime |
+| **Advanced Gene Injection** | `strategy-dna.ts` | 40% per-family injection rate in random genesis → structural innovation |
+| **Composite Function Evolution** | `composite-functions.ts` | 9 mathematical operations × 4 normalizations → AI discovers indicator combinations |
+| **Directional Change Framework** | `directional-change.ts` | Event-based price segmentation with evolved θ threshold (Kampouridis) |
+| **Structural Novelty Bonus** | `evaluator.ts` | Fitness bonus for advanced gene usage, decaying over generations |
+| **Advanced Pattern Replay** | `experience-replay.ts` | MICROSTRUCTURE_COMBO + COMPOSITE_FUNCTION patterns stored for seeding |
 | **Gradient Accents** | `globals.css` | Visual differentiation of card types through colored top-borders |
 | **Stagger Animation** | `globals.css`, `page.tsx` | Cinematic card entrance with sequential delays |
+| **Pipeline State Machine** | `pipeline/page.tsx` | Auto-cycling demo engine that simulates real-time pipeline progression |
+| **Gene Persistence Tracking** | `pipeline/page.tsx` | Tracking which gene configs survive across generations → proven patterns |
+| **Explainable AI** | `pipeline/page.tsx` | Decision reasoning chains showing WHY AI chose each strategy |
 
 ---
 
-*Last Updated: 2026-03-06*
+### 10. Advanced Gene Signal Flow (Phase 9)
+
+```
+Strategy DNA received for evaluation
+         ↓
+Signal Engine: calculateAdvancedSignals(dna, candles)
+         ↓
+  ├── Microstructure Genes (if present)
+  │     ├─ Volume Profile → POC detection, bucket analysis
+  │     ├─ Volume Acceleration → spike/accumulation signals
+  │     ├─ Candle Anatomy → body:wick ratio analysis
+  │     ├─ Range Dynamics → expansion/contraction detection
+  │     └─ Absorption → whale activity detection
+  ├── Price Action Genes (if present)
+  │     ├─ Candlestick Patterns → 10 formations with evolved thresholds
+  │     ├─ Structural Breaks → N-bar high/low
+  │     ├─ Swing Sequences → HH/HL, LH/LL
+  │     ├─ Compression → narrowing range → breakout
+  │     └─ Gap Analysis → ATR-normalized gaps
+  ├── Composite Function Genes (if present)
+  │     └─ f(indicator_A, indicator_B) → 9 ops × 4 norms → novel signal
+  └── Directional Change Genes (if present)
+        ├─ DC Event Detection (θ% reversal threshold)
+        ├─ DC Indicators (trendRatio, oscillation, magnitude)
+        └─ Overshoot analysis
+         ↓
+Aggregate: bullishSignals vs bearishSignals
+         ↓
+  ├─ aggregateBias: 'bullish' | 'bearish' | 'neutral'
+  └─ advancedConfidence: 0-1 (agreement ratio)
+         ↓
+Fed to entry/exit decision alongside standard indicator signals
+```
+
+---
+
+*Last Updated: 2026-03-06 17:06 (UTC+3)*

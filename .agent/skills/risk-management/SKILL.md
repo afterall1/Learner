@@ -205,3 +205,14 @@ The following changes are **ABSOLUTELY FORBIDDEN** without a full Expert Council
 - `src/lib/engine/brain.ts` → Integrates risk checks before trade execution
 - `src/lib/engine/island.ts` → Calls risk manager for per-island trade validation
 - `src/lib/engine/cortex.ts` → Enforces GLOBAL risk across all islands + correlation guard
+
+---
+
+## 🔗 Cross-References
+
+| Related Skill | Relationship | When to Co-Activate |
+|--------------|-------------|---------------------|
+| `backtesting-simulation` | Constraint source | Risk genes (SL/TP/leverage) bound simulated trades |
+| `evolution-engine` | Constraint source | Risk genes in StrategyDNA bounded by safety rails |
+| `anti-overfitting-validation` | Parallel guard | Risk = capital safety, Validation = statistical safety |
+| `binance-integration` | Enforcement point | Risk checks run before live order placement |

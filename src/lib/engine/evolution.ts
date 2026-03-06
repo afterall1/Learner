@@ -2,7 +2,8 @@
 // Learner: Evolution Engine — Genetic Algorithm Controller
 // ============================================================
 // Enhanced with: Adaptive Mutation, Diversity Pressure,
-// Strategy Memory, and Complexity-Aware Fitness.
+// Strategy Memory, Complexity-Aware Fitness, and
+// Experience Replay Integration.
 // ============================================================
 
 import { v4 as uuidv4 } from 'uuid';
@@ -18,6 +19,7 @@ import {
 } from '@/types';
 import { generateRandomStrategy, crossover, mutate } from './strategy-dna';
 import { evaluatePerformance, calculateFitnessScore } from './evaluator';
+import { ExperienceReplayMemory } from './experience-replay';
 
 // ─── Configuration ───────────────────────────────────────────
 
@@ -68,11 +70,33 @@ export class EvolutionEngine {
     }
 
     /**
-     * Create the initial generation with random strategies (Genesis).
+     * Create the initial generation.
+     * If an ExperienceReplayMemory and current regime are provided,
+     * 30% of the population will be seeded from proven gene patterns.
+     * The remaining 70% are random (preserving diversity).
+     *
+     * Without replay: 100% random genesis (original behavior).
      */
-    createInitialGeneration(): EvolutionGeneration {
+    createInitialGeneration(
+        replayMemory?: ExperienceReplayMemory,
+        currentRegime?: MarketRegime,
+    ): EvolutionGeneration {
         const population: StrategyDNA[] = [];
-        for (let i = 0; i < this.config.populationSize; i++) {
+
+        // Phase 7: Seed from Experience Replay if available
+        if (replayMemory && currentRegime && replayMemory.canSeedForRegime(currentRegime)) {
+            const seeded = replayMemory.generateSeededPopulation(
+                currentRegime,
+                this.config.populationSize,
+                0, // generation 0
+            );
+            for (const strategy of seeded) {
+                population.push(strategy);
+            }
+        }
+
+        // Fill remaining slots with random strategies
+        while (population.length < this.config.populationSize) {
             population.push(generateRandomStrategy(0));
         }
 
@@ -144,11 +168,17 @@ export class EvolutionEngine {
 
     /**
      * Create the next generation using selection, crossover, and mutation.
-     * Enhanced with adaptive mutation and diversity pressure.
+     * Enhanced with adaptive mutation, diversity pressure, and
+     * optional Experience Replay injection.
+     *
+     * When replay memory is provided, 1-2 replay strategies may replace
+     * wild cards, injecting proven gene patterns into the population.
      */
     evolveNextGeneration(
         currentGeneration: EvolutionGeneration,
-        tradesByStrategy: Map<string, Trade[]>
+        tradesByStrategy: Map<string, Trade[]>,
+        replayMemory?: ExperienceReplayMemory,
+        currentRegime?: MarketRegime,
     ): EvolutionGeneration {
         // Step 1: Evaluate and rank current generation
         const ranked = this.evaluateGeneration(currentGeneration, tradesByStrategy);
@@ -200,7 +230,23 @@ export class EvolutionEngine {
         }
 
         // Step 6: Add wild cards for diversity maintenance
-        for (let i = 0; i < wildCardCount; i++) {
+        // Phase 7: Replace some wild cards with replay-seeded strategies
+        let replayInjected = 0;
+        if (replayMemory && currentRegime && replayMemory.canSeedForRegime(currentRegime)) {
+            const replayCount = Math.min(2, wildCardCount); // Max 2 replay injections
+            const replayStrategies = replayMemory.generateSeededPopulation(
+                currentRegime,
+                replayCount,
+                this.currentGeneration,
+            );
+            for (const replayed of replayStrategies) {
+                newPopulation.push(replayed);
+                replayInjected++;
+            }
+        }
+
+        // Fill remaining wild card slots with random strategies
+        for (let i = 0; i < wildCardCount - replayInjected; i++) {
             newPopulation.push(generateRandomStrategy(this.currentGeneration));
         }
 

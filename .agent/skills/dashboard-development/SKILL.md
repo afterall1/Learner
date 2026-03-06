@@ -342,3 +342,14 @@ const offset = circumference * (1 - utilization);
 - `src/app/page.tsx` → Dashboard page with 8 panels (1010+ lines)
 - `src/app/layout.tsx` → Root layout with fonts and metadata
 - `src/lib/store/index.ts` → 6 Zustand stores
+
+---
+
+## 🔗 Cross-References
+
+| Related Skill | Relationship | When to Co-Activate |
+|--------------|-------------|---------------------|
+| `data-visualization` | Extension | Chart components follow dashboard design system |
+| `motion-design` | Extension | Animations follow dashboard timing conventions |
+| `multi-island-ui` | Extension | Island panels follow dashboard panel architecture |
+| `learner-conventions` | Standard | All UI code must follow naming/import rules |

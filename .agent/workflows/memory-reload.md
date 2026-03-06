@@ -21,9 +21,10 @@ cat memory/overview.md
 - It uses Genetic Algorithms (NOT Reinforcement Learning)
 - **Island Model GA**: Each pair+timeframe has its own isolated evolution engine
 - **Meta-Evolution (GA²)**: Second-layer GA optimizes evolution parameters (HyperDNA) per-island
+- **Advanced Strategy Genome (Phase 9)**: 5 evolvable gene families (Microstructure, Price Action, Composite Functions, Multi-TF Confluence, Directional Changes)
 - Risk rails are hardcoded and non-overridable (GLOBAL across all islands)
 - Paper trading + 4-Gate Validation is mandatory before live trading
-- **Dashboard**: 9 panels including Cortex Neural Map for live island visualization
+- **Dashboard**: 2 pages — Main (9 panels + Cortex Neural Map) + Pipeline (8 panels + Strategy Archaeology)
 
 ---
 
@@ -39,8 +40,9 @@ cat memory/active_context.md
 - Current development phase
 - Architecture mode: Cortex (multi-island) or AIBrain (single-island)
 - AI Brain / Cortex state (islands, generations, fitness, active strategies)
+- Advanced Genome status (which gene families are integrated)
 - Meta-Evolution status (HyperDNA, meta-generation, GA² cycle count)
-- Validation pipeline status (4-Gate)
+- Validation pipeline status (4-Gate + Novelty Bonus)
 - Dashboard status (panels, visualization components)
 - Incomplete features / technical debt
 - Next session priorities
@@ -56,11 +58,12 @@ cat memory/architecture/system_design.md
 ```
 
 **After reading**, confirm you understand:
-- Module dependency graph (Types → Engine → Anti-Overfitting → Island Model → Risk → Store → Dashboard)
+- Module dependency graph (Types → Engine → Advanced Genes → Anti-Overfitting → Island Model → Risk → Store → Dashboard)
 - Island Model architecture (Cortex → Islands → Migration → Capital Allocator)
+- **Advanced Gene Signal Flow**: Microstructure/PriceAction/Composite/DC → aggregateBias + advancedConfidence
 - **Meta-Evolution (GA²)**: HyperDNA → Island → Meta-Fitness → Meta-Crossover cycle
 - 4-Gate Validation Pipeline (WFA → Monte Carlo → Overfitting → Regime Diversity)
-- Strategy evolution pipeline (per-island)
+- Strategy evolution pipeline (per-island, with advanced gene injection/crossover/mutation)
 - Zustand store architecture (6 stores)
 - Risk management integration (GLOBAL across all islands)
 - Dashboard data flow (Cortex Neural Map, gradient accents, stagger animations)
@@ -77,13 +80,14 @@ cat memory/file_map.md
 
 **After reading**, you should be able to locate any module by domain:
 - **Types**: `types/index.ts`, `types/trading-slot.ts`
-- **Core Engine**: `strategy-dna.ts`, `evaluator.ts`, `evolution.ts`, `brain.ts`
+- **Core Engine**: `strategy-dna.ts`, `evaluator.ts`, `signal-engine.ts`, `evolution.ts`, `brain.ts`, `experience-replay.ts`
+- **Advanced Genes**: `microstructure-genes.ts`, `price-action-genes.ts`, `composite-functions.ts`, `directional-change.ts`
 - **Anti-Overfitting**: `walk-forward.ts`, `monte-carlo.ts`, `regime-detector.ts`, `overfitting-detector.ts`
 - **Island Model**: `island.ts`, `cortex.ts`, `meta-evolution.ts`, `migration.ts`, `capital-allocator.ts`
 - **Risk**: `manager.ts`
 - **State**: `store/index.ts` (6 stores including CortexStore)
-- **Dashboard**: `page.tsx` (9 panels + CortexNeuralMap), `globals.css` (1060+ lines), `layout.tsx`
-- **Memory**: Overview, Active Context, System Design, File Map, ADRs (4), Changelog
+- **Dashboard**: `page.tsx` (9 panels + CortexNeuralMap), `pipeline/page.tsx` (8 panels + Strategy Archaeology), `globals.css` (1960+ lines), `layout.tsx`
+- **Memory**: Overview, Active Context, System Design, File Map, ADRs (6), Changelog
 
 ---
 
@@ -100,6 +104,8 @@ Get-ChildItem memory/adr/*.md | ForEach-Object { Write-Host "=== $($_.Name) ==="
 - **ADR-002**: Anti-Overfitting Pipeline — 4-Gate validation + 3-stage promotion
 - **ADR-003**: Island Model Architecture — Multi-pair multi-timeframe isolated evolution
 - **ADR-004**: Meta-Evolution (GA²) — Second-layer GA for per-island HyperDNA optimization
+- **ADR-005**: Strategy Archaeology — Explainable AI through Gene Lineage, Gene Survival, and Decision Explainer
+- **ADR-006**: Advanced Strategy Genome Architecture — 5 evolvable gene families, structural evolution, composite function evolution, directional change framework
 
 ---
 
@@ -124,7 +130,7 @@ Scan available agent skills to understand domain-specific development rules:
 Get-ChildItem .agent/skills -Directory | ForEach-Object { Write-Host "=== $($_.Name) ==="; Get-Content "$($_.FullName)/SKILL.md" -TotalCount 5; Write-Host "" }
 ```
 
-**Critical skills**: `learner-conventions` (mandatory for all code), `evolution-engine`, `risk-management`, `meta-evolution`
+**Critical skills**: `learner-conventions` (mandatory for all code), `evolution-engine`, `risk-management`, `meta-evolution`, `anti-overfitting-validation`
 
 ---
 
@@ -148,7 +154,9 @@ After completing all steps, provide the following confirmation to the user:
 - **Meta-Evolution**: GA² [Active/Inactive], HyperDNA per-island
 - **Validation**: 4-Gate Pipeline (WFA + MC + Overfitting + Regime)
 - **Promotion**: Paper → Candidate → Active
-- **Dashboard**: 9 panels + Cortex Neural Map
+- **Dashboard**: 2 pages, 17 panels total (Main 9 + Pipeline 8)
+- **Pipeline**: Strategy Archaeology (Gene Lineage + Gene Survival + Decision Explainer)
+- **Advanced Genome**: Phase 9 — 5 gene families (Microstructure, Price Action, Composite, Multi-TF Confluence, DC)
 
 ### AI Brain / Cortex Status
 - **State**: [Current state]

@@ -356,3 +356,13 @@ function adjustPrice(price: number, tickSize: number): number {
 - `src/types/index.ts` → `Timeframe` enum used for kline intervals
 
 See `references/api-endpoints.md` for detailed request/response JSON schemas.
+
+---
+
+## 🔗 Cross-References
+
+| Related Skill | Relationship | When to Co-Activate |
+|--------------|-------------|---------------------|
+| `backtesting-simulation` | Data provider | Kline data → OHLCV[] → feeds backtester |
+| `risk-management` | Enforcement | Risk checks run before order placement |
+| `learner-conventions` | Standard | API code must follow error handling + naming patterns |

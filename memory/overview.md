@@ -4,7 +4,7 @@
 **Name**: Learner
 **Type**: Self-evolving AI-powered algorithmic trading system
 **Target**: Binance Futures (USDT-M perpetual contracts)
-**Status**: Active Development — Phase 5 (Meta-Evolution GA² + Dashboard Enhancement Complete)
+**Status**: Active Development — Phase 9 (Advanced Strategy Genome Architecture Complete)
 **Created**: 2026-03-05
 
 ---
@@ -30,28 +30,40 @@ The system is built on a **Genetic Algorithm** paradigm (not Reinforcement Learn
 ### Key Architectural Features
 - **Island Model GA**: Each pair+timeframe combination has its own isolated evolution engine
 - **Meta-Evolution (GA²)**: Second-layer genetic algorithm that optimizes evolution parameters (HyperDNA) per-island
+- **Advanced Strategy Genome (Phase 9)**: 5 evolvable gene families: Microstructure, Price Action, Composite Functions, Multi-TF Confluence, Directional Changes
+- **Composite Function Evolution**: Mathematical composition of indicators — AI discovers novel relationships like `ABS_DIFF(RSI, EMA_slope)`
+- **Directional Change (DC)**: Event-based price analysis with evolved θ reversal threshold (Kampouridis framework)
 - **4-Gate Validation Pipeline**: Walk-Forward Analysis → Monte Carlo → Overfitting Detection → Regime Diversity
+- **Structural Novelty Bonus**: Fitness bonus for strategies using advanced gene families (decays over generations)
 - **3-Stage Promotion**: Paper Trading → Candidate → Active
 - **Market Regime Detection**: 5 regimes (Trending Up/Down, Ranging, High/Low Volatility)
 - **Cross-Island Migration**: Top strategies shared between related islands
+- **Pipeline Dashboard**: Dedicated `/pipeline` page with 8 panels visualizing the full evolution lifecycle
+- **Strategy Archaeology**: Gene Lineage Tree + Gene Survival Heatmap + Decision Explainer (Explainable AI)
 
 ### Module Map
 
 ```
 src/
 ├── types/
-│   ├── index.ts              → 560+ line type system (DNA, Trade, Evolution, Risk, Island, HyperDNA)
+│   ├── index.ts              → 780+ line type system (DNA, Trade, Evolution, Risk, Island, HyperDNA, Advanced Genes)
 │   └── trading-slot.ts       → TradingSlot pair+timeframe identifier system
 ├── lib/engine/
-│   ├── strategy-dna.ts       → Genome generation, crossover, mutation operators
-│   ├── evaluator.ts          → Composite fitness + complexity penalty + deflated fitness
+│   ├── strategy-dna.ts       → Genome generation, crossover, mutation + advanced gene operators
+│   ├── evaluator.ts          → Composite fitness + complexity penalty + deflated fitness + novelty bonus
+│   ├── signal-engine.ts      → Indicator calculation + advanced gene signal integration
 │   ├── evolution.ts          → GA: adaptive mutation, diversity pressure, Strategy Memory
+│   ├── experience-replay.ts  → Pattern extraction including advanced gene patterns
 │   ├── brain.ts              → AI Brain (single-island, 4-Gate validation, 3-stage promotion)
 │   ├── island.ts             → Island: self-contained evolution unit + HyperDNA (GA²)
 │   ├── cortex.ts             → Cortex: multi-island orchestrator + Meta-Evolution cycles
 │   ├── meta-evolution.ts     → Meta-Evolution Engine (GA²): HyperDNA genome, meta-fitness, stability
 │   ├── migration.ts          → Cross-island knowledge transfer (3 topologies)
 │   ├── capital-allocator.ts  → Dynamic performance-weighted capital distribution
+│   ├── microstructure-genes.ts → [Phase 9] Volume profile, absorption, candle anatomy, range dynamics
+│   ├── price-action-genes.ts  → [Phase 9] Parameterized candlestick patterns, structural breaks, compression
+│   ├── composite-functions.ts → [Phase 9] Mathematical indicator composition (9 ops × 4 normalizations)
+│   ├── directional-change.ts  → [Phase 9] Event-based DC analysis (Kampouridis), evolved θ threshold
 │   ├── walk-forward.ts       → Walk-Forward Analysis (rolling IS/OOS windows)
 │   ├── monte-carlo.ts        → Monte Carlo permutation testing + Deflated Sharpe Ratio
 │   ├── regime-detector.ts    → Market regime classification (ADX/ATR/SMA-based)
@@ -62,8 +74,10 @@ src/
 │   └── index.ts              → 6 Zustand stores (Brain, Cortex, Portfolio, Trade, Market, Config)
 └── app/
     ├── layout.tsx             → Root layout with Inter + JetBrains Mono fonts
-    ├── globals.css            → Premium dark glassmorphism design system (1060+ lines)
-    └── page.tsx               → 9-panel dashboard + Cortex Neural Map (1300+ lines)
+    ├── globals.css            → Premium dark glassmorphism design system (1960+ lines)
+    ├── page.tsx               → Main dashboard: 9 panels + Cortex Neural Map (1300+ lines)
+    └── pipeline/
+        └── page.tsx           → Pipeline dashboard: 8 panels + Strategy Archaeology (1400+ lines)
 ```
 
 ---
@@ -88,17 +102,30 @@ src/
 
 ---
 
-## 📊 Dashboard Panels (9)
+## 📊 Dashboard Architecture (2 Pages, 17 Panels)
 
+### Main Dashboard (`/`) — 9 Panels
 1. Portfolio Overview — Balance, P&L metrics, animated counter
 2. Active Strategy — DNA strand visualization, fitness score
 3. Risk Monitor — SVG gauge, drawdown/position bars, Emergency Stop, critical pulse
-4. Performance Charts — Equity curve / Drawdown toggle (Recharts)
+4. Performance Charts — Equity curve / Drawdown toggle
 5. Evolution Timeline — Generation scores bar chart
 6. AI Brain Monitor — Real-time color-coded log feed
 7. **Cortex Neural Map** — Live island visualization, migration flows, HyperDNA meta-gen
 8. Trade History — Expandable table with AI reasoning
 9. Market Overview — Binance Futures pair prices
+
+### Pipeline Dashboard (`/pipeline`) — 8 Panels
+1. **Pipeline Flow** — 7-stage animated horizontal flow with live stats per stage
+2. **Generation Fitness** — Dual-axis area chart (best/avg fitness) with validation markers
+3. **4-Gate Validation** — Animated sequential gate reveal with PASS/FAIL verdicts
+4. **Strategy Roster Radar** — 5-regime radar chart + top strategies list
+5. **Experience Replay** — Regime × pattern type confidence heatmap
+6. **Gene Lineage Tree** ★ — 6-generation family tree with origin tracking (Explainable AI)
+7. **Gene Survival Heatmap** ★ — Gene persistence across generations, persistent genes glow
+8. **Decision Explainer** ★ — Why AI chose each strategy during regime changes
+
+> ★ = Strategy Archaeology panels (Radical Innovation — Explainable AI)
 
 ---
 
@@ -124,5 +151,5 @@ src/
 
 ---
 
-*Last Updated: 2026-03-06*
+*Last Updated: 2026-03-06 17:06 (UTC+3)*
 *Build Status: ✅ Passing (zero errors)*

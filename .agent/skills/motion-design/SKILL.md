@@ -371,3 +371,13 @@ function AnimatedCounter({
 ## 📂 Key Files
 - `src/app/globals.css` → Existing animations: `pulse-glow`, `fadeIn`, `risk-gauge-arc`
 - `src/app/page.tsx` → BrainStateIndicator animation classes
+
+---
+
+## 🔗 Cross-References
+
+| Related Skill | Relationship | When to Co-Activate |
+|--------------|-------------|---------------------|
+| `dashboard-development` | Parent | Animations exist within dashboard panels |
+| `data-visualization` | Extension | Chart animations follow motion timing |
+| `multi-island-ui` | Extension | Island card hover/selection transitions |

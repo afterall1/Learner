@@ -13,10 +13,18 @@ Check each item if the corresponding change was made during this session:
 - [ ] `types/trading-slot.ts` changed? → Update `memory/file_map.md` + `memory/architecture/system_design.md`
 
 ### Core Engine Layer
-- [ ] `strategy-dna.ts` changed? → Update `memory/architecture/system_design.md` (DNA flow)
+- [ ] `strategy-dna.ts` changed? → Update `memory/architecture/system_design.md` (DNA flow) + `memory/overview.md` (Module Map) + `memory/file_map.md`
 - [ ] `evaluator.ts` changed? → Update `memory/architecture/system_design.md` (Fitness scoring)
+- [ ] `signal-engine.ts` changed? → Update `memory/architecture/system_design.md` (Signal flow) + `memory/file_map.md`
 - [ ] `evolution.ts` changed? → Update `memory/architecture/system_design.md` (GA pipeline)
+- [ ] `experience-replay.ts` changed? → Update `memory/architecture/system_design.md` (Pattern extraction) + `memory/file_map.md`
 - [ ] `brain.ts` changed? → Update `memory/architecture/system_design.md` (Brain lifecycle) + `memory/active_context.md` (Brain status)
+
+### Advanced Gene Layer
+- [ ] `microstructure-genes.ts` changed? → Update `memory/file_map.md` (Advanced Gene Layer) + `memory/architecture/system_design.md` (Advanced Gene Signal Flow)
+- [ ] `price-action-genes.ts` changed? → Update `memory/file_map.md` (Advanced Gene Layer) + `memory/architecture/system_design.md` (Advanced Gene Signal Flow)
+- [ ] `composite-functions.ts` changed? → Update `memory/file_map.md` (Advanced Gene Layer) + `memory/architecture/system_design.md` (Advanced Gene Signal Flow)
+- [ ] `directional-change.ts` changed? → Update `memory/file_map.md` (Advanced Gene Layer) + `memory/architecture/system_design.md` (Advanced Gene Signal Flow)
 
 ### Anti-Overfitting Layer
 - [ ] `walk-forward.ts` changed? → Update `memory/architecture/system_design.md` (Validation pipeline)
@@ -39,6 +47,7 @@ Check each item if the corresponding change was made during this session:
 
 ### Dashboard Layer
 - [ ] `page.tsx` changed? → Update `memory/overview.md` (Dashboard Panels) if new panels added
+- [ ] `pipeline/page.tsx` changed? → Update `memory/overview.md` (Pipeline Dashboard section) + `memory/architecture/system_design.md` (Pipeline data flow)
 - [ ] `globals.css` changed? → No doc update needed (styling only)
 - [ ] New components added? → Update `memory/file_map.md` + `memory/overview.md`
 

@@ -10,6 +10,7 @@
  *   node memory/scripts/context-fingerprint.js --generate   # Create/update fingerprint
  *   node memory/scripts/context-fingerprint.js --verify     # Check for drift
  *   node memory/scripts/context-fingerprint.js --report      # Detailed drift report
+ *   node memory/scripts/context-fingerprint.js --smart-sync  # Auto-detect which docs need updating
  * 
  * The fingerprint tracks:
  *   1. Source file hashes (detects code changes)
@@ -37,8 +38,18 @@ const SOURCE_FILES = [
     // Core Engine Layer
     'src/lib/engine/strategy-dna.ts',
     'src/lib/engine/evaluator.ts',
+    'src/lib/engine/signal-engine.ts',
     'src/lib/engine/evolution.ts',
+    'src/lib/engine/experience-replay.ts',
     'src/lib/engine/brain.ts',
+    // Advanced Gene Layer (Phase 9)
+    'src/lib/engine/microstructure-genes.ts',
+    'src/lib/engine/price-action-genes.ts',
+    'src/lib/engine/composite-functions.ts',
+    'src/lib/engine/directional-change.ts',
+    // Backtesting Engine Layer (Phase 10)
+    'src/lib/engine/backtester.ts',
+    'src/lib/engine/market-simulator.ts',
     // Anti-Overfitting Layer
     'src/lib/engine/walk-forward.ts',
     'src/lib/engine/monte-carlo.ts',
@@ -56,6 +67,7 @@ const SOURCE_FILES = [
     'src/lib/store/index.ts',
     // Presentation Layer
     'src/app/page.tsx',
+    'src/app/pipeline/page.tsx',
     'src/app/globals.css',
     'src/app/layout.tsx',
 ];
@@ -86,13 +98,153 @@ const CROSS_REFERENCES = {
         'memory/architecture/system_design.md',
         'memory/active_context.md',
     ],
+    // Advanced Gene Layer (Phase 9)
+    'src/lib/engine/microstructure-genes.ts': [
+        'memory/file_map.md',
+        'memory/architecture/system_design.md',
+    ],
+    'src/lib/engine/price-action-genes.ts': [
+        'memory/file_map.md',
+        'memory/architecture/system_design.md',
+    ],
+    'src/lib/engine/composite-functions.ts': [
+        'memory/file_map.md',
+        'memory/architecture/system_design.md',
+    ],
+    'src/lib/engine/directional-change.ts': [
+        'memory/file_map.md',
+        'memory/architecture/system_design.md',
+    ],
+    'src/lib/engine/signal-engine.ts': [
+        'memory/file_map.md',
+        'memory/architecture/system_design.md',
+    ],
+    'src/lib/engine/experience-replay.ts': [
+        'memory/file_map.md',
+    ],
+    // Backtesting Engine Layer (Phase 10)
+    'src/lib/engine/backtester.ts': [
+        'memory/file_map.md',
+        'memory/architecture/system_design.md',
+    ],
+    'src/lib/engine/market-simulator.ts': [
+        'memory/file_map.md',
+        'memory/architecture/system_design.md',
+    ],
     'src/app/page.tsx': [
         'memory/overview.md',
         'memory/file_map.md',
     ],
+    'src/app/pipeline/page.tsx': [
+        'memory/overview.md',
+        'memory/file_map.md',
+        'memory/architecture/system_design.md',
+    ],
     'src/app/globals.css': [
         'memory/file_map.md',
     ],
+};
+
+/** Smart Sync Rules: source file → which memory docs to update and what to check */
+const SYNC_RULES = {
+    'src/types/index.ts': {
+        docs: ['memory/overview.md', 'memory/file_map.md'],
+        check: 'Type system changes: update Module Map + File Map descriptions',
+    },
+    'src/types/trading-slot.ts': {
+        docs: ['memory/file_map.md', 'memory/architecture/system_design.md'],
+        check: 'TradingSlot changes: update File Map + System Design Island architecture',
+    },
+    'src/lib/engine/strategy-dna.ts': {
+        docs: ['memory/architecture/system_design.md', 'memory/overview.md', 'memory/file_map.md'],
+        check: 'DNA changes: update System Design DNA flow + Overview Module Map + File Map',
+    },
+    'src/lib/engine/evaluator.ts': {
+        docs: ['memory/architecture/system_design.md'],
+        check: 'Evaluator changes: update System Design fitness scoring section',
+    },
+    'src/lib/engine/signal-engine.ts': {
+        docs: ['memory/file_map.md', 'memory/architecture/system_design.md'],
+        check: 'Signal Engine changes: update File Map + System Design Advanced Gene Signal Flow',
+    },
+    'src/lib/engine/evolution.ts': {
+        docs: ['memory/architecture/system_design.md'],
+        check: 'Evolution changes: update System Design GA pipeline section',
+    },
+    'src/lib/engine/experience-replay.ts': {
+        docs: ['memory/file_map.md'],
+        check: 'Experience Replay changes: update File Map pattern types',
+    },
+    'src/lib/engine/brain.ts': {
+        docs: ['memory/architecture/system_design.md', 'memory/active_context.md'],
+        check: 'Brain changes: update System Design lifecycle + Active Context brain status',
+    },
+    // Advanced Gene Layer (Phase 9)
+    'src/lib/engine/microstructure-genes.ts': {
+        docs: ['memory/file_map.md', 'memory/architecture/system_design.md'],
+        check: 'Microstructure Gene changes: update File Map Advanced Gene Layer + System Design signal flow',
+    },
+    'src/lib/engine/price-action-genes.ts': {
+        docs: ['memory/file_map.md', 'memory/architecture/system_design.md'],
+        check: 'Price Action Gene changes: update File Map Advanced Gene Layer + System Design signal flow',
+    },
+    'src/lib/engine/composite-functions.ts': {
+        docs: ['memory/file_map.md', 'memory/architecture/system_design.md'],
+        check: 'Composite Function changes: update File Map Advanced Gene Layer + System Design signal flow',
+    },
+    'src/lib/engine/directional-change.ts': {
+        docs: ['memory/file_map.md', 'memory/architecture/system_design.md'],
+        check: 'Directional Change changes: update File Map Advanced Gene Layer + System Design signal flow',
+    },
+    // Backtesting Engine Layer (Phase 10)
+    'src/lib/engine/backtester.ts': {
+        docs: ['memory/file_map.md', 'memory/architecture/system_design.md'],
+        check: 'Backtester changes: update File Map Backtesting Engine Layer + System Design backtest data flow',
+    },
+    'src/lib/engine/market-simulator.ts': {
+        docs: ['memory/file_map.md', 'memory/architecture/system_design.md'],
+        check: 'Market Simulator changes: update File Map Backtesting Engine Layer + System Design execution modeling',
+    },
+    'src/lib/engine/island.ts': {
+        docs: ['memory/file_map.md', 'memory/architecture/system_design.md'],
+        check: 'Island changes: update File Map + System Design Island architecture',
+    },
+    'src/lib/engine/cortex.ts': {
+        docs: ['memory/file_map.md', 'memory/architecture/system_design.md', 'memory/active_context.md'],
+        check: 'Cortex changes: update File Map + System Design Cortex flow + Active Context brain status',
+    },
+    'src/lib/engine/meta-evolution.ts': {
+        docs: ['memory/overview.md', 'memory/file_map.md', 'memory/architecture/system_design.md'],
+        check: 'Meta-Evolution changes: update Overview key features + File Map + System Design GA² flow',
+    },
+    'src/lib/engine/migration.ts': {
+        docs: ['memory/architecture/system_design.md'],
+        check: 'Migration changes: update System Design migration topology',
+    },
+    'src/lib/engine/capital-allocator.ts': {
+        docs: ['memory/architecture/system_design.md'],
+        check: 'Capital Allocator changes: update System Design capital allocation flow',
+    },
+    'src/lib/risk/manager.ts': {
+        docs: ['memory/overview.md', 'memory/architecture/system_design.md'],
+        check: 'Risk changes: update Overview Critical Rules + System Design risk integration',
+    },
+    'src/lib/store/index.ts': {
+        docs: ['memory/architecture/system_design.md'],
+        check: 'Store changes: update System Design store architecture table',
+    },
+    'src/app/page.tsx': {
+        docs: ['memory/overview.md', 'memory/file_map.md'],
+        check: 'Main dashboard changes: update Overview dashboard panels + File Map',
+    },
+    'src/app/pipeline/page.tsx': {
+        docs: ['memory/overview.md', 'memory/file_map.md', 'memory/architecture/system_design.md'],
+        check: 'Pipeline dashboard changes: update Overview pipeline panels + File Map + System Design pipeline data flow',
+    },
+    'src/app/globals.css': {
+        docs: ['memory/file_map.md'],
+        check: 'CSS changes: update File Map line count (styling only, no arch changes)',
+    },
 };
 
 // ═══════════════════════════════════════════════════════════════
@@ -436,6 +588,133 @@ function commandReport() {
     console.log('');
 }
 
+function commandSmartSync() {
+    printHeader();
+    const previous = loadFingerprint();
+    const current = generateFingerprint();
+
+    if (!previous) {
+        console.log(`${COLORS.yellow}⚠ No previous fingerprint found. Generating initial fingerprint...${COLORS.reset}`);
+        saveFingerprint(current);
+        console.log(`${COLORS.green}✓ Initial fingerprint created. Make changes, then run --smart-sync again.${COLORS.reset}`);
+        console.log('');
+        return;
+    }
+
+    console.log(`${COLORS.bold}🔍 Smart Sync Analysis${COLORS.reset}`);
+    console.log(`${COLORS.dim}Comparing against fingerprint from: ${previous.generatedAt}${COLORS.reset}`);
+    console.log('');
+
+    // Detect changed source files
+    const changedFiles = [];
+    for (const file of SOURCE_FILES) {
+        const prevHash = previous.sourceHashes[file];
+        const currHash = current.sourceHashes[file];
+
+        if (!prevHash && currHash) {
+            changedFiles.push({ file, reason: 'NEW FILE' });
+        } else if (prevHash && currHash && prevHash !== currHash) {
+            const prevLines = previous.lineCounts[file] || 0;
+            const currLines = current.lineCounts[file] || 0;
+            const delta = currLines - prevLines;
+            const deltaStr = delta > 0 ? `+${delta}` : `${delta}`;
+            changedFiles.push({ file, reason: `MODIFIED (${deltaStr} lines)` });
+        } else if (prevHash && !currHash) {
+            changedFiles.push({ file, reason: 'DELETED' });
+        }
+    }
+
+    if (changedFiles.length === 0) {
+        console.log(`${COLORS.green}${COLORS.bold}✓ No source changes detected — memory is in sync${COLORS.reset}`);
+        console.log('');
+        return;
+    }
+
+    // Display changed files
+    console.log(`${COLORS.yellow}${COLORS.bold}Changed Source Files (${changedFiles.length}):${COLORS.reset}`);
+    console.log('');
+    for (const { file, reason } of changedFiles) {
+        const icon = reason === 'NEW FILE' ? `${COLORS.green}+${COLORS.reset}` :
+            reason === 'DELETED' ? `${COLORS.red}-${COLORS.reset}` :
+                `${COLORS.yellow}~${COLORS.reset}`;
+        console.log(`  ${icon} ${file} ${COLORS.dim}[${reason}]${COLORS.reset}`);
+    }
+
+    // Build memory update plan
+    const docUpdatePlan = {};
+    const actionItems = [];
+
+    for (const { file } of changedFiles) {
+        const rule = SYNC_RULES[file];
+        if (rule) {
+            actionItems.push({ file, check: rule.check });
+            for (const doc of rule.docs) {
+                if (!docUpdatePlan[doc]) {
+                    docUpdatePlan[doc] = [];
+                }
+                docUpdatePlan[doc].push(path.basename(file));
+            }
+        }
+    }
+
+    // Display update plan
+    console.log('');
+    console.log(`${COLORS.cyan}${COLORS.bold}═══ MEMORY UPDATE PLAN ═══${COLORS.reset}`);
+    console.log('');
+
+    const docEntries = Object.entries(docUpdatePlan);
+    if (docEntries.length === 0) {
+        console.log(`${COLORS.dim}  No memory docs require updating for these changes.${COLORS.reset}`);
+    } else {
+        // Always-required docs
+        console.log(`${COLORS.bold}  Always Required:${COLORS.reset}`);
+        console.log(`    ${COLORS.yellow}▸${COLORS.reset} memory/active_context.md — Add session entry with completed tasks`);
+        console.log(`    ${COLORS.yellow}▸${COLORS.reset} memory/changelog.md — Add version entry if significant changes`);
+        console.log('');
+
+        console.log(`${COLORS.bold}  Change-Specific Docs (${docEntries.length}):${COLORS.reset}`);
+        for (const [doc, triggers] of docEntries) {
+            const triggerStr = triggers.join(', ');
+            console.log(`    ${COLORS.cyan}▸${COLORS.reset} ${doc}`);
+            console.log(`      ${COLORS.dim}triggered by: ${triggerStr}${COLORS.reset}`);
+        }
+    }
+
+    // Display action checklist
+    console.log('');
+    console.log(`${COLORS.bold}  Action Checklist:${COLORS.reset}`);
+    for (let i = 0; i < actionItems.length; i++) {
+        console.log(`    ${COLORS.yellow}${i + 1}.${COLORS.reset} ${actionItems[i].check}`);
+    }
+
+    // Memory health score
+    const changedMemDocs = MEMORY_FILES.filter(f =>
+        previous.memoryHashes[f] !== current.memoryHashes[f]
+    );
+    const requiredDocs = Object.keys(docUpdatePlan);
+    const updatedRequired = requiredDocs.filter(d => changedMemDocs.includes(d));
+    const healthScore = requiredDocs.length > 0
+        ? Math.round((updatedRequired.length / requiredDocs.length) * 100)
+        : 100;
+
+    console.log('');
+    console.log(`${COLORS.bold}  Memory Health Score:${COLORS.reset}`);
+    const healthColor = healthScore === 100 ? COLORS.green :
+        healthScore >= 50 ? COLORS.yellow : COLORS.red;
+    const healthBar = '█'.repeat(Math.round(healthScore / 10)) + '░'.repeat(10 - Math.round(healthScore / 10));
+    console.log(`    ${healthColor}${healthBar} ${healthScore}%${COLORS.reset}`);
+    if (healthScore < 100) {
+        const missing = requiredDocs.filter(d => !changedMemDocs.includes(d));
+        console.log(`    ${COLORS.red}Missing updates: ${missing.map(d => path.basename(d)).join(', ')}${COLORS.reset}`);
+    } else {
+        console.log(`    ${COLORS.green}All required memory docs have been updated!${COLORS.reset}`);
+    }
+
+    console.log('');
+    console.log(`${COLORS.dim}After completing updates, run: --generate to save new fingerprint${COLORS.reset}`);
+    console.log('');
+}
+
 // ═══════════════════════════════════════════════════════════════
 // MAIN
 // ═══════════════════════════════════════════════════════════════
@@ -453,10 +732,14 @@ switch (command) {
     case '--report':
         commandReport();
         break;
+    case '--smart-sync':
+        commandSmartSync();
+        break;
     default:
         console.log('Usage:');
-        console.log('  node context-fingerprint.js --generate   Create/update fingerprint');
-        console.log('  node context-fingerprint.js --verify     Check for drift');
-        console.log('  node context-fingerprint.js --report     Detailed status report');
+        console.log('  node context-fingerprint.js --generate    Create/update fingerprint');
+        console.log('  node context-fingerprint.js --verify      Check for drift');
+        console.log('  node context-fingerprint.js --report      Detailed status report');
+        console.log('  node context-fingerprint.js --smart-sync  Auto-detect memory update plan');
         break;
 }

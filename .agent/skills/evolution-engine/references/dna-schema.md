@@ -36,9 +36,66 @@ interface StrategyDNA {
     fitnessScore: number;              // 0-100 composite score (complexity-penalized)
     tradeCount: number;                // Total trades executed
     lastEvaluated: number | null;      // Timestamp of last evaluation
+    structuralComplexity?: number;     // 0-1 scale, how many gene families are active
   };
+
+  // ─── Phase 9: Advanced Gene Arrays (ALL OPTIONAL) ───
+  microstructureGenes?: MicrostructureGene[];    // Volume profile, absorption, candle anatomy
+  priceActionGenes?: PriceActionGene[];          // Candlestick patterns, structural breaks
+  compositeGenes?: CompositeFunctionGene[];      // Mathematical indicator compositions
+  confluenceGenes?: TimeframeConfluenceGene[];   // Multi-TF alignment (awaiting data)
+  dcGenes?: DirectionalChangeGene[];             // Event-based DC analysis
 }
 ```
+
+## Advanced Gene Families (Phase 9)
+
+### Microstructure Genes
+
+| Type | Description | Key Parameters |
+|------|-------------|----------------|
+| `VOLUME_PROFILE` | POC detection, volume bucket concentration | lookbackPeriod (10-50), buckets (5-20), threshold (0.1-0.9) |
+| `VOLUME_ACCELERATION` | Volume spike / accumulation detection | lookbackPeriod (5-30), threshold (1.2-3.0) |
+| `CANDLE_ANATOMY` | Body-to-wick ratios, shadow dominance | lookbackPeriod (3-20), threshold (0.3-0.8) |
+| `RANGE_EXPANSION` | ATR sequence expansion/contraction | lookbackPeriod (5-20), threshold (1.2-2.5) |
+| `ABSORPTION` | Large candle + small net movement (whales) | lookbackPeriod (5-20), threshold (1.5-3.0) |
+
+### Price Action Genes
+
+| Type | Description | Key Parameters |
+|------|-------------|----------------|
+| `CANDLESTICK_PATTERN` | 10 parameterized formations (Engulfing, Doji, Hammer, etc.) | formation, bodyThreshold (0.1-0.5), wickThreshold (0.3-0.8) |
+| `STRUCTURAL_BREAK` | N-bar high/low break | lookbackPeriod (5-30), breakBars (3-15) |
+| `SWING_SEQUENCE` | HH/HL or LH/LL detection | swingLength (3-10) |
+| `COMPRESSION` | Narrowing range → breakout | lookbackPeriod (5-20), threshold (0.3-0.7) |
+| `GAP_ANALYSIS` | ATR-normalized gap detection | lookbackPeriod (5-15), gapThreshold (0.5-2.0) |
+
+### Composite Function Genes
+
+| Operation | Formula | Example Usage |
+|-----------|---------|---------------|
+| `ADD` | A + B | RSI_14 + StochRSI → compound momentum |
+| `SUBTRACT` | A - B | EMA_20 - SMA_50 → trend-momentum divergence |
+| `MULTIPLY` | A × B | Volume × ATR → volatility-weighted flow |
+| `DIVIDE` | A / B | ATR_7 / ATR_21 → volatility ratio |
+| `RATIO` | A / (A + B) | normalized relative strength |
+| `ABS_DIFF` | \|A - B\| | divergence magnitude |
+| `NORMALIZE_DIFF` | (A - B) / MAD | standardized divergence |
+| `MAX` | max(A, B) | dominant signal |
+| `MIN` | min(A, B) | weakest signal filter |
+
+**Normalizations**: `none`, `percentile`, `z_score`, `min_max`
+**Inputs**: Any `IndicatorType` value (RSI, EMA, etc.) or raw field (`close`, `high`, `low`, `open`, `volume`)
+
+### Directional Change Genes
+
+| Parameter | Range | Description |
+|-----------|-------|-------------|
+| `theta` | 0.5% - 5.0% | Reversal threshold (evolved by GA) |
+| `lookbackPeriod` | 20 - 200 | Candle history for DC event detection |
+| `indicator` | enum | DC-derived: `trendRatio`, `avgMagnitude`, `oscillationCount`, `upturnRatio` |
+| `signalThreshold` | 0.2 - 0.8 | Signal trigger threshold |
+| `overshootFactor` | 1.0 - 3.0 | Overshoot detection multiplier |
 
 ## Indicator Gene Types
 
@@ -63,6 +120,17 @@ interface StrategyDNA {
 | 3 | 1.00 | Baseline |
 | 4 | 0.92 | -8% penalty |
 | 5 | 0.85 | -15% penalty (overly complex) |
+
+## Structural Novelty Bonus (Phase 9)
+
+| Advanced Family Active | Bonus (Gen 0) | Bonus (Gen 100) | Bonus (Gen 200+) |
+|----------------------|----------------|------------------|-------------------|
+| 1 family | +2.0 pts | +1.0 pts | +0.4 pts |
+| 2 families | +4.0 pts | +2.0 pts | +0.8 pts |
+| 3 families | +6.0 pts | +3.0 pts | +1.2 pts |
+| 4 families (max) | +8.0 pts | +4.0 pts | +1.6 pts |
+
+> **Decay formula**: `bonus = familyCount × 2 × max(0.2, 1 - generation/200)`
 
 ## Signal Conditions
 
@@ -121,3 +189,4 @@ Strategy names follow the pattern: `{Adjective} {Animal}`
 | `RANGING` | < 20 | — | — |
 | `HIGH_VOLATILITY` | — | > 1.5× avg | — |
 | `LOW_VOLATILITY` | — | < 0.5× avg | — |
+

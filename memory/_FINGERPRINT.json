@@ -1,57 +1,75 @@
 {
   "version": "1.0.0",
-  "generatedAt": "2026-03-06T00:37:54.963Z",
-  "projectVersion": "v0.7.0",
+  "generatedAt": "2026-03-06T19:09:51.974Z",
+  "projectVersion": "v0.12.0",
   "sourceHashes": {
-    "src/types/index.ts": "839c5e0a1dc98019",
+    "src/types/index.ts": "0d85ec7945c6348c",
     "src/types/trading-slot.ts": "61c7ed64286070fb",
-    "src/lib/engine/strategy-dna.ts": "a71ca856de3f9986",
-    "src/lib/engine/evaluator.ts": "599610956cef55fe",
-    "src/lib/engine/evolution.ts": "970613afe1aeb6b2",
+    "src/lib/engine/strategy-dna.ts": "319f89d62ca8e182",
+    "src/lib/engine/evaluator.ts": "1d194d45d012f434",
+    "src/lib/engine/signal-engine.ts": "e3cec98c53bb56d1",
+    "src/lib/engine/evolution.ts": "bda0129268dc3924",
+    "src/lib/engine/experience-replay.ts": "0b5bea00035bed45",
     "src/lib/engine/brain.ts": "731a6333d58d5ec0",
+    "src/lib/engine/microstructure-genes.ts": "788bc0f603a24be4",
+    "src/lib/engine/price-action-genes.ts": "16a8704c29f68d06",
+    "src/lib/engine/composite-functions.ts": "29a2a14ab7f83478",
+    "src/lib/engine/directional-change.ts": "88736a73c1649551",
+    "src/lib/engine/backtester.ts": "b09c0348552ae84e",
+    "src/lib/engine/market-simulator.ts": "7260a46914b1ca08",
     "src/lib/engine/walk-forward.ts": "4986dda259068caf",
     "src/lib/engine/monte-carlo.ts": "34faa9bed09f7b9d",
-    "src/lib/engine/regime-detector.ts": "14de1d5c5e26722c",
+    "src/lib/engine/regime-detector.ts": "c495a5483efcc786",
     "src/lib/engine/overfitting-detector.ts": "1c0ba7c0bb8f19ef",
-    "src/lib/engine/island.ts": "6962f4f930612665",
-    "src/lib/engine/cortex.ts": "b6133c91083ab471",
+    "src/lib/engine/island.ts": "7f04785ef1497162",
+    "src/lib/engine/cortex.ts": "dd7ab0d044ff9393",
     "src/lib/engine/meta-evolution.ts": "aefa961905c6fd28",
     "src/lib/engine/migration.ts": "be26a436baafcb32",
     "src/lib/engine/capital-allocator.ts": "18938886803a9624",
     "src/lib/risk/manager.ts": "24d087cca6775fcf",
-    "src/lib/store/index.ts": "acbd81e787b44e5e",
-    "src/app/page.tsx": "9e3c90508961a678",
-    "src/app/globals.css": "e0c3b301066c6fa3",
+    "src/lib/store/index.ts": "8fcb0db981f649a7",
+    "src/app/page.tsx": "45d6e83425a8a828",
+    "src/app/pipeline/page.tsx": "967b68d21b32b031",
+    "src/app/globals.css": "adfc863cda6c1a3f",
     "src/app/layout.tsx": "b7c900afea5bfe7e"
   },
   "memoryHashes": {
-    "memory/overview.md": "e5accb229fe1c571",
-    "memory/active_context.md": "916c97618d5e3a42",
-    "memory/architecture/system_design.md": "86a92645ca8a3caf",
-    "memory/file_map.md": "fc96816d5a0a77c8",
-    "memory/changelog.md": "6abe0e7aa65d3d86",
-    "memory/_SYNC_CHECKLIST.md": "4423c6efe2083f0c"
+    "memory/overview.md": "9767ddb64b134c9e",
+    "memory/active_context.md": "b76b7ce0a5687840",
+    "memory/architecture/system_design.md": "c307ffcaaf3b0532",
+    "memory/file_map.md": "262ad9492ddbfa2e",
+    "memory/changelog.md": "d59a8733d9dd6a77",
+    "memory/_SYNC_CHECKLIST.md": "b0c5d9ce6d4a8f8a"
   },
   "lineCounts": {
-    "src/types/index.ts": 575,
+    "src/types/index.ts": 1134,
     "src/types/trading-slot.ts": 97,
-    "src/lib/engine/strategy-dna.ts": 372,
-    "src/lib/engine/evaluator.ts": 257,
-    "src/lib/engine/evolution.ts": 466,
+    "src/lib/engine/strategy-dna.ts": 600,
+    "src/lib/engine/evaluator.ts": 309,
+    "src/lib/engine/signal-engine.ts": 968,
+    "src/lib/engine/evolution.ts": 512,
+    "src/lib/engine/experience-replay.ts": 710,
     "src/lib/engine/brain.ts": 617,
+    "src/lib/engine/microstructure-genes.ts": 544,
+    "src/lib/engine/price-action-genes.ts": 576,
+    "src/lib/engine/composite-functions.ts": 380,
+    "src/lib/engine/directional-change.ts": 461,
+    "src/lib/engine/backtester.ts": 813,
+    "src/lib/engine/market-simulator.ts": 336,
     "src/lib/engine/walk-forward.ts": 250,
     "src/lib/engine/monte-carlo.ts": 245,
     "src/lib/engine/regime-detector.ts": 391,
     "src/lib/engine/overfitting-detector.ts": 328,
-    "src/lib/engine/island.ts": 609,
-    "src/lib/engine/cortex.ts": 568,
+    "src/lib/engine/island.ts": 820,
+    "src/lib/engine/cortex.ts": 813,
     "src/lib/engine/meta-evolution.ts": 571,
     "src/lib/engine/migration.ts": 304,
     "src/lib/engine/capital-allocator.ts": 233,
     "src/lib/risk/manager.ts": 266,
-    "src/lib/store/index.ts": 475,
-    "src/app/page.tsx": 1299,
-    "src/app/globals.css": 1311,
+    "src/lib/store/index.ts": 533,
+    "src/app/page.tsx": 1377,
+    "src/app/pipeline/page.tsx": 1410,
+    "src/app/globals.css": 1965,
     "src/app/layout.tsx": 28
   },
   "crossRefStatus": {
@@ -69,17 +87,53 @@
       "memory/architecture/system_design.md": true,
       "memory/active_context.md": true
     },
+    "src/lib/engine/microstructure-genes.ts": {
+      "memory/file_map.md": true,
+      "memory/architecture/system_design.md": true
+    },
+    "src/lib/engine/price-action-genes.ts": {
+      "memory/file_map.md": true,
+      "memory/architecture/system_design.md": true
+    },
+    "src/lib/engine/composite-functions.ts": {
+      "memory/file_map.md": true,
+      "memory/architecture/system_design.md": true
+    },
+    "src/lib/engine/directional-change.ts": {
+      "memory/file_map.md": true,
+      "memory/architecture/system_design.md": true
+    },
+    "src/lib/engine/signal-engine.ts": {
+      "memory/file_map.md": true,
+      "memory/architecture/system_design.md": true
+    },
+    "src/lib/engine/experience-replay.ts": {
+      "memory/file_map.md": true
+    },
+    "src/lib/engine/backtester.ts": {
+      "memory/file_map.md": true,
+      "memory/architecture/system_design.md": false
+    },
+    "src/lib/engine/market-simulator.ts": {
+      "memory/file_map.md": true,
+      "memory/architecture/system_design.md": false
+    },
     "src/app/page.tsx": {
       "memory/overview.md": true,
       "memory/file_map.md": true
+    },
+    "src/app/pipeline/page.tsx": {
+      "memory/overview.md": true,
+      "memory/file_map.md": true,
+      "memory/architecture/system_design.md": true
     },
     "src/app/globals.css": {
       "memory/file_map.md": true
     }
   },
   "structuralIntegrity": {
-    "sourceFilesPresent": 20,
-    "sourceFilesTotal": 20,
+    "sourceFilesPresent": 29,
+    "sourceFilesTotal": 29,
     "memoryFilesPresent": 6,
     "memoryFilesTotal": 6
   }

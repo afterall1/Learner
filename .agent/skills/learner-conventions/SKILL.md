@@ -25,21 +25,30 @@ Every code change in this project MUST comply with ALL four flags simultaneously
 ```
 src/
 ├── types/
-│   ├── index.ts                  → Master type system (480+ lines)
+│   ├── index.ts                  → Master type system (700+ lines, incl. Phase 9 advanced gene types)
 │   └── trading-slot.ts           → TradingSlot pair:timeframe identifier
 ├── lib/engine/
-│   ├── strategy-dna.ts           → Genome generation, crossover, mutation
-│   ├── evaluator.ts              → Composite fitness + complexity penalty + deflated fitness
+│   ├── strategy-dna.ts           → Genome generation, crossover, mutation (incl. advanced genes)
+│   ├── evaluator.ts              → Composite fitness + complexity penalty + novelty bonus
+│   ├── signal-engine.ts          → Indicator calculations + advanced gene signal integration
 │   ├── evolution.ts              → GA controller (adaptive mutation, diversity, Strategy Memory)
+│   ├── experience-replay.ts      → Regime-pattern memory + advanced gene patterns
 │   ├── brain.ts                  → AI Brain (single-island, 4-Gate validation, 3-stage promotion)
 │   ├── island.ts                 → Island: isolated evolution unit (pair+timeframe scoped)
 │   ├── cortex.ts                 → Cortex: multi-island orchestrator
 │   ├── migration.ts              → Cross-island knowledge transfer (3 topologies)
 │   ├── capital-allocator.ts      → Dynamic performance-weighted capital distribution
+│   ├── meta-evolution.ts         → GA² meta-evolution engine (HyperDNA)
 │   ├── walk-forward.ts           → Walk-Forward Analysis (rolling IS/OOS)
 │   ├── monte-carlo.ts            → Monte Carlo permutation + Deflated Sharpe Ratio
 │   ├── regime-detector.ts        → Market regime classification (5 regimes)
-│   └── overfitting-detector.ts   → Composite overfitting risk (0-100)
+│   ├── overfitting-detector.ts   → Composite overfitting risk (0-100)
+│   ├── microstructure-genes.ts   → Phase 9: Volume Profile, Acceleration, Candle Anatomy
+│   ├── price-action-genes.ts     → Phase 9: 10 candlestick formations, structural breaks
+│   ├── composite-functions.ts    → Phase 9: Mathematical indicator evolution (9 ops × 4 norms)
+│   ├── directional-change.ts     → Phase 9: Event-based DC analysis (Kampouridis)
+│   ├── backtester.ts             → Phase 10: Core backtest engine + IndicatorCache (PFLM)
+│   └── market-simulator.ts       → Phase 10: Realistic execution (slippage, commission, impact)
 ├── lib/risk/
 │   └── manager.ts                → 8 hardcoded safety rails (GLOBAL)
 ├── lib/store/
@@ -47,8 +56,9 @@ src/
 ├── lib/api/                      → Exchange API layer (future)
 └── app/
     ├── layout.tsx                → Root layout
-    ├── globals.css               → Design system (764 lines)
-    └── page.tsx                  → 8-panel dashboard (1010+ lines)
+    ├── globals.css               → Design system (~1960 lines, dark glassmorphism)
+    ├── page.tsx                  → 9-panel dashboard + Cortex Neural Map (~1300 lines)
+    └── pipeline/page.tsx         → Pipeline + Archaeology dashboard (~1400 lines)
 ```
 
 ---
@@ -286,10 +296,23 @@ Only declare work **"complete"** if:
 ---
 
 ## 📂 Key Files
-- `src/types/index.ts` → Master type system
+- `src/types/index.ts` → Master type system (700+ lines, Phases 1–10)
 - `src/types/trading-slot.ts` → TradingSlot identifier
 - `src/lib/store/index.ts` → 6 Zustand stores
+- `src/lib/engine/backtester.ts` → Core backtest engine + PFLM IndicatorCache
+- `src/lib/engine/market-simulator.ts` → Realistic execution modeling
 - `memory/overview.md` → Project overview
 - `memory/active_context.md` → Current state
 - `.agent/workflows/memory-reload.md` → Context hydration
 - `.agent/workflows/memory-sync.md` → State persistence
+
+---
+
+## 🔗 Cross-References
+
+| Related Skill | Relationship | When to Co-Activate |
+|--------------|-------------|---------------------|
+| _(all skills)_ | Foundation | This skill applies to ALL code changes in the project |
+| `evolution-engine` | Consumer | DNA operations must follow type safety + naming rules |
+| `dashboard-development` | Consumer | UI components must follow design system conventions |
+| `backtesting-simulation` | Consumer | Engine code must follow error handling + module prefix rules |

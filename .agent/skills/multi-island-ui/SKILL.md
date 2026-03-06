@@ -568,3 +568,14 @@ function CortexControlBar() {
 - `src/lib/engine/cortex.ts` → `CortexSnapshot` data shape
 - `src/types/index.ts` → `IslandSnapshot`, `CortexSnapshot`, `IslandAllocation`, `MigrationEvent`
 - `src/types/trading-slot.ts` → `TradingSlot`, `TradingSlotStatus`
+
+---
+
+## 🔗 Cross-References
+
+| Related Skill | Relationship | When to Co-Activate |
+|--------------|-------------|---------------------|
+| `dashboard-development` | Parent | Island panels follow dashboard panel architecture |
+| `data-visualization` | Extension | Capital allocation donut + fitness sparklines |
+| `motion-design` | Extension | Island card transitions + staggered animations |
+| `meta-evolution` | Data source | HyperDNA state displayed per-island card |

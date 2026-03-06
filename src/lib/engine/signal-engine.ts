@@ -842,3 +842,126 @@ function determineDirection(
 
     return bullishScore >= bearishScore ? TradeDirection.LONG : TradeDirection.SHORT;
 }
+
+// ─── Phase 9: Advanced Gene Signal Integration ───────────────
+// These functions evaluate the new gene types and integrate their
+// signals into the overall strategy evaluation.
+
+import {
+    calculateMicrostructureSignals,
+    type MicrostructureResult,
+} from './microstructure-genes';
+import {
+    calculatePriceActionSignals,
+    type PriceActionResult,
+} from './price-action-genes';
+import {
+    calculateCompositeSignals,
+    type CompositeResult,
+} from './composite-functions';
+import {
+    evaluateDCGene,
+    type DCSignalResult,
+} from './directional-change';
+
+/**
+ * Complete advanced signal evaluation result.
+ * Contains all advanced gene signals for a strategy.
+ */
+export interface AdvancedSignalResults {
+    microstructure: Map<string, MicrostructureResult>;
+    priceAction: Map<string, PriceActionResult>;
+    composite: Map<string, CompositeResult>;
+    dc: Map<string, DCSignalResult>;
+    /** Aggregate bullish/bearish/neutral signal from all advanced genes */
+    aggregateBias: 'bullish' | 'bearish' | 'neutral';
+    /** 0-1 confidence from advanced genes */
+    advancedConfidence: number;
+}
+
+/**
+ * Calculate all advanced gene signals for a strategy.
+ * This is the central integration point — called by the main
+ * evaluateStrategy function to add advanced signal data.
+ */
+export function calculateAdvancedSignals(
+    dna: StrategyDNA,
+    candles: OHLCV[],
+): AdvancedSignalResults {
+    const results: AdvancedSignalResults = {
+        microstructure: new Map(),
+        priceAction: new Map(),
+        composite: new Map(),
+        dc: new Map(),
+        aggregateBias: 'neutral',
+        advancedConfidence: 0,
+    };
+
+    let bullishSignals = 0;
+    let bearishSignals = 0;
+    let totalSignals = 0;
+
+    // Microstructure genes
+    if (dna.microstructureGenes && dna.microstructureGenes.length > 0) {
+        results.microstructure = calculateMicrostructureSignals(dna.microstructureGenes, candles);
+        for (const r of results.microstructure.values()) {
+            totalSignals++;
+            if (r.detected) {
+                if (r.currentValue > 60) bullishSignals++;
+                else if (r.currentValue < 40) bearishSignals++;
+            }
+        }
+    }
+
+    // Price action genes
+    if (dna.priceActionGenes && dna.priceActionGenes.length > 0) {
+        results.priceAction = calculatePriceActionSignals(dna.priceActionGenes, candles);
+        for (const r of results.priceAction.values()) {
+            totalSignals++;
+            if (r.detected) {
+                if (r.direction === 'bullish') bullishSignals++;
+                else if (r.direction === 'bearish') bearishSignals++;
+            }
+        }
+    }
+
+    // Composite genes
+    if (dna.compositeGenes && dna.compositeGenes.length > 0) {
+        results.composite = calculateCompositeSignals(dna.compositeGenes, candles);
+        for (const r of results.composite.values()) {
+            totalSignals++;
+            if (r.currentValue > 60) bullishSignals++;
+            else if (r.currentValue < 40) bearishSignals++;
+        }
+    }
+
+    // Directional Change genes
+    if (dna.dcGenes && dna.dcGenes.length > 0) {
+        for (const dcGene of dna.dcGenes) {
+            const dcResult = evaluateDCGene(dcGene, candles);
+            if (dcResult) {
+                results.dc.set(dcGene.id, dcResult);
+                totalSignals++;
+                if (dcResult.signalTriggered) {
+                    if (dcResult.currentValue > 60) bullishSignals++;
+                    else if (dcResult.currentValue < 40) bearishSignals++;
+                }
+            }
+        }
+    }
+
+    // Aggregate bias
+    if (bullishSignals > bearishSignals) {
+        results.aggregateBias = 'bullish';
+    } else if (bearishSignals > bullishSignals) {
+        results.aggregateBias = 'bearish';
+    }
+
+    // Confidence: what fraction of advanced signals agree with the majority?
+    if (totalSignals > 0) {
+        const agreeing = Math.max(bullishSignals, bearishSignals);
+        results.advancedConfidence = Math.round((agreeing / totalSignals) * 100) / 100;
+    }
+
+    return results;
+}

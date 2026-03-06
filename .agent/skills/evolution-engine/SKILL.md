@@ -71,6 +71,21 @@ Every trading strategy is encoded as a `StrategyDNA` genome. This is the **funda
 | `mutationHistory` | Human-readable log of mutations applied |
 | `lastEvaluated` | Timestamp of last evaluation |
 
+#### 6. Advanced Gene Families (Phase 9)
+
+Optional advanced gene arrays extend the standard genome:
+
+| Gene Family | Module | What It Enables |
+|-------------|--------|-----------------|
+| `microstructureGenes` | `microstructure-genes.ts` | Volume Profile POC, Volume Acceleration, Candle Anatomy, Range Expansion |
+| `priceActionGenes` | `price-action-genes.ts` | 10 candlestick formations, structural breaks, swing sequences |
+| `compositeFunctionGenes` | `composite-functions.ts` | Mathematical indicator evolution (9 ops × 4 normalizations) |
+| `confluenceGenes` | _(future)_ | Multi-timeframe confluence signals |
+| `directionalChangeGenes` | `directional-change.ts` | Event-based DC analysis (θ reversal threshold) |
+
+**40% injection rate**: `generateRandomStrategy()` adds advanced genes 40% of the time.
+**Novelty bonus**: Up to +8 fitness points for strategies using advanced gene families.
+
 ---
 
 ## 🔄 Evolution Pipeline (Per-Island)
@@ -111,6 +126,9 @@ Every trading strategy is encoded as a `StrategyDNA` genome. This is the **funda
 │  11. FORM Generation N+1 → REPEAT                       │
 │                                                         │
 │  PARALLEL: Run 4-Gate Validation on top 3 candidates    │
+│                                                         │
+│  BACKTEST: Use quickFitness() for rapid evaluation      │
+│     └─ IndicatorCache shared across population (PFLM)  │
 └─────────────────────────────────────────────────────────┘
 ```
 
@@ -226,13 +244,28 @@ After sufficient trades (≥30), top 3 candidates per generation are tested:
 ---
 
 ## 📂 Key Files
-- `src/types/index.ts` → StrategyDNA, IndicatorGene, SignalRule, RiskGenes, MarketRegime
+- `src/types/index.ts` → StrategyDNA, IndicatorGene, SignalRule, RiskGenes, MarketRegime, Advanced Gene types
 - `src/types/trading-slot.ts` → TradingSlot (slotId source)
-- `src/lib/engine/strategy-dna.ts` → Genome operations (create, crossover, mutate)
-- `src/lib/engine/evaluator.ts` → Fitness scoring with complexity penalty
+- `src/lib/engine/strategy-dna.ts` → Genome operations (create, crossover, mutate) + advanced gene integration
+- `src/lib/engine/evaluator.ts` → Fitness scoring with complexity penalty + novelty bonus
 - `src/lib/engine/evolution.ts` → GA controller (adaptive mutation, Strategy Memory, diversity)
 - `src/lib/engine/brain.ts` → Single-island lifecycle + 4-Gate validation
 - `src/lib/engine/island.ts` → Island-scoped evolution container
 - `src/lib/engine/cortex.ts` → Multi-island orchestrator
+- `src/lib/engine/backtester.ts` → Historical simulation + IndicatorCache (PFLM)
+- `src/lib/engine/market-simulator.ts` → Realistic execution modeling
 
 See `references/dna-schema.md` for the complete DNA field reference.
+
+---
+
+## 🔗 Cross-References
+
+| Related Skill | Relationship | When to Co-Activate |
+|--------------|-------------|---------------------|
+| `backtesting-simulation` | Consumer | Evolution uses `quickFitness()` / `batchBacktest()` for population evaluation |
+| `performance-analysis` | Producer | Evaluator scores feed directly into GA selection |
+| `anti-overfitting-validation` | Post-processor | Top candidates go through 4-Gate validation |
+| `meta-evolution` | Controller | GA² HyperDNA controls evolution parameters per-island |
+| `risk-management` | Constraint | Risk genes bounded by 8 hardcoded safety rails |
+| `learner-conventions` | Standard | All code must follow project conventions |

@@ -1309,3 +1309,657 @@ body::before {
   font-family: var(--font-mono);
   font-weight: 600;
 }
+
+/* ═══════════════════════════════════════════════════════════════ */
+/* PIPELINE VISUALIZATION — Phase 8                              */
+/* ═══════════════════════════════════════════════════════════════ */
+
+/* ─── Pipeline Flow Container ───────────────────────────────── */
+
+.pipeline-flow {
+  display: flex;
+  align-items: stretch;
+  gap: 0;
+  overflow-x: auto;
+  padding: 12px 4px;
+  scroll-snap-type: x mandatory;
+}
+
+/* ─── Pipeline Stage Card ───────────────────────────────────── */
+
+.pipeline-stage {
+  flex: 1;
+  min-width: 120px;
+  padding: 14px 12px;
+  border-radius: var(--radius-md);
+  background: var(--bg-card);
+  border: 1px solid var(--glass-border);
+  text-align: center;
+  transition: all var(--transition-base);
+  position: relative;
+  scroll-snap-align: start;
+}
+
+.pipeline-stage:hover {
+  background: var(--bg-card-hover);
+  border-color: var(--glass-border-hover);
+  transform: translateY(-2px);
+}
+
+.pipeline-stage .stage-icon {
+  font-size: 1.3rem;
+  margin-bottom: 6px;
+}
+
+.pipeline-stage .stage-title {
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin-bottom: 8px;
+}
+
+.pipeline-stage .stage-stats {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.pipeline-stage .stage-stat {
+  font-size: 0.65rem;
+  font-family: var(--font-mono);
+  color: var(--text-muted);
+}
+
+.pipeline-stage .stage-stat .stat-highlight {
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+/* Stage States */
+.pipeline-stage.stage-idle {
+  border-color: rgba(100, 116, 139, 0.15);
+  opacity: 0.6;
+}
+
+.pipeline-stage.stage-idle .stage-title {
+  color: var(--text-muted);
+}
+
+.pipeline-stage.stage-active {
+  border-color: rgba(99, 102, 241, 0.35);
+  box-shadow: 0 0 20px rgba(99, 102, 241, 0.08), inset 0 0 20px rgba(99, 102, 241, 0.03);
+}
+
+.pipeline-stage.stage-active .stage-title {
+  color: var(--accent-primary);
+}
+
+.pipeline-stage.stage-active::after {
+  content: '';
+  position: absolute;
+  inset: -1px;
+  border-radius: var(--radius-md);
+  border: 1px solid rgba(99, 102, 241, 0.3);
+  animation: pulse-glow 2s ease-in-out infinite;
+  pointer-events: none;
+}
+
+.pipeline-stage.stage-complete {
+  border-color: rgba(52, 211, 153, 0.25);
+}
+
+.pipeline-stage.stage-complete .stage-title {
+  color: var(--success);
+}
+
+.pipeline-stage.stage-failed {
+  border-color: rgba(244, 63, 94, 0.25);
+}
+
+.pipeline-stage.stage-failed .stage-title {
+  color: var(--danger);
+}
+
+/* ─── Pipeline Connector Arrow ──────────────────────────────── */
+
+.pipeline-connector {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  min-width: 32px;
+  position: relative;
+}
+
+.pipeline-connector .connector-line {
+  width: 100%;
+  height: 2px;
+  background: rgba(99, 115, 171, 0.15);
+  position: relative;
+  overflow: hidden;
+}
+
+.pipeline-connector .connector-line::after {
+  content: '›';
+  position: absolute;
+  right: -4px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 0.9rem;
+  color: var(--text-muted);
+  line-height: 1;
+}
+
+.pipeline-connector.flowing .connector-line {
+  background: rgba(99, 102, 241, 0.2);
+}
+
+@keyframes connectorFlow {
+  0% {
+    transform: translateX(-100%);
+  }
+
+  100% {
+    transform: translateX(200%);
+  }
+}
+
+.pipeline-connector.flowing .connector-line::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 50%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, var(--accent-primary), transparent);
+  animation: connectorFlow 1.5s linear infinite;
+}
+
+/* ─── Validation Gate Bar ───────────────────────────────────── */
+
+.gate-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 0;
+}
+
+.gate-bar .gate-name {
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  min-width: 85px;
+  white-space: nowrap;
+}
+
+.gate-bar .gate-track {
+  flex: 1;
+  height: 8px;
+  background: rgba(99, 115, 171, 0.08);
+  border-radius: 4px;
+  overflow: hidden;
+  position: relative;
+}
+
+.gate-bar .gate-fill {
+  height: 100%;
+  border-radius: 4px;
+  transition: width 800ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.gate-bar .gate-fill.pass {
+  background: var(--gradient-emerald);
+}
+
+.gate-bar .gate-fill.fail {
+  background: var(--gradient-rose);
+}
+
+.gate-bar .gate-fill.pending {
+  background: var(--gradient-amber);
+}
+
+.gate-bar .gate-badge {
+  font-size: 0.6rem;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 4px;
+  text-transform: uppercase;
+  min-width: 36px;
+  text-align: center;
+  letter-spacing: 0.04em;
+}
+
+.gate-bar .gate-badge.badge-pass {
+  background: rgba(52, 211, 153, 0.12);
+  color: var(--success);
+}
+
+.gate-bar .gate-badge.badge-fail {
+  background: rgba(244, 63, 94, 0.12);
+  color: var(--danger);
+}
+
+.gate-bar .gate-badge.badge-pending {
+  background: rgba(251, 191, 36, 0.12);
+  color: var(--warning);
+}
+
+/* ─── Regime Heatmap ────────────────────────────────────────── */
+
+.regime-heatmap {
+  display: grid;
+  gap: 3px;
+}
+
+.regime-heatmap-cell {
+  border-radius: var(--radius-sm);
+  padding: 8px 6px;
+  text-align: center;
+  transition: all var(--transition-fast);
+  cursor: pointer;
+  border: 1px solid transparent;
+  min-height: 50px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+}
+
+.regime-heatmap-cell:hover {
+  transform: scale(1.05);
+  border-color: var(--glass-border-hover);
+  z-index: 2;
+  position: relative;
+}
+
+.regime-heatmap-cell .cell-value {
+  font-size: 0.85rem;
+  font-weight: 700;
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+.regime-heatmap-cell .cell-label {
+  font-size: 0.55rem;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  opacity: 0.7;
+}
+
+/* ─── Roster Entry Row ──────────────────────────────────────── */
+
+.roster-entry {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  border-radius: var(--radius-sm);
+  transition: background var(--transition-fast);
+  border-bottom: 1px solid rgba(99, 115, 171, 0.06);
+}
+
+.roster-entry:last-child {
+  border-bottom: none;
+}
+
+.roster-entry:hover {
+  background: rgba(99, 102, 241, 0.04);
+}
+
+.roster-entry .roster-state {
+  font-size: 1rem;
+  flex-shrink: 0;
+  width: 24px;
+  text-align: center;
+}
+
+.roster-entry .roster-name {
+  flex: 1;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.roster-entry .roster-regime {
+  font-size: 0.6rem;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 4px;
+  background: rgba(99, 102, 241, 0.1);
+  color: var(--accent-primary);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+}
+
+.roster-entry .roster-confidence {
+  font-size: 0.75rem;
+  font-weight: 700;
+  font-family: var(--font-mono);
+  min-width: 32px;
+  text-align: right;
+}
+
+/* ─── Pipeline Page Nav Tab ─────────────────────────────────── */
+
+.nav-tabs {
+  display: flex;
+  gap: 2px;
+  padding: 3px;
+  background: rgba(14, 17, 30, 0.6);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--glass-border);
+}
+
+.nav-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  border: none;
+  background: transparent;
+  border-radius: var(--radius-sm);
+  font-family: var(--font-sans);
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  text-decoration: none;
+}
+
+.nav-tab.active {
+  background: rgba(99, 102, 241, 0.15);
+  color: var(--accent-primary);
+}
+
+.nav-tab:hover:not(.active) {
+  color: var(--text-secondary);
+}
+
+/* ─── Pipeline Page Responsive ──────────────────────────────── */
+
+@media (max-width: 768px) {
+  .pipeline-flow {
+    flex-direction: column;
+  }
+
+  .pipeline-connector {
+    width: auto;
+    height: 24px;
+    min-width: auto;
+  }
+
+  .pipeline-connector .connector-line {
+    width: 2px;
+    height: 100%;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════ */
+/* STRATEGY ARCHAEOLOGY — Phase 8.5                              */
+/* ═══════════════════════════════════════════════════════════════ */
+
+/* ─── Gene Lineage Tree ─────────────────────────────────────── */
+
+.lineage-tree-container {
+  position: relative;
+  width: 100%;
+  overflow-x: auto;
+  padding: 8px 0;
+}
+
+.lineage-node {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.lineage-node:hover {
+  transform: scale(1.08);
+}
+
+.lineage-node .node-circle {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.65rem;
+  font-weight: 700;
+  font-family: var(--font-mono);
+  border: 2px solid;
+  transition: all var(--transition-fast);
+}
+
+.lineage-node .node-circle.alive {
+  border-color: var(--success);
+  background: rgba(52, 211, 153, 0.1);
+  color: var(--success);
+}
+
+.lineage-node .node-circle.dead {
+  border-color: var(--text-muted);
+  background: rgba(100, 116, 139, 0.06);
+  color: var(--text-muted);
+  opacity: 0.5;
+}
+
+.lineage-node .node-circle.seeded {
+  border-color: var(--accent-primary);
+  background: rgba(99, 102, 241, 0.1);
+  color: var(--accent-primary);
+}
+
+.lineage-node .node-circle.champion {
+  border-color: var(--warning);
+  background: rgba(251, 191, 36, 0.12);
+  color: var(--warning);
+  box-shadow: 0 0 12px rgba(251, 191, 36, 0.2);
+}
+
+.lineage-node .node-name {
+  font-size: 0.55rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  max-width: 60px;
+  text-align: center;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.lineage-node .node-fitness {
+  font-size: 0.55rem;
+  font-family: var(--font-mono);
+  font-weight: 600;
+}
+
+/* ─── Gene Survival Heatmap ─────────────────────────────────── */
+
+.survival-heatmap {
+  display: grid;
+  gap: 2px;
+}
+
+.survival-cell {
+  border-radius: 3px;
+  min-height: 26px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all var(--transition-fast);
+  cursor: pointer;
+  position: relative;
+}
+
+.survival-cell:hover {
+  transform: scale(1.15);
+  z-index: 5;
+  box-shadow: 0 0 8px rgba(99, 102, 241, 0.3);
+}
+
+.survival-cell .cell-inner {
+  font-size: 0.55rem;
+  font-family: var(--font-mono);
+  font-weight: 600;
+  opacity: 0.9;
+}
+
+@keyframes persistGlow {
+
+  0%,
+  100% {
+    box-shadow: 0 0 4px rgba(52, 211, 153, 0.3);
+  }
+
+  50% {
+    box-shadow: 0 0 10px rgba(52, 211, 153, 0.5);
+  }
+}
+
+.survival-cell.persistent {
+  animation: persistGlow 3s ease-in-out infinite;
+  border: 1px solid rgba(52, 211, 153, 0.3);
+}
+
+.survival-row-label {
+  font-size: 0.6rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  padding: 0 6px;
+  white-space: nowrap;
+}
+
+.survival-col-label {
+  font-size: 0.55rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-align: center;
+  padding: 2px 0;
+  font-family: var(--font-mono);
+}
+
+/* ─── Decision Explainer ────────────────────────────────────── */
+
+.decision-card {
+  padding: 14px 16px;
+  border-radius: var(--radius-md);
+  background: var(--bg-card);
+  border: 1px solid var(--glass-border);
+  margin-bottom: 10px;
+  transition: all var(--transition-base);
+}
+
+.decision-card:hover {
+  border-color: var(--glass-border-hover);
+}
+
+.decision-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+.decision-regime-change {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.decision-regime-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 10px;
+  border-radius: 6px;
+  font-size: 0.7rem;
+  font-weight: 600;
+}
+
+.decision-time {
+  font-size: 0.65rem;
+  font-family: var(--font-mono);
+  color: var(--text-muted);
+}
+
+.decision-strategy {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-radius: var(--radius-sm);
+  background: rgba(52, 211, 153, 0.06);
+  border: 1px solid rgba(52, 211, 153, 0.15);
+  margin-bottom: 10px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--success);
+}
+
+.decision-reasons {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  padding-left: 8px;
+  border-left: 2px solid rgba(99, 115, 171, 0.1);
+}
+
+.decision-reason {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 0 5px 10px;
+  font-size: 0.72rem;
+  color: var(--text-secondary);
+  position: relative;
+}
+
+.decision-reason::before {
+  content: '';
+  position: absolute;
+  left: -9px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: rgba(99, 115, 171, 0.3);
+}
+
+.decision-reason .reason-icon {
+  flex-shrink: 0;
+  width: 16px;
+  text-align: center;
+  font-size: 0.75rem;
+}
+
+.decision-reason .reason-value {
+  font-family: var(--font-mono);
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .decision-regime-change {
+    flex-wrap: wrap;
+    font-size: 0.7rem;
+  }
+}

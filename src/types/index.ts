@@ -151,12 +151,22 @@ export interface StrategyDNA {
   riskGenes: RiskGenes;
   directionBias: TradeDirection | null; // null = both directions
   status: StrategyStatus;
+
+  // ─── Advanced Genes (Phase 9) ────────────────────────────
+  // Optional arrays — backward compatible with all existing strategies
+  microstructureGenes?: MicrostructureGene[];        // Volume profile, candle anatomy, absorption
+  priceActionGenes?: PriceActionGene[];              // Candlestick patterns, structural breaks
+  compositeGenes?: CompositeFunctionGene[];          // Mathematical indicator relationships
+  confluenceGenes?: TimeframeConfluenceGene[];       // Multi-TF alignment
+  dcGenes?: DirectionalChangeGene[];                 // Event-based directional changes
+
   metadata: {
     mutationHistory: string[];
     fitnessScore: number;
     tradeCount: number;
     lastEvaluated: number | null;
     validation: StrategyValidation | null;
+    structuralComplexity?: number;  // 0-1 measure of genome structural diversity
   };
 }
 
@@ -683,4 +693,441 @@ export interface BinanceMiniTickerEvent {
   l: string;                     // Low price
   v: string;                     // Total traded base asset volume
   q: string;                     // Total traded quote asset volume
+}
+
+// ─── Strategy Roster ─────────────────────────────────────────
+
+export enum RosterState {
+  ACTIVE = 'ACTIVE',
+  HIBERNATING = 'HIBERNATING',
+  RETIRED = 'RETIRED',
+}
+
+/**
+ * A validated strategy banked in the Roster.
+ * Tracks per-regime performance and activation/hibernation lifecycle.
+ */
+export interface RosterEntry {
+  strategy: StrategyDNA;
+  regimePerformance: Record<MarketRegime, PerformanceMetrics | null>;
+  bestRegime: MarketRegime;                     // Regime where it performs best
+  regimeScores: Record<MarketRegime, number>;   // Confidence-weighted score per regime
+  state: RosterState;
+  activationCount: number;
+  totalTradesWhileActive: number;
+  totalPnlContribution: number;                 // Cumulative PnL across all activations
+  lastActivated: number;                        // Timestamp
+  lastHibernated: number | null;
+  addedAt: number;
+  confidenceScore: number;                      // 0-100, increases with successful activations
+}
+
+export interface RosterSnapshot {
+  totalStrategies: number;
+  activeStrategy: RosterEntry | null;
+  hibernatingStrategies: RosterEntry[];
+  retiredCount: number;
+  regimeCoverage: Record<MarketRegime, number>; // Count of strategies per regime
+  bestFitnessPerRegime: Record<MarketRegime, number>;
+  totalRosterPnl: number;
+}
+
+// ─── Experience Replay ───────────────────────────────────────
+
+export enum PatternType {
+  INDICATOR_COMBO = 'INDICATOR_COMBO',
+  RISK_PROFILE = 'RISK_PROFILE',
+  SIGNAL_CONFIG = 'SIGNAL_CONFIG',
+  TIMING_PATTERN = 'TIMING_PATTERN',
+  MICROSTRUCTURE_COMBO = 'MICROSTRUCTURE_COMBO',     // Phase 9: Microstructure gene patterns
+  COMPOSITE_FUNCTION = 'COMPOSITE_FUNCTION',         // Phase 9: Mathematical function patterns
+  PRICE_ACTION_PATTERN = 'PRICE_ACTION_PATTERN',     // Phase 9: Price action patterns
+  DIRECTIONAL_CHANGE = 'DIRECTIONAL_CHANGE',         // Phase 9: DC event patterns
+}
+
+/**
+ * A proven gene pattern extracted from validated strategies.
+ * Used to seed new genesis generations with institutional knowledge.
+ */
+export interface ExperiencePattern {
+  id: string;
+  type: PatternType;
+  regime: MarketRegime;
+  indicatorTypes: IndicatorType[];              // Indicators in this combo
+  indicatorGenes: IndicatorGene[];              // Full gene configs
+  riskProfile: RiskGenes | null;                // Null if not a risk pattern
+  avgFitness: number;                           // Average fitness of strategies with this pattern
+  peakFitness: number;                          // Best ever fitness
+  sampleCount: number;                          // How many strategies contributed
+  confidenceScore: number;                      // 0-1, Bayesian updated
+  successRate: number;                          // % of validations passed
+  createdAt: number;
+  lastValidated: number;
+  sourceStrategyIds: string[];                  // IDs of contributing strategies
+}
+
+export interface ExperienceMemorySnapshot {
+  totalPatterns: number;
+  patternsByRegime: Record<MarketRegime, number>;
+  highConfidencePatterns: number;               // confidence > 0.7
+  avgPatternFitness: number;
+  oldestPattern: number;                        // Timestamp
+  newestPattern: number;
+}
+
+// ─── Advanced Gene Types (Phase 9) ───────────────────────────
+// These gene types allow the GA to evolve BEYOND standard indicator
+// parameter tuning. They enable structural innovation — the AI can
+// discover strategies involving price action, microstructure analysis,
+// mathematical function composition, and event-based price analysis.
+
+// ── Microstructure Gene Types ────────────────────────────────
+
+export enum MicrostructureGeneType {
+  VOLUME_PROFILE = 'VOLUME_PROFILE',         // Volume distribution across price levels
+  VOLUME_ACCELERATION = 'VOLUME_ACCELERATION', // Rate of change of volume
+  CANDLE_ANATOMY = 'CANDLE_ANATOMY',         // Body:wick ratios, shadow dominance
+  RANGE_EXPANSION = 'RANGE_EXPANSION',       // True range expansion/contraction sequences
+  ABSORPTION = 'ABSORPTION',                 // Large candle + small net movement
+}
+
+export interface MicrostructureGene {
+  id: string;
+  type: MicrostructureGeneType;
+  lookbackPeriod: number;                     // 3-50 candles to analyze
+  params: {
+    // Volume Profile
+    priceBuckets?: number;                    // 5-20 price level divisions
+    concentrationThreshold?: number;          // 0.3-0.8 volume concentration threshold
+
+    // Volume Acceleration
+    accelerationPeriod?: number;              // 2-10 rate of change lookback
+    spikeMultiplier?: number;                 // 1.5-5.0 volume spike detection threshold
+
+    // Candle Anatomy
+    bodyRatioThreshold?: number;              // 0.1-0.9 minimum body:total ratio
+    shadowDominance?: 'upper' | 'lower' | 'balanced'; // Which shadow to focus on
+    dominanceThreshold?: number;              // 0.3-0.8 shadow dominance ratio
+
+    // Range Expansion
+    expansionMultiplier?: number;             // 1.2-3.0 ATR multiple for expansion detection
+    contractionRatio?: number;                // 0.3-0.7 range contraction ratio
+    sequenceLength?: number;                  // 2-5 consecutive bars required
+
+    // Absorption
+    candleSizeMultiplier?: number;            // 1.5-4.0 relative to avg candle size
+    maxNetMovementPercent?: number;           // 0.1-0.5 max price change despite large candle
+  };
+}
+
+// ── Price Action Pattern Types ───────────────────────────────
+
+export enum PriceActionPatternType {
+  CANDLESTICK_PATTERN = 'CANDLESTICK_PATTERN',   // Engulfing, Doji, Hammer, etc.
+  STRUCTURAL_BREAK = 'STRUCTURAL_BREAK',         // Break of N-bar high/low
+  SWING_SEQUENCE = 'SWING_SEQUENCE',             // HH/HL or LH/LL sequences
+  COMPRESSION = 'COMPRESSION',                   // Narrowing range → breakout
+  GAP_ANALYSIS = 'GAP_ANALYSIS',                 // Price gaps relative to ATR
+}
+
+export enum CandlestickFormation {
+  ENGULFING = 'ENGULFING',                        // Bullish/bearish engulfing
+  DOJI = 'DOJI',                                  // Indecision candle
+  HAMMER = 'HAMMER',                              // Bottom reversal
+  SHOOTING_STAR = 'SHOOTING_STAR',                // Top reversal
+  MORNING_STAR = 'MORNING_STAR',                  // 3-bar bottom reversal
+  EVENING_STAR = 'EVENING_STAR',                  // 3-bar top reversal
+  THREE_SOLDIERS = 'THREE_SOLDIERS',              // 3 consecutive bullish
+  THREE_CROWS = 'THREE_CROWS',                    // 3 consecutive bearish
+  PINBAR = 'PINBAR',                              // Long wick rejection
+  INSIDE_BAR = 'INSIDE_BAR',                      // Bar within previous bar
+}
+
+export interface PriceActionGene {
+  id: string;
+  type: PriceActionPatternType;
+  params: {
+    // Candlestick Pattern
+    formation?: CandlestickFormation;             // Which formation to detect
+    bodyRatioMin?: number;                        // 0.0-0.9 parameterized detection thresholds
+    wickRatioMin?: number;                        // 0.0-0.9 — these EVOLVE, not hardcoded
+    confirmationBars?: number;                    // 1-3 bars after pattern for confirmation
+
+    // Structural Break
+    breakLookback?: number;                       // 5-50 bars lookback for high/low
+    breakDirection?: 'bullish' | 'bearish' | 'both'; // Which direction to detect
+    retestRequired?: boolean;                     // Require price to retest break level
+
+    // Swing Sequence
+    swingLookback?: number;                       // 3-20 bars for swing point detection
+    sequenceLength?: number;                      // 2-5 swing points required
+    minSwingPercent?: number;                     // 0.1-2.0% minimum swing size
+
+    // Compression
+    compressionBars?: number;                     // 3-20 bars of narrowing range
+    compressionRatio?: number;                    // 0.3-0.8 max range vs initial range
+    breakoutMultiplier?: number;                  // 1.2-3.0 ATR multiple for breakout confirm
+
+    // Gap Analysis
+    gapMinATR?: number;                           // 0.3-2.0 minimum gap size in ATR units
+    gapDirection?: 'up' | 'down' | 'both';        // Which gap direction
+    fillExpected?: boolean;                       // Expect gap to fill or continue
+  };
+}
+
+// ── Multi-Timeframe Confluence ────────────────────────────────
+
+export enum ConfluenceType {
+  TREND_ALIGNMENT = 'TREND_ALIGNMENT',           // Primary vs Higher TF trend match
+  MOMENTUM_CONFLUENCE = 'MOMENTUM_CONFLUENCE',   // Momentum agreement across TFs
+  VOLATILITY_MATCH = 'VOLATILITY_MATCH',         // Volatility state comparison
+  STRUCTURE_CONFLUENCE = 'STRUCTURE_CONFLUENCE',  // S/R alignment between TFs
+}
+
+export interface TimeframeConfluenceGene {
+  id: string;
+  type: ConfluenceType;
+  primaryTimeframe: Timeframe;                    // The timeframe for signal generation
+  higherTimeframe: Timeframe;                     // The timeframe for context/confirmation
+  params: {
+    // Trend Alignment
+    trendIndicator?: IndicatorType;               // Which indicator defines "trend" (EMA, SMA, ADX)
+    trendPeriod?: number;                         // Period for trend determination
+    alignmentRequired?: boolean;                  // Must trends agree to enter?
+
+    // Momentum Confluence
+    momentumIndicator?: IndicatorType;            // RSI, MACD, StochRSI
+    momentumPeriod?: number;                      // Period for momentum calc
+    momentumThreshold?: number;                   // Threshold for "bullish" vs "bearish"
+
+    // Volatility Match
+    volLookback?: number;                         // ATR lookback period
+    volExpansionThreshold?: number;               // 1.2-3.0 expansion detection
+    requireLowVolHigherTF?: boolean;              // Trade only when higher TF is calm
+
+    // Structure Confluence
+    structureLookback?: number;                   // Bars to find S/R on higher TF
+    proximityPercent?: number;                    // 0.1-1.0% proximity to S/R level
+  };
+}
+
+// ── Composite Function Genes (Mathematical Evolution) ────────
+
+export enum CompositeOperation {
+  ADD = 'ADD',                                    // A + B
+  SUBTRACT = 'SUBTRACT',                          // A - B
+  MULTIPLY = 'MULTIPLY',                          // A * B
+  DIVIDE = 'DIVIDE',                              // A / B (safe division)
+  MAX = 'MAX',                                    // max(A, B)
+  MIN = 'MIN',                                    // min(A, B)
+  ABS_DIFF = 'ABS_DIFF',                          // |A - B|
+  RATIO = 'RATIO',                                // A / (A + B)
+  NORMALIZE_DIFF = 'NORMALIZE_DIFF',              // (A - B) / (A + B + ε)
+}
+
+export interface CompositeFunctionGene {
+  id: string;
+  operation: CompositeOperation;                   // The mathematical function
+  inputA: {
+    sourceType: 'indicator' | 'microstructure' | 'price_action' | 'raw_price';
+    sourceId?: string;                             // ID of the source gene
+    indicatorType?: IndicatorType;                 // If sourceType is 'indicator'
+    period?: number;                               // Lookback period
+    rawField?: 'close' | 'high' | 'low' | 'open' | 'volume'; // If raw_price
+  };
+  inputB: {
+    sourceType: 'indicator' | 'microstructure' | 'price_action' | 'raw_price';
+    sourceId?: string;
+    indicatorType?: IndicatorType;
+    period?: number;
+    rawField?: 'close' | 'high' | 'low' | 'open' | 'volume';
+  };
+  outputNormalization: 'none' | 'percentile' | 'z_score' | 'min_max';
+  outputPeriod: number;                            // Lookback for normalization (5-50)
+}
+
+// ── Directional Change Genes (Event-Based Price Analysis) ────
+
+export enum DCEventType {
+  UPTURN = 'UPTURN',                               // Price reversed UP by θ%
+  DOWNTURN = 'DOWNTURN',                           // Price reversed DOWN by θ%
+  UPWARD_OVERSHOOT = 'UPWARD_OVERSHOOT',           // Extension beyond upturn point
+  DOWNWARD_OVERSHOOT = 'DOWNWARD_OVERSHOOT',       // Extension beyond downturn point
+}
+
+export interface DCEvent {
+  type: DCEventType;
+  price: number;                                    // Price at event
+  timestamp: number;                                // When event occurred
+  magnitude: number;                                // Size of the move (in %)
+  duration: number;                                 // Candles since last event
+}
+
+export interface DirectionalChangeGene {
+  id: string;
+  theta: number;                                    // 0.1-5.0% — the reversal threshold (EVOLVES)
+  params: {
+    // DC Event Signals
+    signalOn: DCEventType;                          // Which event type triggers signal
+    requiredConsecutive?: number;                   // 1-3 consecutive events required
+
+    // Overshoot Analysis
+    overshootThreshold?: number;                    // 0.5-3.0 — overshoot magnitude filter
+    maxDuration?: number;                           // Max candles for event validity
+
+    // DC-derived indicators
+    trendRatio?: boolean;                           // T = total_upDC_len / total_downDC_len
+    reversalMagnitude?: boolean;                    // R = avg magnitude of DC events
+    oscillationCount?: boolean;                     // How many DC events in lookback
+    lookbackEvents?: number;                        // 5-30 DC events for indicator calc
+  };
+}
+
+// ── Advanced Signal Rule ─────────────────────────────────────
+
+/**
+ * Extended signal rule that can reference any gene type.
+ * Uses sourceType to determine which gene family the signal targets.
+ */
+export interface AdvancedSignalRule {
+  id: string;
+  sourceType: 'indicator' | 'microstructure' | 'price_action' | 'composite' | 'confluence' | 'dc';
+  sourceGeneId: string;                             // ID of the gene to evaluate
+  condition: SignalCondition;
+  threshold: number;
+  secondaryThreshold?: number;
+}
+
+// ─── Trade Forensics (Phase 12) ──────────────────────────────
+
+/**
+ * Phase 12: Types of events that can occur during a trade's lifecycle.
+ * Each represents a meaningful market event while a position is open.
+ */
+export enum TradeEventType {
+  REGIME_CHANGE = 'REGIME_CHANGE',                   // Market regime shifted during trade
+  INDICATOR_SHIFT = 'INDICATOR_SHIFT',               // Key indicator crossed a threshold
+  NEAR_MISS_SL = 'NEAR_MISS_SL',                     // Price came within 15% of stop loss
+  NEAR_MISS_TP = 'NEAR_MISS_TP',                     // Price came within 15% of take profit
+  MAX_ADVERSE_EXCURSION = 'MAX_ADVERSE_EXCURSION',   // New worst drawdown during trade
+  MAX_FAVORABLE_EXCURSION = 'MAX_FAVORABLE_EXCURSION', // New best unrealized PnL
+  DRAWDOWN_SPIKE = 'DRAWDOWN_SPIKE',                 // Drawdown exceeded 50% of SL distance
+  VOLATILITY_SHIFT = 'VOLATILITY_SHIFT',             // ATR changed > 30% from entry
+}
+
+/**
+ * Phase 12: A single timestamped event during a trade's lifecycle.
+ * These events form the "black box recording" of a trade.
+ */
+export interface TradeLifecycleEvent {
+  timestamp: number;
+  candleIndex: number;                               // Which candle (0 = entry candle)
+  type: TradeEventType;
+  severity: number;                                  // 0-1 importance
+  details: {
+    previousValue?: number | string;
+    currentValue?: number | string;
+    threshold?: number;
+    description: string;
+  };
+}
+
+/**
+ * Phase 12: 4-factor causal attribution model.
+ */
+export enum CausalFactorType {
+  STRATEGY_QUALITY = 'STRATEGY_QUALITY',       // Signal accuracy, rule quality
+  MARKET_CONDITIONS = 'MARKET_CONDITIONS',     // Regime favorability, volatility
+  TIMING = 'TIMING',                           // Entry/exit timing quality
+  LUCK = 'LUCK',                               // Residual (unexplained)
+}
+
+/**
+ * Phase 12: Single causal factor contributing to trade outcome.
+ */
+export interface CausalFactor {
+  type: CausalFactorType;
+  contribution: number;                        // -1 to +1 (negative = hurt, positive = helped)
+  confidence: number;                          // 0-1 how sure we are
+  evidence: string;                            // Human-readable explanation
+}
+
+/**
+ * Phase 12: Categories of lessons that the system can learn from trades.
+ */
+export enum TradeLessonType {
+  AVOID_REGIME = 'AVOID_REGIME',                     // This strategy fails in this regime
+  PREFER_REGIME = 'PREFER_REGIME',                   // This strategy excels in this regime
+  TIGHTEN_SL = 'TIGHTEN_SL',                         // SL was too wide for this volatility
+  LOOSEN_SL = 'LOOSEN_SL',                           // SL was hit prematurely
+  IMPROVE_ENTRY = 'IMPROVE_ENTRY',                   // Entry timing was poor
+  IMPROVE_EXIT = 'IMPROVE_EXIT',                     // Exit timing was poor
+  INDICATOR_UNRELIABLE = 'INDICATOR_UNRELIABLE',     // Key indicator diverged from expectation
+  REGIME_TRANSITION_RISK = 'REGIME_TRANSITION_RISK', // Trade was caught in regime change
+}
+
+/**
+ * Phase 12: A structured, actionable lesson extracted from trade forensics.
+ */
+export interface TradeLesson {
+  id: string;
+  tradeId: string;
+  strategyId: string;
+  type: TradeLessonType;
+  regime: MarketRegime;
+  severity: number;                            // 0-1 how impactful
+  description: string;                         // Human-readable lesson
+  actionableAdvice: string;                    // What the GA should do about it
+  confidence: number;                          // 0-1 how reliable this lesson is
+  timestamp: number;
+}
+
+/**
+ * Phase 12: Complete forensic report for a single trade.
+ * Produced by the ForensicAnalyzer after trade close.
+ */
+export interface TradeForensicReport {
+  tradeId: string;
+  strategyId: string;
+  strategyName: string;
+  slotId: string;
+
+  // ── Timeline ──
+  entryTime: number;
+  exitTime: number;
+  durationCandles: number;
+  events: TradeLifecycleEvent[];
+
+  // ── Excursion Analysis ──
+  maxFavorableExcursion: number;               // Best unrealized PnL (%)
+  maxAdverseExcursion: number;                 // Worst unrealized PnL (%)
+  mfeCandle: number;                           // Candle index of MFE
+  maeCandle: number;                           // Candle index of MAE
+  excursionRatio: number;                      // MFE / |MAE| — shows reward:risk realized
+
+  // ── Efficiency Scores ──
+  entryEfficiency: number;                     // 0-100: how close entry was to optimal price
+  exitEfficiency: number;                      // 0-100: how close exit was to MFE
+  holdEfficiency: number;                      // 0-100: captured PnL vs MFE
+
+  // ── Regime Context ──
+  entryRegime: MarketRegime;
+  exitRegime: MarketRegime;
+  regimeChangedDuringTrade: boolean;
+  regimeChangeCount: number;
+
+  // ── Causal Attribution ──
+  causalFactors: CausalFactor[];
+  primaryCause: CausalFactorType;
+
+  // ── Extracted Lessons ──
+  lessons: TradeLesson[];
+
+  // ── Indicators State (entry → exit delta) ──
+  indicatorDelta: Record<string, { atEntry: number; atExit: number; changePercent: number }>;
+
+  // ── Final Outcome ──
+  pnlPercent: number;
+  pnlUSD: number;
+  wasSuccessful: boolean;
 }

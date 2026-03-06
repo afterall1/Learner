@@ -25,24 +25,34 @@ If git is not initialized, manually review the changes discussed in this session
 
 ---
 
-## Step 2: Sync Checklist Audit
+## Step 2: Smart Sync Analysis
 
-Read the sync checklist and verify which documentation needs updating:
+Run the Smart Sync Diff Engine to automatically detect which memory docs need updating:
+
+```
+node memory/scripts/context-fingerprint.js --smart-sync
+```
+
+The tool will:
+1. Compare current source file hashes against the last fingerprint
+2. Show which source files changed (with line count deltas)
+3. Generate a **Memory Update Plan** listing exactly which docs need updating
+4. Display an **Action Checklist** with specific instructions per change
+5. Calculate a **Memory Health Score** (0-100%)
+
+Follow the generated plan for Steps 3-6. If you prefer the manual checklist:
 
 ```
 cat memory/_SYNC_CHECKLIST.md
 ```
 
-Go through each checkbox in the checklist:
-- If the corresponding code was changed this session → update the referenced documentation
-- If not changed → skip that item
-
 **Pay special attention to**:
 - **Type Layer**: `types/index.ts` and `types/trading-slot.ts`
 - **Anti-Overfitting Layer**: `walk-forward.ts`, `monte-carlo.ts`, `regime-detector.ts`, `overfitting-detector.ts`
 - **Island Model Layer**: `island.ts`, `cortex.ts`, `meta-evolution.ts`, `migration.ts`, `capital-allocator.ts`
-- **Core Engine Layer**: `strategy-dna.ts`, `evaluator.ts`, `evolution.ts`, `brain.ts`
-- **Dashboard Layer**: `page.tsx` (panels, components), `globals.css` (design system, animations)
+- **Core Engine Layer**: `strategy-dna.ts`, `evaluator.ts`, `evolution.ts`, `brain.ts`, `signal-engine.ts`, `experience-replay.ts`
+- **Advanced Gene Layer**: `microstructure-genes.ts`, `price-action-genes.ts`, `composite-functions.ts`, `directional-change.ts`
+- **Dashboard Layer**: `page.tsx` (panels, components), `pipeline/page.tsx` (pipeline panels, archaeology), `globals.css` (design system, animations)
 
 ---
 
@@ -137,6 +147,8 @@ If significant architectural changes were made:
 - ADR-002: Anti-Overfitting Pipeline
 - ADR-003: Island Model Architecture
 - ADR-004: Meta-Evolution (GA²)
+- ADR-005: Strategy Archaeology (Explainable AI)
+- ADR-006: Advanced Strategy Genome Architecture
 
 ---
 

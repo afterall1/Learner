@@ -407,3 +407,14 @@ interface OverfittingReport {
 - `src/lib/engine/brain.ts` → 4-Gate pipeline orchestration in validation flow
 - `src/lib/engine/island.ts` → Per-island validation pipeline execution
 - `src/types/index.ts` → All validation interfaces (WalkForwardResult, MonteCarloResult, OverfittingReport, etc.)
+
+---
+
+## 🔗 Cross-References
+
+| Related Skill | Relationship | When to Co-Activate |
+|--------------|-------------|---------------------|
+| `backtesting-simulation` | Data source | Backtest `Trade[]` feeds into WFA/Monte Carlo |
+| `performance-analysis` | Producer | Fitness scores contribute to overfitting composite |
+| `evolution-engine` | Consumer | Validation gates determine strategy promotion/retirement |
+| `risk-management` | Parallel guard | Validation = statistical safety, Risk = capital safety |

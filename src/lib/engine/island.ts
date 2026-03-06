@@ -32,7 +32,16 @@ import { evaluatePerformance, calculateFitnessScore, calculateDeflatedFitness } 
 import { runWalkForwardAnalysis } from './walk-forward';
 import { runMonteCarloPermutation } from './monte-carlo';
 import { detectRegime, classifyTradeRegime, calculateRegimeDiversity } from './regime-detector';
+import { StrategyRoster } from './strategy-roster';
+import { ExperienceReplayMemory } from './experience-replay';
 import { calculateOverfittingScore } from './overfitting-detector';
+import {
+    RegimeIntelligence,
+    type RegimeTransitionForecast,
+} from './regime-intelligence';
+import { TradeForensicsEngine } from './trade-forensics';
+import { ForensicLearningEngine } from './forensic-learning';
+import { calculateATR } from './regime-detector';
 
 // ─── Island Configuration ────────────────────────────────────
 
@@ -70,6 +79,10 @@ export class Island {
     private validatedStrategies: StrategyDNA[] = [];
     private retiredStrategies: StrategyDNA[] = [];
     private tradeRegimeMap: Map<string, MarketRegime> = new Map();
+
+    // ─── Phase 7: Strategy Roster + Experience Replay ─────────
+    private readonly roster: StrategyRoster = new StrategyRoster();
+    private readonly experienceMemory: ExperienceReplayMemory = new ExperienceReplayMemory();
     private currentRegime: MarketRegime | null = null;
     private marketCandles: OHLCV[] = [];
     private allocatedCapital: number = 0;
@@ -80,6 +93,17 @@ export class Island {
     private validationAttempts: number = 0;
     private validationPasses: number = 0;
     private diversityIndexHistory: number[] = [];      // Diversity per generation
+
+    // ─── Phase 11: MRTI — Predictive Regime Intelligence ─────
+    private readonly regimeIntelligence: RegimeIntelligence = new RegimeIntelligence();
+    private lastForecast: RegimeTransitionForecast | null = null;
+    private preWarmedStrategyId: string | null = null;
+
+    // ─── Phase 12: Trade Forensics ─────────────────────────
+    private readonly tradeForensics: TradeForensicsEngine = new TradeForensicsEngine();
+
+    // ─── Phase 12.1: Forensic Learning (Closed Loop) ─────────
+    private readonly forensicLearning: ForensicLearningEngine = new ForensicLearningEngine();
 
     constructor(slot: TradingSlot, config: Partial<IslandConfig> = {}, hyperDna?: HyperDNA) {
         this.slot = slot;
@@ -112,7 +136,11 @@ export class Island {
         this.slot.status = TradingSlotStatus.ACTIVE;
         this.log(LogLevel.INFO, `🏝️ Island [${this.slot.id}] ACTIVATED`);
 
-        const genesis = this.evolutionEngine.createInitialGeneration();
+        // Phase 7: Seed genesis from Experience Replay if available
+        const genesis = this.evolutionEngine.createInitialGeneration(
+            this.experienceMemory,
+            this.currentRegime ?? undefined,
+        );
 
         // Tag all strategies with this island's slot ID
         for (const strategy of genesis.population) {
@@ -125,7 +153,10 @@ export class Island {
         this.activeStrategy = this.candidateStrategies[0];
         this.activeStrategy.status = StrategyStatus.PAPER;
 
-        this.log(LogLevel.EVOLUTION, `Genesis: ${genesis.population.length} strategies for ${this.slot.pair}/${this.slot.timeframe}`, {
+        const seededCount = genesis.population.filter(
+            s => s.metadata.mutationHistory[0]?.startsWith('seeded:'),
+        ).length;
+        this.log(LogLevel.EVOLUTION, `Genesis: ${genesis.population.length} strategies for ${this.slot.pair}/${this.slot.timeframe} (${seededCount} seeded from Replay)`, {
             slotId: this.slot.id,
         });
 
@@ -160,11 +191,103 @@ export class Island {
         try {
             if (candles.length >= 60) {
                 const analysis = detectRegime(candles);
+                const previousRegime = this.currentRegime;
                 this.currentRegime = analysis.currentRegime;
+
+                // Phase 11: Calibrate MRTI on first substantial data
+                if (candles.length >= 200 && !this.regimeIntelligence.isCalibrated()) {
+                    this.regimeIntelligence.calibrate(candles);
+                    this.log(LogLevel.INFO, `🔮 [${this.slot.id}] MRTI calibrated (${this.regimeIntelligence.getMatrixSnapshot().totalTransitions} transitions)`);
+                }
+
+                // Phase 11: Generate regime forecast
+                if (this.regimeIntelligence.isCalibrated()) {
+                    this.lastForecast = this.regimeIntelligence.forecast(candles);
+                    this.handleRegimeForecast(this.lastForecast);
+                }
+
+                // Phase 7: Handle regime transition via Roster
+                if (previousRegime !== null && previousRegime !== this.currentRegime) {
+                    this.handleRegimeTransition(this.currentRegime);
+                }
+
+                // Phase 12: Tick all active trade black boxes
+                if (this.tradeForensics && candles.length > 0) {
+                    const latestCandle = candles[candles.length - 1];
+                    const currentATR = candles.length >= 14 ? calculateATR(candles, 14) : 0;
+                    this.tradeForensics.tickAll(
+                        latestCandle,
+                        this.currentRegime ?? MarketRegime.RANGING,
+                        {}, // Indicators computed at tick level; placeholder for now
+                        currentATR,
+                    );
+                }
             }
         } catch (error) {
             const msg = error instanceof Error ? error.message : 'Unknown error';
             this.log(LogLevel.WARNING, `Regime detection failed: ${msg}`);
+        }
+    }
+
+    /**
+     * Phase 11: Handle MRTI regime transition forecast.
+     * Pre-warms the Roster strategy for the predicted next regime
+     * when transition risk is elevated.
+     */
+    handleRegimeForecast(forecast: RegimeTransitionForecast): void {
+        if (forecast.recommendation === 'PREPARE') {
+            // Pre-warm: identify the best strategy for predicted regime WITHOUT switching
+            const preWarmed = this.roster.preWarmForRegime(forecast.predictedNextRegime);
+            if (preWarmed) {
+                this.preWarmedStrategyId = preWarmed.strategy.id;
+                this.log(LogLevel.INFO,
+                    `🔮 [${this.slot.id}] MRTI PREPARE: Pre-warmed "${preWarmed.strategy.name}" ` +
+                    `for ${forecast.predictedNextRegime} (risk: ${(forecast.transitionRisk * 100).toFixed(0)}%, ` +
+                    `est. ${forecast.estimatedCandlesRemaining} candles remaining)`,
+                );
+            } else {
+                this.preWarmedStrategyId = null;
+                this.log(LogLevel.WARNING,
+                    `🔮 [${this.slot.id}] MRTI PREPARE: No strategy for ${forecast.predictedNextRegime} — evolution needed`,
+                );
+            }
+        } else if (forecast.recommendation === 'SWITCH') {
+            // Proactive switch: transition risk is critical
+            const preWarmed = this.roster.preWarmForRegime(forecast.predictedNextRegime);
+            if (preWarmed) {
+                // Proactively switch to the predicted regime's strategy
+                this.handleRegimeTransition(forecast.predictedNextRegime);
+                this.log(LogLevel.EVOLUTION,
+                    `🔮 [${this.slot.id}] MRTI SWITCH: Proactively switched to "${preWarmed.strategy.name}" ` +
+                    `for predicted ${forecast.predictedNextRegime} (risk: ${(forecast.transitionRisk * 100).toFixed(0)}%)`,
+                );
+            }
+        }
+        // HOLD: no action needed, current strategy remains active
+    }
+
+    /**
+     * Phase 7: Handle a market regime transition.
+     * If the Roster has a proven strategy for the new regime, activate it
+     * instantly. Otherwise, continue with evolution.
+     */
+    handleRegimeTransition(newRegime: MarketRegime): void {
+        const rosterSwitch = this.roster.handleRegimeTransition(newRegime);
+
+        if (rosterSwitch !== null) {
+            // Roster has a proven strategy — activate it!
+            this.activeStrategy = rosterSwitch.strategy;
+            this.state = BrainState.TRADING;
+            this.preWarmedStrategyId = null; // Clear pre-warm
+            this.log(LogLevel.EVOLUTION,
+                `🔄 [${this.slot.id}] REGIME → ${newRegime}: Roster activated "${rosterSwitch.strategy.name}" ` +
+                `(confidence: ${rosterSwitch.confidenceScore}, activations: ${rosterSwitch.activationCount})`,
+            );
+        } else {
+            // No Roster strategy available — evolution must find one
+            this.log(LogLevel.WARNING,
+                `🔄 [${this.slot.id}] REGIME → ${newRegime}: No Roster strategy available — evolving`,
+            );
         }
     }
 
@@ -190,11 +313,42 @@ export class Island {
             }
         }
 
+        // Phase 12: Trade Forensics — open black box on entry, analyze on close
+        const tradeRegime = this.tradeRegimeMap.get(trade.id) ?? MarketRegime.RANGING;
+        if (trade.status !== TradeStatus.CLOSED && !this.tradeForensics.hasActiveBlackBox(trade.id)) {
+            // Trade just opened — start recording
+            const currentATR = this.marketCandles.length >= 14
+                ? calculateATR(this.marketCandles, 14)
+                : 0;
+            this.tradeForensics.openBlackBox(
+                trade,
+                tradeRegime,
+                trade.indicators ?? {},
+                currentATR,
+            );
+        }
+
         if (trade.status === TradeStatus.CLOSED) {
             const pnlStr = trade.pnlPercent !== null
                 ? `${trade.pnlPercent > 0 ? '+' : ''}${(trade.pnlPercent * 100).toFixed(2)}%`
                 : 'N/A';
             this.log(LogLevel.TRADE, `[${this.slot.id}] Trade closed: ${trade.symbol} → ${pnlStr}`);
+
+            // Phase 12: Close black box and generate forensic report
+            const forensicReport = this.tradeForensics.closeAndAnalyze(
+                trade,
+                trade.indicators ?? {},
+            );
+            if (forensicReport && forensicReport.lessons.length > 0) {
+                this.log(LogLevel.INFO,
+                    `🔍 [${this.slot.id}] Forensics: ${forensicReport.lessons.length} lessons extracted ` +
+                    `(entry eff: ${forensicReport.entryEfficiency}%, exit eff: ${forensicReport.exitEfficiency}%, ` +
+                    `cause: ${forensicReport.primaryCause})`,
+                );
+
+                // Phase 12.1: Feed lessons into Bayesian learning engine (CLOSES THE LOOP)
+                this.forensicLearning.ingestLessons(forensicReport.lessons);
+            }
 
             const closedCount = (this.tradesByStrategy.get(trade.strategyId) ?? [])
                 .filter(t => t.status === TradeStatus.CLOSED).length;
@@ -321,7 +475,16 @@ export class Island {
         if (overallPassed) {
             strategy.status = StrategyStatus.CANDIDATE;
             this.validatedStrategies.push(strategy);
-            this.log(LogLevel.EVOLUTION, `✅ [${this.slot.id}] ${strategy.name} PASSED → CANDIDATE`);
+
+            // Phase 7: Bank strategy in Roster + record experience
+            const strategyTrades = this.tradesByStrategy.get(strategy.id) ?? [];
+            const regime = this.currentRegime ?? MarketRegime.RANGING;
+            this.roster.addToRoster(strategy, regime, strategyTrades);
+            this.experienceMemory.recordExperience(strategy, strategyTrades, regime);
+
+            const rosterSize = this.roster.getAllEntries().length;
+            const patternCount = this.experienceMemory.getPatternCount();
+            this.log(LogLevel.EVOLUTION, `✅ [${this.slot.id}] ${strategy.name} PASSED → ROSTER (${rosterSize} banked, ${patternCount} patterns)`);
         } else {
             strategy.status = StrategyStatus.RETIRED;
             this.retiredStrategies.push(strategy);
@@ -373,7 +536,13 @@ export class Island {
         const diversityIndex = this.evolutionEngine.calculateDiversityIndex(currentGen.population);
         this.diversityIndexHistory.push(diversityIndex);
 
-        const nextGen = this.evolutionEngine.evolveNextGeneration(currentGen, this.tradesByStrategy);
+        // Phase 7: Pass replay memory and regime for seeded injection
+        const nextGen = this.evolutionEngine.evolveNextGeneration(
+            currentGen,
+            this.tradesByStrategy,
+            this.experienceMemory,
+            this.currentRegime ?? undefined,
+        );
 
         // Tag all new strategies with this island's slot
         for (const strategy of nextGen.population) {
@@ -501,6 +670,48 @@ export class Island {
 
     getEvolutionEngine(): EvolutionEngine {
         return this.evolutionEngine;
+    }
+
+    /**
+     * Phase 7: Get the Strategy Roster for cross-island insight sharing.
+     */
+    getRoster(): StrategyRoster {
+        return this.roster;
+    }
+
+    /**
+     * Phase 7: Get the Experience Replay Memory.
+     */
+    getExperienceMemory(): ExperienceReplayMemory {
+        return this.experienceMemory;
+    }
+
+    /**
+     * Phase 11: Get the latest MRTI regime forecast.
+     */
+    getRegimeForecast(): RegimeTransitionForecast | null {
+        return this.lastForecast;
+    }
+
+    /**
+     * Phase 11: Get the MRTI engine for advanced access.
+     */
+    getRegimeIntelligence(): RegimeIntelligence {
+        return this.regimeIntelligence;
+    }
+
+    /**
+     * Phase 12: Get the Trade Forensics Engine.
+     */
+    getTradeForensics(): TradeForensicsEngine {
+        return this.tradeForensics;
+    }
+
+    /**
+     * Phase 12.1: Get the Forensic Learning Engine (closed-loop feedback).
+     */
+    getForensicLearning(): ForensicLearningEngine {
+        return this.forensicLearning;
     }
 
     getLifetimeBestFitness(): number {

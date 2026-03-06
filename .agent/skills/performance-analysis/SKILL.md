@@ -102,6 +102,49 @@ Implemented in `src/lib/engine/monte-carlo.ts` → `calculateDeflatedSharpe()`
 
 ---
 
+### Layer 4: Novelty Bonus (Phase 9)
+
+Strategies using **advanced gene families** (Phase 9) receive a fitness bonus that decays over generations:
+
+```typescript
+export function calculateNoveltyBonus(
+  strategy: StrategyDNA,
+  currentGeneration: number,
+): number
+// Returns 0–8 bonus points
+// Decays: max(0, bonus × (1 - generation/200))
+```
+
+| Advanced Gene Family | Bonus Points |
+|---------------------|-------------|
+| Microstructure genes | +2 |
+| Price action genes | +2 |
+| Composite function genes | +2 |
+| Directional change genes | +2 |
+| **Maximum total** | **+8** |
+
+```
+finalFitness = deflatedFitness + noveltyBonus
+```
+
+---
+
+### Backtesting → Evaluator Flow (Phase 10)
+
+The backtester generates `Trade[]` arrays that feed directly into the evaluator:
+
+```
+backtester.runBacktest(dna, candles)
+  → Trade[] (simulated with realistic slippage/commission)
+    → evaluatePerformance(trades)
+      → PerformanceMetrics
+        → calculateFitnessScore(metrics, indicatorCount, totalTested)
+          → calculateNoveltyBonus(dna, generation)
+            → Final fitness score (0–108)
+```
+
+---
+
 ## 📊 Individual Metric Calculations
 
 ### Sharpe Ratio
@@ -215,7 +258,9 @@ A strategy must pass ALL of these to advance from PAPER to CANDIDATE:
 ---
 
 ## 📂 Key Files
-- `src/lib/engine/evaluator.ts` → All metric calculations, composite scoring, complexity penalty
+- `src/lib/engine/evaluator.ts` → All metric calculations, composite scoring, complexity penalty, novelty bonus
+- `src/lib/engine/backtester.ts` → Generates Trade[] for evaluator (PFLM IndicatorCache)
+- `src/lib/engine/market-simulator.ts` → Realistic execution (slippage, commission, impact)
 - `src/lib/engine/monte-carlo.ts` → Deflated Sharpe Ratio implementation
 - `src/lib/engine/walk-forward.ts` → Walk-Forward Analysis (IS/OOS efficiency)
 - `src/lib/engine/overfitting-detector.ts` → Composite overfitting scorer
@@ -224,3 +269,15 @@ A strategy must pass ALL of these to advance from PAPER to CANDIDATE:
 - `src/lib/engine/evolution.ts` → Uses fitness for selection + Strategy Memory
 
 See `references/fitness-formula.md` for mathematical proofs.
+
+---
+
+## 🔗 Cross-References
+
+| Related Skill | Relationship | When to Co-Activate |
+|--------------|-------------|---------------------|
+| `backtesting-simulation` | Data source | Backtester produces `Trade[]` → evaluator scores them |
+| `evolution-engine` | Consumer | Fitness scores drive GA selection + Strategy Memory |
+| `anti-overfitting-validation` | Extension | WFA/MC/Regime scores feed into composite overfitting |
+| `meta-evolution` | Controller | GA² HyperDNA adjusts fitness weight genes |
+| `risk-management` | Constraint | Max drawdown threshold linked to risk safety rails |

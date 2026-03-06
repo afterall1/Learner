@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
+import Link from 'next/link';
 import {
   Brain, Activity, BarChart3, Shield,
   Play, Pause,
@@ -1321,6 +1322,14 @@ export default function DashboardPage() {
           </div>
         </div>
         <div className="header-actions">
+          <nav className="nav-tabs">
+            <Link href="/" className="nav-tab active">
+              <Activity size={14} /> Dashboard
+            </Link>
+            <Link href="/pipeline" className="nav-tab">
+              <GitBranch size={14} /> Pipeline
+            </Link>
+          </nav>
           <ConnectionStatusBadge />
           <BrainStateIndicator state={brainState} />
           <div style={{ display: 'flex', gap: 8 }}>

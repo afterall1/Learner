@@ -399,3 +399,14 @@ const chartData = useMemo(() =>
 - `src/app/globals.css` → Sparkline, evolution-timeline CSS
 - `src/app/page.tsx` → EquityCurveChart, EvolutionTimeline patterns
 - `src/lib/store/index.ts` → Data shape from Zustand stores
+
+---
+
+## 🔗 Cross-References
+
+| Related Skill | Relationship | When to Co-Activate |
+|--------------|-------------|---------------------|
+| `dashboard-development` | Parent | Charts live inside dashboard panel architecture |
+| `motion-design` | Extension | Chart animations follow motion timing rules |
+| `backtesting-simulation` | Data source | Equity curve + trade data from backtest results |
+| `performance-analysis` | Data source | Strategy metrics feed radar/bar charts |
