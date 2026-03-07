@@ -27,6 +27,8 @@ cat memory/overview.md
 - **Dashboard**: 3 pages — Main (9 panels + Cortex Neural Map) + Pipeline (8 panels + Strategy Archaeology + Overmind Hub) + Brain (Holographic Neural Cortex)
 - **Strategic Overmind**: Opus 4.6 AI supervisor with 6-phase reasoning cycle (OBSERVE→ANALYZE→HYPOTHESIZE→DIRECT→VERIFY→LEARN), 15 modules, PSPP + CCR systems
 - **Neural Brain Visualization**: Phase 18 — Holographic JARVIS-style 3D cortex, multi-color heatmap, biological refractory period
+- **Binance Execution Layer**: Phase 19 — 7 REST methods, 4 API routes, User Data WebSocket, Account Sync, Exchange Circuit Breaker + ExchangeInfoCache
+- **AOLE**: Phase 19.1 — 13-state atomic order lifecycle (Entry→SL→TP), Adaptive Rate Governor, Execution Quality Tracker
 
 ---
 
@@ -60,7 +62,7 @@ cat memory/architecture/system_design.md
 ```
 
 **After reading**, confirm you understand:
-- Module dependency graph (Types → Engine → Advanced Genes → Anti-Overfitting → Island Model → Risk → Store & Persistence → Overmind → Dashboard)
+- Module dependency graph (Types → Engine → Advanced Genes → Anti-Overfitting → Island Model → Risk → Store & Persistence → Binance Execution → Overmind → Dashboard)
 - Island Model architecture (Cortex → Islands → Migration → Capital Allocator)
 - **Persistence Architecture**: PersistenceBridge → IndexedDB (local) + Supabase (cloud)
 - **Strategic Overmind**: 6-phase cycle, OpusClient, HypothesisEngine, EvolutionDirector, AdversarialTester
@@ -94,7 +96,9 @@ cat memory/file_map.md
 - **State & Persistence**: `store/index.ts` (6 stores), `store/persistence.ts` (IndexedDB), `db/supabase.ts` (cloud)
 - **Persistence Bridge**: `persistence-bridge.ts` (dual-write, lazy auto-init)
 - **Dashboard**: `page.tsx` (9 panels + CortexNeuralMap), `brain/page.tsx` (Holographic Neural Cortex), `pipeline/page.tsx` (8 panels + Strategy Archaeology), `globals.css` (2580+ lines), `layout.tsx`
-- **Memory**: Overview, Active Context, System Design, File Map, ADRs (9), Changelog
+- **Binance API**: `api/binance-rest.ts` (AdaptiveRateGovernor), `api/exchange-circuit-breaker.ts`, `api/user-data-stream.ts`, `api/account-sync.ts`, `api/order-lifecycle.ts` (AOLE), `api/execution-quality.ts`
+- **API Routes**: `api/binance/order/route.ts`, `position/route.ts`, `account/route.ts`, `depth/route.ts`
+- **Memory**: Overview, Active Context, System Design, File Map, ADRs (10), Changelog
 
 ---
 
@@ -116,6 +120,7 @@ Get-ChildItem memory/adr/*.md | ForEach-Object { Write-Host "=== $($_.Name) ==="
 - **ADR-007**: Hybrid Persistence Architecture — IndexedDB local cache + Supabase cloud PostgreSQL, PersistenceBridge dual-write, lazy auto-init
 - **ADR-008**: Strategic Overmind Architecture — Opus 4.6 AI supervisor, 6-phase reasoning cycle, PSPP, CCR, graceful degradation
 - **ADR-009**: Neural Brain Visualization Architecture — Holographic 3D cortex, biological refractory period, multi-color HSLA heatmap
+- **ADR-010**: Atomic Order Lifecycle Engine — 13-state machine, mandatory SL invariant, Adaptive Rate Governor, Execution Quality Tracker
 
 ---
 
@@ -172,6 +177,8 @@ After completing all steps, provide the following confirmation to the user:
 - **Pipeline**: Strategy Archaeology (Gene Lineage + Gene Survival + Decision Explainer)
 - **Brain Visualization**: Holographic Neural Cortex (10 neurons, 15 synapses, Memory Trace Heatmap)
 - **Persistence**: Hybrid (IndexedDB local + Supabase cloud), PersistenceBridge dual-write
+- **Binance Execution**: Phase 19 — 7 REST methods, 4 API routes, Circuit Breaker, User Data WS
+- **AOLE**: Phase 19.1 — 13-state atomic lifecycle, Adaptive Rate Governor, Execution Quality Tracker
 - **Strategic Overmind**: Opus 4.6 AI supervisor, 6-phase cycle, 15 modules (PSPP + CCR + ACE)
 - **Agent Skills**: 16 domain-specific skills, Auto-Activation Intelligence (skill-map.json)
 - **Advanced Genome**: Phase 9 — 5 gene families (Microstructure, Price Action, Composite, Multi-TF Confluence, DC)

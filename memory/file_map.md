@@ -9,7 +9,7 @@
 
 | File | Purpose | Importance |
 |------|---------|------------|
-| `index.ts` | Complete type system (780+ lines). All enums (BrainState, StrategyStatus, Timeframe, MarketRegime, MicrostructureGeneType, PriceActionPatternType, CandlestickFormation, ConfluenceType, CompositeOperation, DCEventType, etc.), interfaces (StrategyDNA with optional advanced gene arrays, Trade, Position, PerformanceMetrics, EvolutionGeneration, IslandSnapshot, CortexSnapshot, MigrationEvent, IslandAllocation, MicrostructureGene, PriceActionGene, CompositeFunctionGene, TimeframeConfluenceGene, DirectionalChangeGene, DCEvent, AdvancedSignalRule, validation types), and default constants. | 🔴 |
+| `index.ts` | Complete type system (2030+ lines). All enums (BrainState, StrategyStatus, Timeframe, MarketRegime, MicrostructureGeneType, PriceActionPatternType, CandlestickFormation, ConfluenceType, CompositeOperation, DCEventType, OrderSide, OrderType, OrderStatus, OrderLifecycleState, CircuitBreakerState, etc.), interfaces (StrategyDNA, Trade, OrderRequest, OrderResult, PositionInfo, OrderBookSnapshot, OrderGroupConfig, OrderGroup, StateTransition, ExecutionRecord, ExecutionQualityStats, AdaptiveRateStatus, validation types), and default constants. | 🔴 |
 | `trading-slot.ts` | TradingSlot type — pair+timeframe identifier for the Island Model. Factory functions (`createTradingSlot`, `parseSlotId`), `TradingSlotStatus` enum, default pairs/timeframes, starter slot generator. | 🔴 |
 
 ---
@@ -95,6 +95,21 @@
 
 ---
 
+## 📡 Binance Execution Layer (`src/lib/api/`) [Phase 19 + 19.1]
+
+| File | Purpose | Importance |
+|------|---------|------------|
+| `binance-rest.ts` | **Binance Futures REST Client** (~839 lines). HMAC-SHA256 signed requests, configurable testnet/mainnet, **AdaptiveRateGovernor** (Phase 19.1: reads `X-MBX-USED-WEIGHT-1m` + `X-MBX-ORDER-COUNT-1m` headers, adjusts concurrency 1-10, emergency pause at >92%). 7 order methods: `placeOrder` (NEVER retried), `cancelOrder`, `cancelAllOrders`, `getOpenOrders`, `getPositionRisk`, `getOrderBook`, `setMarginType`. Market data: `getKlines`, `get24hrTicker`, `getLatestPrice`, `getExchangeInfo`. | 🔴 |
+| `binance-ws.ts` | Binance WebSocket client for market data streams (klines, tickers). Handles reconnection and subscription management. | 🟡 |
+| `market-data-service.ts` | Market data aggregation service. Coordinates REST + WebSocket data sources. | 🟡 |
+| `exchange-circuit-breaker.ts` | **Phase 19 — Exchange Circuit Breaker** (~360 lines). 3-state machine (CLOSED→OPEN→HALF_OPEN) wrapping all Binance API calls. Configurable failure thresholds, cooldown period, automatic recovery. + `ExchangeInfoCache`: auto-refreshing cache of trading symbol filters (tickSize, stepSize, minNotional), validates and adjusts order precision. | 🔴 |
+| `user-data-stream.ts` | **Phase 19 — User Data WebSocket** (~476 lines). Manages `listenKey` lifecycle (create/keepAlive/delete), WebSocket connection with exponential backoff reconnect, parses 3 event types: ACCOUNT_UPDATE (balance/position changes), ORDER_TRADE_UPDATE (fill confirmations), MARGIN_CALL (liquidation warnings). Callback pattern for event handling. | 🔴 |
+| `account-sync.ts` | **Phase 19 — Account Sync Service** (~212 lines). 30-second periodic polling of account balances and positions. Circuit breaker integration, position change detection via SHA-256 hash comparison, graceful degradation (retains last known state on error). | 🟡 |
+| `order-lifecycle.ts` | **Phase 19.1 — Atomic Order Lifecycle Engine (AOLE)** (~370 lines). 13-state machine (PENDING→SETTING_LEVERAGE→PLACING_ENTRY→ENTRY_FILLED→PLACING_SL→SL_PLACED→PLACING_TP→FULLY_ARMED). **Core Invariant**: position NEVER exists without stop-loss protection. SL has 3 retries with exponential backoff; if all fail → EMERGENCY_CLOSE (market-close position). Partial fill handling, execution quality recording per order, configurable callbacks for state changes. | 🔴 |
+| `execution-quality.ts` | **Phase 19.1 — Execution Quality Tracker** (~190 lines). Per-symbol rolling window (100 orders, 24h). Tracks slippage (bps), latency (ms), fill ratio per execution. Provides: `getStats()` (avg/P95), `getCalibratedSlippage()` (feeds into market-simulator.ts to replace hardcoded slippage). Integrates with Trade Forensics for execution attribution. | 🔴 |
+
+---
+
 ## 🛡️ Risk Layer (`src/lib/risk/`)
 
 | File | Purpose | Importance |
@@ -152,6 +167,7 @@
 | `adr/005-strategy-archaeology.md` | ADR: Strategy Archaeology — Explainable AI for genetic strategy evolution (Gene Lineage + Gene Survival + Decision Explainer) | 🟢 |
 | `adr/006-advanced-genome.md` | ADR: Advanced Strategy Genome Architecture — 5 evolvable gene families, composite function evolution, directional change framework, structural novelty bonus | 🟢 |
 | `adr/009-neural-brain-visualization.md` | ADR: Neural Brain Visualization Architecture — Holographic 3D cortex, biological refractory period, multi-color HSLA heatmap | 🟢 |
+| `adr/010-atomic-order-lifecycle.md` | ADR: Atomic Order Lifecycle Engine — 13-state machine, mandatory SL invariant, Adaptive Rate Governor, Execution Quality Tracker | 🟢 |
 | `changelog.md` | Version history | 🟢 |
 | `_SYNC_CHECKLIST.md` | End-of-session verification checklist | 🟡 |
 | `_FINGERPRINT.json` | Context DNA Fingerprint — SHA-256 hashes of all source + memory files, cross-reference matrix, structural integrity record | 🟡 |
@@ -165,6 +181,10 @@
 |------|---------|------------|
 | `validate-skills.js` | **Skill Integrity Validator** (~252 lines). Detects orphaned source files, stale skill references, and missing/one-way cross-links. Self-auditing knowledge graph. | 🔴 |
 | `generate-skill-map.js` | **Skill Auto-Activation Intelligence** (~330 lines). Static import analysis builds `skill-map.json` (file→skill index) + `skill-graph.md` (Mermaid DAG). Transforms passive skills into active intelligence. | 🔴 |
+| `git-guardian.js` | **Git Guardian Pre-Commit Hook** (~210 lines). 3-gate validation: secret pattern detection (100+ regex), file size limit (500KB), JSON syntax validation. Blocks commits containing API keys or large files. | 🔴 |
+| `commit-msg-validator.js` | **Commit Message Convention** (~110 lines). Enforces `type(scope): description` format. Validates type (feat, fix, docs, etc.) and min description length. | 🟡 |
+| `install-hooks.js` | **Git Hook Auto-Installer** (~130 lines). Cross-platform `pre-commit` + `commit-msg` hook installation. Creates executable scripts in `.git/hooks/`. | 🟡 |
+| `memory-health.js` | **Memory Health Dashboard**. Diagnostic tool showing memory freshness, file map coverage, ADR gaps, skill health. | 🟡 |
 
 ---
 
@@ -208,4 +228,4 @@
 
 ---
 
-*Last Updated: 2026-03-07 03:55 (UTC+3)*
+*Last Updated: 2026-03-07 04:55 (UTC+3)*

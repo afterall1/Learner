@@ -40,6 +40,16 @@ graph TD
         CAP[capital-allocator.ts]
     end
 
+    subgraph "Layer 2d: Binance Execution"
+        BREST[api/binance-rest.ts]
+        BWS[api/binance-ws.ts]
+        CB[api/exchange-circuit-breaker.ts]
+        UDS[api/user-data-stream.ts]
+        ACCSYNC[api/account-sync.ts]
+        AOLE[api/order-lifecycle.ts]
+        EQT[api/execution-quality.ts]
+    end
+
     subgraph "Layer 3: Safety"
         RISK[risk/manager.ts]
     end
@@ -114,6 +124,16 @@ graph TD
     BRIDGE --> SUPABASE
     ISLAND --> BRIDGE
     STORE --> PERSIST
+
+    T --> BREST
+    T --> AOLE
+    T --> EQT
+    BREST --> CB
+    CB --> BREST
+    BREST --> AOLE
+    CB --> AOLE
+    UDS --> ACCSYNC
+    AOLE --> EQT
 end
 ```
 
@@ -168,6 +188,69 @@ sequenceDiagram
 - **Error isolation** — Cloud failure NEVER blocks local persistence (and vice versa)
 - **Cloud-first reads** — `loadLastCheckpoint()` tries Supabase first, IndexedDB fallback
 - **Singleton init promise** — Prevents race conditions on concurrent first writes
+
+---
+
+## Atomic Order Lifecycle Flow (Phase 19.1 — AOLE)
+
+```mermaid
+stateDiagram-v2
+    [*] --> PENDING : executeAtomicOrder()
+    PENDING --> SETTING_LEVERAGE : Set leverage + margin type
+    SETTING_LEVERAGE --> PLACING_ENTRY : Place entry order
+    PLACING_ENTRY --> ENTRY_FILLED : Order filled
+    PLACING_ENTRY --> FAILED : Entry rejected
+
+    ENTRY_FILLED --> PLACING_SL : Place stop-loss (3 retries)
+    PLACING_SL --> SL_PLACED : SL accepted
+    PLACING_SL --> EMERGENCY_CLOSE : All 3 retries failed
+
+    SL_PLACED --> PLACING_TP : Place take-profit
+    SL_PLACED --> SL_ONLY : No TP configured
+    PLACING_TP --> FULLY_ARMED : TP accepted
+    PLACING_TP --> SL_ONLY : TP failed (acceptable)
+
+    EMERGENCY_CLOSE --> ROLLED_BACK : Market-close success
+    EMERGENCY_CLOSE --> FAILED : Close also failed (CRITICAL)
+
+    FULLY_ARMED --> CLOSED : Position exits normally
+    SL_ONLY --> CLOSED : Position exits normally
+```
+
+### Key Design Decisions
+- **Core Invariant**: Position NEVER exists without stop-loss protection
+- **SL retries (3×)** with exponential backoff (1s, 2s, 4s)
+- **EMERGENCY_CLOSE**: Immediate market-close if SL exhausts all retries
+- **TP failure is acceptable**: SL provides baseline protection
+- **Partial fill handling**: SL/TP sized to `executedQty` (not `origQty`)
+- **Execution Quality**: Every fill records slippage/latency for Tracker
+
+---
+
+## Adaptive Rate Governor (Phase 19.1)
+
+```mermaid
+sequenceDiagram
+    participant C as BinanceRestClient
+    participant G as AdaptiveRateGovernor
+    participant B as Binance API
+
+    C->>G: acquire()
+    alt Paused (>92% utilization)
+        G->>G: wait 5 seconds
+    end
+    G-->>C: slot granted
+
+    C->>B: API request
+    B-->>C: Response + headers
+
+    C->>G: updateFromHeaders(headers)
+    Note over G: Read X-MBX-USED-WEIGHT-1m<br/>Read X-MBX-ORDER-COUNT-1m
+    G->>G: adjustConcurrency()
+    Note over G: <50% → 10 concurrent<br/>50-75% → 5<br/>75-92% → 2<br/>>92% → 1 + pause
+
+    C->>G: release()
+```
 
 ### Data Types Persisted
 

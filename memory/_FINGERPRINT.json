@@ -1,9 +1,9 @@
 {
   "version": "1.0.0",
-  "generatedAt": "2026-03-07T01:25:33.920Z",
-  "projectVersion": "v0.18.0",
+  "generatedAt": "2026-03-07T01:59:54.835Z",
+  "projectVersion": "v0.19.1",
   "sourceHashes": {
-    "src/types/index.ts": "c3b4a2d610816bab",
+    "src/types/index.ts": "0dfb3ea30003a95f",
     "src/types/trading-slot.ts": "61c7ed64286070fb",
     "src/lib/engine/strategy-dna.ts": "319f89d62ca8e182",
     "src/lib/engine/evaluator.ts": "1d194d45d012f434",
@@ -34,15 +34,15 @@
     "src/app/layout.tsx": "b7c900afea5bfe7e"
   },
   "memoryHashes": {
-    "memory/overview.md": "3bd56617ed0d2485",
-    "memory/active_context.md": "664be93d3763399a",
-    "memory/architecture/system_design.md": "b1ff4ad4bb7654aa",
-    "memory/file_map.md": "91022a4b6af0d485",
-    "memory/changelog.md": "4832d31fedb993ea",
+    "memory/overview.md": "50a75b89a8486e17",
+    "memory/active_context.md": "dc451f8c7e26ecd0",
+    "memory/architecture/system_design.md": "8ef4173d0532305f",
+    "memory/file_map.md": "5ca2e439ddab6bd7",
+    "memory/changelog.md": "d2d01314c21f8e41",
     "memory/_SYNC_CHECKLIST.md": "db74a75eb0511be8"
   },
   "lineCounts": {
-    "src/types/index.ts": 1716,
+    "src/types/index.ts": 2031,
     "src/types/trading-slot.ts": 97,
     "src/lib/engine/strategy-dna.ts": 600,
     "src/lib/engine/evaluator.ts": 309,

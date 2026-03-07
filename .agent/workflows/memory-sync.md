@@ -55,6 +55,7 @@ cat memory/_SYNC_CHECKLIST.md
 - **Dashboard Layer**: `page.tsx` (panels, components), `brain/page.tsx` (holographic neural cortex), `pipeline/page.tsx` (pipeline panels, archaeology), `globals.css` (design system, animations, holographic theme)
 - **Persistence Layer**: `persistence.ts` (IndexedDB), `supabase.ts` (cloud DB), `persistence-bridge.ts` (dual-write bridge)
 - **Overmind Layer**: `overmind/strategic-overmind.ts`, `overmind/opus-client.ts`, `overmind/hypothesis-engine.ts`, `overmind/evolution-director.ts`, `overmind/adversarial-tester.ts`, `overmind/predictive-orchestrator.ts`, `overmind/episodic-memory.ts`, `overmind/counterfactual-engine.ts`, `overmind/meta-cognition.ts`, and 6 supporting modules
+- **Binance Execution Layer**: `api/binance-rest.ts` (AdaptiveRateGovernor), `api/exchange-circuit-breaker.ts`, `api/user-data-stream.ts`, `api/account-sync.ts`, `api/order-lifecycle.ts` (AOLE), `api/execution-quality.ts`
 - **Skill Layer**: All `.agent/skills/*/SKILL.md` files, `.agent/skill-map.json`, `.agent/skill-graph.md`
 
 ---
@@ -156,6 +157,7 @@ If significant architectural changes were made:
 - ADR-007: Hybrid Persistence Architecture (IndexedDB + Supabase)
 - ADR-008: Strategic Overmind Architecture (Opus 4.6 AI Supervisor, PSPP, CCR)
 - ADR-009: Neural Brain Visualization Architecture (Holographic 3D Cortex, Biological Refractory Period, Multi-Color HSLA Heatmap)
+- ADR-010: Atomic Order Lifecycle Engine (13-state machine, mandatory SL invariant, Adaptive Rate Governor, Execution Quality Tracker)
 
 ---
 
@@ -197,6 +199,24 @@ node memory/scripts/context-fingerprint.js --generate
 ```
 
 The fingerprint file `memory/_FINGERPRINT.json` must be committed as part of the sync.
+
+---
+
+## Step 8.5: Memory Coherence Validation (Semantic Cross-Reference)
+
+Run the Memory Coherence Validator to detect documentation rot (deleted files still referenced, renamed types):
+
+```
+node scripts/memory-coherence.js
+```
+
+This goes BEYOND hash-based fingerprinting by performing 4-phase semantic validation:
+1. **File references**: Verifies every file path mentioned in memory docs exists in the source tree
+2. **ADR cross-references**: Validates file paths referenced in ADR documents
+3. **Workflow commands**: Checks that every `node`/`cat` command in workflows targets existing files
+4. **Critical types**: Spot-checks 15 core TypeScript types exist in `types/index.ts`
+
+Target: **95%+ coherence score**. If below, fix the broken references before committing.
 
 ---
 

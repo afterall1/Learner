@@ -4,7 +4,60 @@ All notable changes to this project are documented here.
 
 ---
 
-## [v0.18.0] — 2026-03-07
+## [v0.19.1] — 2026-03-07
+
+### Added
+- **Atomic Order Lifecycle Engine (Phase 19.1 — Radical Innovation)**
+  - `src/lib/api/order-lifecycle.ts` — 13-state machine (~370 lines)
+    - Lifecycle: PENDING → SETTING_LEVERAGE → PLACING_ENTRY → ENTRY_FILLED → PLACING_SL → SL_PLACED → PLACING_TP → FULLY_ARMED
+    - **Core Invariant**: Position NEVER exists without stop-loss protection
+    - SL placement retried 3× with exponential backoff; exhaustion → EMERGENCY_CLOSE (immediate market-close)
+    - Partial fill handling (uses executedQty for SL/TP sizing)
+    - Execution quality recording per order (slippage, latency, fill ratio)
+    - Configurable lifecycle callbacks (onStateChange, onFullyArmed, onEmergencyClose, onFailed)
+    - Full state audit trail (StateTransition[] with timestamps and reasons)
+  - `src/lib/api/execution-quality.ts` — Execution Quality Tracker (~190 lines)
+    - Per-symbol rolling window (100 orders, 24h staleness filter)
+    - Tracks: slippage (bps), latency (ms), fill ratio
+    - `getStats()`: avg + P95 slippage/latency per symbol
+    - `getCalibratedSlippage()`: feeds real data into market-simulator.ts to replace hardcoded values
+
+### Changed
+- `src/lib/api/binance-rest.ts` — **Adaptive Rate Governor** replaces static `RateLimiter`
+  - Reads `X-MBX-USED-WEIGHT-1m` and `X-MBX-ORDER-COUNT-1m` from every Binance response
+  - Dynamically adjusts concurrency: <50% → 10, 50-75% → 5, 75-92% → 2, >92% → 1 (+ 5s pause)
+  - New `getRateStatus()` method returns `AdaptiveRateStatus`
+  - DELETE method now sends body (for cancel operations)
+- `src/types/index.ts` — +120 lines: OrderLifecycleState (13 states), OrderGroupConfig, OrderGroup, StateTransition, ExecutionRecord, ExecutionQualityStats, AdaptiveRateStatus
+
+### Architecture
+- ADR-010: Atomic Order Lifecycle Engine — 13-state machine, mandatory SL invariant, Adaptive Rate Governor, Execution Quality Tracker
+
+### Build Status
+✅ Passing (zero errors)
+
+## [v0.19.0] — 2026-03-07
+
+### Added
+- **Binance Trading Execution Layer (Phase 19)**
+  - `src/lib/api/exchange-circuit-breaker.ts` — 3-state circuit breaker + ExchangeInfoCache (~360 lines)
+  - `src/lib/api/user-data-stream.ts` — User Data WebSocket (ACCOUNT_UPDATE, ORDER_TRADE_UPDATE, MARGIN_CALL) (~476 lines)
+  - `src/lib/api/account-sync.ts` — Periodic account polling with change detection (~212 lines)
+  - 4 new API routes: order (POST+DELETE), position (GET), account (GET), depth (GET)
+- **Git Guardian Hook System**
+  - `scripts/git-guardian.js` — 3-gate pre-commit hook (secrets, file size, JSON syntax) (~210 lines)
+  - `scripts/commit-msg-validator.js` — Convention enforcement (~110 lines)
+  - `scripts/install-hooks.js` — Cross-platform hook auto-installer (~130 lines)
+
+### Changed
+- `src/lib/api/binance-rest.ts` — +7 order methods (placeOrder, cancelOrder, cancelAllOrders, getOpenOrders, getPositionRisk, getOrderBook, setMarginType) + signedDelete + mapOrderResult
+- `src/types/index.ts` — +196 lines: OrderSide, OrderType, OrderStatus enums, OrderRequest (mandatory stopLoss), OrderResult, PositionInfo, DepthLevel, OrderBookSnapshot, UserDataEvent types, CircuitBreakerState
+- `.gitignore` — Enhanced with API key exclusions
+
+### Build Status
+✅ Passing (zero errors)
+
+
 
 ### Added
 - **Neural Brain Visualization (Phase 18)**
