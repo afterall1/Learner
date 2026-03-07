@@ -4,6 +4,7 @@
 
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
+import { createIndexedDBStorage, saveTrade as persistTrade } from './persistence';
 import {
     BrainState,
     BrainLog,
@@ -27,6 +28,7 @@ import {
     ConnectionStatus,
     DataHealth,
 } from '@/types';
+import type { OvermindSnapshot } from '@/types/overmind';
 import { TradingSlot } from '@/types/trading-slot';
 import { AIBrain, BrainSnapshot } from '@/lib/engine/brain';
 import { Cortex } from '@/lib/engine/cortex';
@@ -168,6 +170,8 @@ interface CortexStoreState {
     capitalAllocations: IslandAllocation[];
     migrationHistory: MigrationEvent[];
     totalCapital: number;
+    /** Strategic Overmind snapshot (Phase 15 + CCR) */
+    overmindSnapshot: OvermindSnapshot | null;
 
     // Actions
     initializeCortex: (slots?: TradingSlot[], totalCapital?: number) => void;
@@ -196,6 +200,7 @@ export const useCortexStore = create<CortexStoreState>()((set, get) => ({
     capitalAllocations: [],
     migrationHistory: [],
     totalCapital: 10000,
+    overmindSnapshot: null,
 
     initializeCortex: (slots, totalCapital) => {
         const cortex = new Cortex({
@@ -214,6 +219,7 @@ export const useCortexStore = create<CortexStoreState>()((set, get) => ({
             capitalAllocations: snapshot.capitalAllocations,
             migrationHistory: snapshot.migrationHistory,
             totalCapital: snapshot.totalCapital,
+            overmindSnapshot: snapshot.overmindSnapshot ?? null,
         });
     },
 
@@ -301,6 +307,7 @@ export const useCortexStore = create<CortexStoreState>()((set, get) => ({
             capitalAllocations: snapshot.capitalAllocations,
             migrationHistory: snapshot.migrationHistory,
             totalCapital: snapshot.totalCapital,
+            overmindSnapshot: snapshot.overmindSnapshot ?? null,
         });
     },
 }));
@@ -318,49 +325,57 @@ interface PortfolioStoreState {
     removePosition: (positionId: string) => void;
 }
 
-export const usePortfolioStore = create<PortfolioStoreState>()((set, get) => ({
-    summary: {
-        totalBalance: 10000,
-        availableBalance: 10000,
-        unrealizedPnl: 0,
-        todayPnl: 0,
-        todayPnlPercent: 0,
-        weekPnl: 0,
-        weekPnlPercent: 0,
-        allTimePnl: 0,
-        allTimePnlPercent: 0,
-        activePositions: 0,
-        totalTrades: 0,
-    },
-    positions: [],
+export const usePortfolioStore = create<PortfolioStoreState>()(
+    persist(
+        (set, get) => ({
+            summary: {
+                totalBalance: 10000,
+                availableBalance: 10000,
+                unrealizedPnl: 0,
+                todayPnl: 0,
+                todayPnlPercent: 0,
+                weekPnl: 0,
+                weekPnlPercent: 0,
+                allTimePnl: 0,
+                allTimePnlPercent: 0,
+                activePositions: 0,
+                totalTrades: 0,
+            },
+            positions: [],
 
-    updateSummary: (partial) => {
-        set((s) => ({
-            summary: { ...s.summary, ...partial },
-        }));
-    },
+            updateSummary: (partial) => {
+                set((s) => ({
+                    summary: { ...s.summary, ...partial },
+                }));
+            },
 
-    setPositions: (positions) => {
-        set({
-            positions,
-            summary: { ...get().summary, activePositions: positions.length },
-        });
-    },
+            setPositions: (positions) => {
+                set({
+                    positions,
+                    summary: { ...get().summary, activePositions: positions.length },
+                });
+            },
 
-    addPosition: (position) => {
-        set((s) => ({
-            positions: [...s.positions, position],
-            summary: { ...s.summary, activePositions: s.positions.length + 1 },
-        }));
-    },
+            addPosition: (position) => {
+                set((s) => ({
+                    positions: [...s.positions, position],
+                    summary: { ...s.summary, activePositions: s.positions.length + 1 },
+                }));
+            },
 
-    removePosition: (positionId) => {
-        set((s) => ({
-            positions: s.positions.filter(p => p.id !== positionId),
-            summary: { ...s.summary, activePositions: s.positions.length - 1 },
-        }));
-    },
-}));
+            removePosition: (positionId) => {
+                set((s) => ({
+                    positions: s.positions.filter(p => p.id !== positionId),
+                    summary: { ...s.summary, activePositions: s.positions.length - 1 },
+                }));
+            },
+        }),
+        {
+            name: 'learner-portfolio',
+            storage: createIndexedDBStorage('learner-portfolio'),
+        }
+    )
+);
 
 // ─── Trade Store ─────────────────────────────────────────────
 
@@ -381,6 +396,9 @@ export const useTradeStore = create<TradeStoreState>()(
             recentTrades: [],
 
             addTrade: (trade) => {
+                // Also persist to IndexedDB (fire-and-forget)
+                persistTrade(trade).catch(() => { });
+
                 set((s) => {
                     const trades = [...s.trades, trade];
                     return {
@@ -395,6 +413,10 @@ export const useTradeStore = create<TradeStoreState>()(
                     const trades = s.trades.map(t =>
                         t.id === tradeId ? { ...t, ...updates } : t
                     );
+                    // Persist updated trade to IndexedDB
+                    const updated = trades.find(t => t.id === tradeId);
+                    if (updated) persistTrade(updated).catch(() => { });
+
                     return {
                         trades,
                         recentTrades: trades.slice(-50),
@@ -408,9 +430,9 @@ export const useTradeStore = create<TradeStoreState>()(
         }),
         {
             name: 'learner-trades',
-            storage: createJSONStorage(() => localStorage),
+            storage: createIndexedDBStorage('learner-trades'),
             partialize: (state) => ({
-                trades: state.trades.slice(-500), // Keep last 500 trades
+                trades: state.trades.slice(-1000), // Keep last 1000 in Zustand hydration
             }),
         }
     )

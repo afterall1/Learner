@@ -6,8 +6,8 @@
 
 ## 📅 Current State
 
-**Date**: 2026-03-06
-**Phase**: Phase 12 — Trade Forensics Engine
+**Date**: 2026-03-07
+**Phase**: Phase 18 — Neural Brain Visualization (Holographic Cortex)
 **Build Status**: ✅ Passing (zero errors)
 **Dev Server**: `http://localhost:3000`
 
@@ -27,12 +27,16 @@
 | **Trade Forensics** | Phase 12 — TradeBlackBox (8 event types, MFE/MAE) + ForensicAnalyzer (4-factor causal attribution) + 8 lesson types |
 | **Validation Pipeline** | 4-Gate (WFA + Monte Carlo + Overfitting + Regime Diversity) + Novelty Bonus |
 | **Promotion Pipeline** | 3-Stage (Paper → Candidate → Active) |
+| **Strategic Overmind** | Phase 15 — Opus 4.6 AI supervisor, 6-phase reasoning cycle, 15 modules (PSPP + CCR + ACE) |
+| **Agent Skills** | Phase 16 — 16 domain-specific skills (13 original + 3 new: strategic-overmind, hybrid-persistence, trade-forensics) |
+| **Skill Intelligence** | Phase 17 — Auto-Activation via static import analysis (skill-map.json + skill-graph.md) |
+| **Neural Brain Visualization** | Phase 18 — Holographic JARVIS-style 3D cortex visualization (`brain/page.tsx`), multi-color heatmap, biological refractory period |
+| **Dashboard** | Main: 9 panels + Cortex Neural Map | Pipeline: 8 panels (5 pipeline + 3 archaeology) + Overmind Hub | Brain: Holographic Neural Cortex |
 | **Current Generation** | N/A (awaiting Binance API connection) |
 | **Best Fitness Score** | N/A |
 | **Active Strategy** | Demo: "Nova Tiger" (Score: 67) |
 | **Total Trades** | 0 (live), 42 (demo simulation) |
 | **Paper Trade Progress** | 0/30 required for validation |
-| **Dashboard** | Main: 9 panels + Cortex Neural Map | Pipeline: 8 panels (5 pipeline + 3 archaeology) |
 
 ---
 
@@ -143,6 +147,47 @@
 80. **Evaluator Enhancement**: `calculateFitnessScore()` now accepts `ForensicLearningEngine` + `MarketRegime` params — CLOSES the feedback loop
 81. **Island Learning Integration**: ForensicLearningEngine field, automatic lesson ingestion after forensic report, `getForensicLearning()` accessor
 
+### Session: 2026-03-06 — IndexedDB Persistence Layer (Phase 13, 5-Expert Council)
+82. **IndexedDB Persistence Layer**: `persistence.ts` (~480 lines) — 6 object stores (trades, strategies, evolution_snapshots, forensic_reports, portfolio_snapshots, engine_state), Zustand adapter, auto-checkpoint scheduler
+83. **Store Upgrades**: TradeStore + PortfolioStore migrated from localStorage to IndexedDB, dual-write pattern for trades
+84. **Persistence Bridge**: `persistence-bridge.ts` (~280 lines) — Singleton wiring engine events to IndexedDB (trade close, forensic report, evolution snapshot + strategies)
+85. **Island Integration**: PersistenceBridge field, trade persistence on close, forensic report persistence, generation snapshot on evolve
+
+### Session: 2026-03-06 — Supabase Cloud Database (Phase 14, 5-Expert Council)
+86. **Supabase Cloud Client**: `supabase.ts` (~340 lines) — PostgreSQL cloud DB, graceful degradation, full CRUD for 6 tables, JSONB pattern
+87. **Dual-Write Bridge**: `persistence-bridge.ts` upgraded — every method writes to BOTH IndexedDB + Supabase with isolated error handling
+88. **Schema**: 6 tables (trades, strategies, evolution_snapshots, forensic_reports, portfolio_snapshots, engine_state)
+
+### Session: 2026-03-07 — Strategic Overmind Architecture (Phase 15)
+89. **Strategic Overmind Engine**: `overmind/strategic-overmind.ts` (~805 lines) — 6-phase reasoning cycle (OBSERVE→ANALYZE→HYPOTHESIZE→DIRECT→VERIFY→LEARN), supervises GA + Meta-Evolution + MRTI
+90. **Opus 4.6 API Client**: `overmind/opus-client.ts` (~314 lines) — Singleton Anthropic API wrapper, adaptive thinking, graceful degradation
+91. **Hypothesis Engine**: `overmind/hypothesis-engine.ts` (~339 lines) — Opus-driven market hypothesis creation, tracking, retirement
+92. **Evolution Director**: `overmind/evolution-director.ts` (~274 lines) — Opus-driven GA directives (mutation, crossover, gene proposals)
+93. **Adversarial Tester**: `overmind/adversarial-tester.ts` (~377 lines) — ACE strategy stress-testing with Opus-generated scenarios
+94. **PSPP Bridge**: `overmind/predictive-orchestrator.ts` — MRTI forecasts → pre-positioning actions (HOLD/PREPARE/SWITCH)
+95. **CCR System** (3 modules): `episodic-memory.ts` + `counterfactual-engine.ts` + `meta-cognition.ts` — Counterfactual Causal Replay
+96. **Supporting Modules** (6 files): `prompt-engine.ts`, `response-parser.ts`, `pair-specialist.ts`, `emergent-indicator.ts`, `strategy-decomposer.ts`, `reasoning-journal.ts`
+97. **Overmind Type System**: `types/overmind.ts` — 23 interfaces for Overmind, PSPP, CCR
+
+### Session: 2026-03-07 — Skill Architecture Audit & Radical Innovation (Phase 16-17)
+98. **Gap Analysis**: Identified 3 critical coverage gaps (Overmind=15 files/0 coverage, Persistence=3 files/0 coverage, Forensics=2 files/0 coverage)
+99. **New Skill: `strategic-overmind`** (285 lines) — 15 modules, 6-phase cycle, CCR, PSPP, OpusClient
+100. **New Skill: `hybrid-persistence`** (165 lines) — Dual-write bridge, IndexedDB, Supabase, cloud-first hydration
+101. **New Skill: `trade-forensics`** (215 lines) — TradeBlackBox, ForensicAnalyzer, Bayesian learning, fitness modifiers
+102. **Updated `regime-intelligence`** — +PSPP bridge section (+21 lines), +predictive-orchestrator.ts key file, +2 cross-refs
+103. **Updated `learner-conventions`** — +Overmind dir (15 files), +persistence paths, +7 module log prefixes, +3 cross-refs
+104. **Skill Integrity Validator**: `scripts/validate-skills.js` (~252 lines) — Detects orphans, stale refs, missing cross-links. Result: 0 stale refs ✅
+105. **Skill Auto-Activation Intelligence**: `scripts/generate-skill-map.js` (~330 lines) — Static import analysis builds `skill-map.json` (932 lines, 55 file mappings) + `skill-graph.md` (138 lines, Mermaid DAG)
+
+### Session: 2026-03-07 — Neural Brain Visualization (Phase 18, 5-Expert Council)
+106. **Holographic Brain Page**: `brain/page.tsx` (~675 lines) — Full JARVIS-style 3D holographic cortex visualization. 10 neuron nodes (hex wireframe inner + circle wireframe outer), 15 synapses with animated signal propagation, CSS 3D perspective with preserve-3d, scanline overlay, hex grid background, noise texture
+107. **HUD System**: Stats bar (Signals, Activity%, Dominant, Learn Rate, Connections), Target Lock detail panel (activity bar + metrics), Consciousness Arc gauge (SVG, 0-100 scale: DORMANT→TRANSCENDENT), floating data particles orbiting neurons
+108. **Multi-Color Memory Trace Heatmap**: Per-row HSLA coloring with 10 curated hues (EVO=purple 270°, BAY=blue 210°, META=magenta 320°, KDSS=orange 30°, SAIE=teal 170°, MKT=cyan 190°, FOR=rose 350°, EXP=emerald 145°, MAP=lavender 250°, REG=gold 45°). Activity controls lightness + alpha. Colored dot indicators next to row labels
+109. **Neuron Explosion Fix**: 6-point stability fix — 800ms biological refractory cooldown per neuron via `cooldownRef` Map, decay rate 1.1→4.5x/sec, activity gain 0.5→0.35, CSS drop-shadow bloom removed (hover only), scan ring capped (+8 +act*8), signal propagation slowed 2.2→1.2x
+110. **Holographic CSS**: 600+ lines added to `globals.css` — 3D canvas, scanline overlays, hex grid, neuron wireframes, synapse animations, HUD elements, consciousness arc, data particles, heatmap multi-color styles
+111. **ADR-009**: Neural Brain Visualization Architecture — Holographic 3D cortex, biological refractory period, per-row HSLA heatmap
+112. **Dashboard Skill**: Updated `dashboard-development/SKILL.md` with brain visualization section
+
 ---
 
 ## 🚧 Incomplete Features / Technical Debt
@@ -151,14 +196,15 @@
 - [x] ~~**Pipeline Dashboard** — Evolution process visibility~~ (8 panels delivered)
 - [x] ~~**Strategy Archaeology** — Explainable AI~~ (Lineage Tree + Survival Heatmap + Decision Explainer delivered)
 - [x] ~~**Advanced Genome** — Evolve beyond standard indicator parameters~~ (5 gene families + structural evolution delivered)
+- [x] ~~**Persistent storage** — LocalStorage is demo-only, need proper DB for production~~ (Phase 13-14: IndexedDB + Supabase hybrid delivered)
 - [ ] **Binance Futures API integration** — REST client + WebSocket streams
 - [ ] **Live paper trading** — Connect Cortex to real market data
 - [ ] **Risk Manager global enforcement** — Cross-island position counting
-- [ ] **Persistent storage** — LocalStorage is demo-only, need proper DB for production
 - [ ] **Git initialization** — Project not yet under version control
 - [ ] **Automated tests** — Unit tests for validation pipeline, migration engine, and advanced genes
 - [ ] **Live data binding** — Connect pipeline panels to real Cortex/Brain state
 - [ ] **Confluence Gene runtime** — Multi-TF Confluence genes need higher TF candle data integration
+- [ ] **Opus API key** — Strategic Overmind requires Anthropic API key in `.env.local`
 
 ---
 
@@ -168,8 +214,10 @@
 2. Binance Futures API integration layer (REST + WebSocket)
 3. Connect Cortex to live market data + **backtest strategies against historical klines**
 4. Connect Pipeline Dashboard to live Cortex state (replace demo data)
-5. MRTI Dashboard Panel — display regime transition forecasts and early warnings
+5. Connect Neural Brain Visualization to live Cortex/Island state (replace demo simulation)
+6. MRTI Dashboard Panel — display regime transition forecasts and early warnings
+7. Connect Strategic Overmind to live Cortex/Island state
 
 ---
 
-*Last Synced: 2026-03-06 21:53 (UTC+3)*
+*Last Synced: 2026-03-07 03:55 (UTC+3)*

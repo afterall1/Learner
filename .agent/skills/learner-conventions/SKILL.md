@@ -48,17 +48,40 @@ src/
 │   ├── composite-functions.ts    → Phase 9: Mathematical indicator evolution (9 ops × 4 norms)
 │   ├── directional-change.ts     → Phase 9: Event-based DC analysis (Kampouridis)
 │   ├── backtester.ts             → Phase 10: Core backtest engine + IndicatorCache (PFLM)
-│   └── market-simulator.ts       → Phase 10: Realistic execution (slippage, commission, impact)
+│   ├── market-simulator.ts       → Phase 10: Realistic execution (slippage, commission, impact)
+│   ├── trade-forensics.ts        → Phase 12: TradeBlackBox + ForensicAnalyzer (971 lines)
+│   ├── forensic-learning.ts      → Phase 12.1: Bayesian beliefs + fitness modifiers (394 lines)
+│   ├── regime-intelligence.ts    → Phase 11: MRTI predictive engine (740 lines)
+│   ├── persistence-bridge.ts     → Phase 13: Dual-write bridge (IndexedDB + Supabase)
+│   └── overmind/                 → Phase 15: Strategic Overmind (15 files)
+│       ├── strategic-overmind.ts  → 6-phase cycle orchestrator (805 lines)
+│       ├── opus-client.ts        → Opus 4.6 API client (singleton)
+│       ├── prompt-engine.ts      → LLM prompt construction
+│       ├── response-parser.ts    → 4-tier JSON extraction
+│       ├── hypothesis-engine.ts  → Market hypothesis generation
+│       ├── evolution-director.ts → GA directives
+│       ├── adversarial-tester.ts → ACE strategy stress testing
+│       ├── pair-specialist.ts    → Pair-specific profiling
+│       ├── emergent-indicator.ts → Novel indicator discovery
+│       ├── strategy-decomposer.ts → RSRD synthesis
+│       ├── episodic-memory.ts    → CCR episode storage
+│       ├── counterfactual-engine.ts → CCR "what if" analysis
+│       ├── meta-cognition.ts     → CCR self-reflection
+│       ├── predictive-orchestrator.ts → PSPP bridge (MRTI → Overmind)
+│       └── reasoning-journal.ts  → Decision reasoning log
 ├── lib/risk/
 │   └── manager.ts                → 8 hardcoded safety rails (GLOBAL)
 ├── lib/store/
-│   └── index.ts                  → 6 Zustand stores
+│   ├── index.ts                  → 6 Zustand stores
+│   └── persistence.ts            → Phase 13: IndexedDB provider (584 lines)
+├── lib/db/
+│   └── supabase.ts               → Phase 14: Supabase cloud provider (381 lines)
 ├── lib/api/                      → Exchange API layer (future)
 └── app/
     ├── layout.tsx                → Root layout
     ├── globals.css               → Design system (~1960 lines, dark glassmorphism)
     ├── page.tsx                  → 9-panel dashboard + Cortex Neural Map (~1300 lines)
-    └── pipeline/page.tsx         → Pipeline + Archaeology dashboard (~1400 lines)
+    └── pipeline/page.tsx         → Pipeline + Archaeology + Overmind Hub (~2050 lines)
 ```
 
 ---
@@ -186,6 +209,13 @@ console.error(`[Cortex] ...`);
 console.error(`[Island:${this.slotId}] ...`);
 console.error(`[MigrationEngine] ...`);
 console.error(`[WalkForward] ...`);
+console.error(`[Overmind] ...`);       // Strategic Overmind
+console.error(`[OpusClient] ...`);     // Opus 4.6 API
+console.error(`[PredictiveOrch] ...`); // PSPP bridge
+console.error(`[Forensics] ...`);      // Trade Forensics
+console.error(`[PersistBridge] ...`);  // Persistence Bridge
+console.error(`[Supabase] ...`);       // Cloud operations
+console.error(`[🧬²] ...`);            // Meta-evolution events
 ```
 
 ---
@@ -316,3 +346,6 @@ Only declare work **"complete"** if:
 | `evolution-engine` | Consumer | DNA operations must follow type safety + naming rules |
 | `dashboard-development` | Consumer | UI components must follow design system conventions |
 | `backtesting-simulation` | Consumer | Engine code must follow error handling + module prefix rules |
+| `strategic-overmind` | Consumer | Overmind code must follow module prefix + error handling rules |
+| `hybrid-persistence` | Consumer | Persistence code must follow SSR guard + error handling rules |
+| `trade-forensics` | Consumer | Forensics code must follow type safety + naming rules |

@@ -42,13 +42,18 @@ Check each item if the corresponding change was made during this session:
 ### Risk Layer
 - [ ] `manager.ts` changed? → Update `memory/overview.md` (Critical Rules) + `memory/architecture/system_design.md` (Risk integration)
 
-### State Layer
+### State & Persistence Layer
 - [ ] `store/index.ts` changed? → Update `memory/architecture/system_design.md` (Store architecture)
+- [ ] `store/persistence.ts` changed? → Update `memory/file_map.md` (Persistence Layer) + `memory/architecture/system_design.md` (Persistence data flow)
+- [ ] `db/supabase.ts` changed? → Update `memory/file_map.md` (Cloud DB Layer) + `memory/architecture/system_design.md` (Cloud data flow)
+- [ ] `persistence-bridge.ts` changed? → Update `memory/architecture/system_design.md` (Dual-write flow) + `memory/file_map.md`
+- [ ] `.env.local` changed? → Update `memory/overview.md` (Tech Stack) if new env vars for external services
 
 ### Dashboard Layer
 - [ ] `page.tsx` changed? → Update `memory/overview.md` (Dashboard Panels) if new panels added
+- [ ] `brain/page.tsx` changed? → Update `memory/overview.md` (Brain Visualization) + `memory/file_map.md` (Presentation Layer) + `memory/architecture/system_design.md`
 - [ ] `pipeline/page.tsx` changed? → Update `memory/overview.md` (Pipeline Dashboard section) + `memory/architecture/system_design.md` (Pipeline data flow)
-- [ ] `globals.css` changed? → No doc update needed (styling only)
+- [ ] `globals.css` changed? → No doc update needed (styling only), unless new design system added (e.g., holographic theme)
 - [ ] New components added? → Update `memory/file_map.md` + `memory/overview.md`
 
 ### Configuration

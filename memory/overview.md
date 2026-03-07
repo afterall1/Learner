@@ -4,7 +4,7 @@
 **Name**: Learner
 **Type**: Self-evolving AI-powered algorithmic trading system
 **Target**: Binance Futures (USDT-M perpetual contracts)
-**Status**: Active Development — Phase 9 (Advanced Strategy Genome Architecture Complete)
+**Status**: Active Development — Phase 18 (Neural Brain Visualization)
 **Created**: 2026-03-05
 
 ---
@@ -16,6 +16,8 @@
 | **Framework** | Next.js 15 (App Router) | SSR, routing, build system |
 | **Language** | TypeScript (Strict) | Type safety across all modules |
 | **State** | Zustand (6 stores) | Real-time reactive state |
+| **Local DB** | IndexedDB (`idb`) | Local cache + offline fallback |
+| **Cloud DB** | Supabase (PostgreSQL) | PC-independent durable storage |
 | **Charts** | Recharts | Performance & evolution visualization |
 | **Icons** | Lucide React | Premium icon system |
 | **IDs** | UUID v4 | Strategy & trade identification |
@@ -40,6 +42,17 @@ The system is built on a **Genetic Algorithm** paradigm (not Reinforcement Learn
 - **Cross-Island Migration**: Top strategies shared between related islands
 - **Pipeline Dashboard**: Dedicated `/pipeline` page with 8 panels visualizing the full evolution lifecycle
 - **Strategy Archaeology**: Gene Lineage Tree + Gene Survival Heatmap + Decision Explainer (Explainable AI)
+- **Trade Forensics Engine (Phase 12)**: TradeBlackBox flight recorder + ForensicAnalyzer + Bayesian causal attribution
+- **Forensic Learning Engine (Phase 12.1)**: Closed-loop lesson aggregation → fitness modifier
+- **IndexedDB Persistence (Phase 13)**: 6 object stores, Zustand adapter, auto-checkpoint
+- **PersistenceBridge (Phase 13.1)**: Wires engine events to IndexedDB + Supabase (lazy auto-init)
+- **Supabase Cloud DB (Phase 14)**: PostgreSQL cloud, 6 tables, hybrid dual-write architecture
+- **Strategic Overmind (Phase 15)**: Opus 4.6 AI supervisor — 6-phase reasoning cycle (OBSERVE→ANALYZE→HYPOTHESIZE→DIRECT→VERIFY→LEARN), 15 modules
+- **PSPP (Phase 15.1)**: Predictive Strategic Pre-Positioning — MRTI forecasts → proactive strategy pre-warming
+- **CCR (Phase 15.2)**: Counterfactual Causal Replay — episodic memory + "what-if" analysis + meta-cognition
+- **Agent Skills (Phase 16)**: 16 domain-specific skills covering all system modules
+- **Skill Auto-Activation Intelligence (Phase 17)**: Static import analysis → machine-readable file→skill mapping + Mermaid DAG
+- **Neural Brain Visualization (Phase 18)**: Holographic JARVIS-style 3D cortex — 10 SVG wireframe neurons, 15 animated synapses, CSS 3D perspective, HUD system (Stats bar + Target Lock + Consciousness Arc), multi-color Memory Trace Heatmap (10 HSLA hues), biological refractory period (800ms cooldown)
 
 ### Module Map
 
@@ -60,24 +73,54 @@ src/
 │   ├── meta-evolution.ts     → Meta-Evolution Engine (GA²): HyperDNA genome, meta-fitness, stability
 │   ├── migration.ts          → Cross-island knowledge transfer (3 topologies)
 │   ├── capital-allocator.ts  → Dynamic performance-weighted capital distribution
-│   ├── microstructure-genes.ts → [Phase 9] Volume profile, absorption, candle anatomy, range dynamics
-│   ├── price-action-genes.ts  → [Phase 9] Parameterized candlestick patterns, structural breaks, compression
-│   ├── composite-functions.ts → [Phase 9] Mathematical indicator composition (9 ops × 4 normalizations)
-│   ├── directional-change.ts  → [Phase 9] Event-based DC analysis (Kampouridis), evolved θ threshold
-│   ├── walk-forward.ts       → Walk-Forward Analysis (rolling IS/OOS windows)
-│   ├── monte-carlo.ts        → Monte Carlo permutation testing + Deflated Sharpe Ratio
-│   ├── regime-detector.ts    → Market regime classification (ADX/ATR/SMA-based)
-│   └── overfitting-detector.ts → Composite overfitting risk scoring (0-100)
+│   ├── trade-forensics.ts    → [Phase 12] TradeBlackBox + ForensicAnalyzer (971 lines)
+│   ├── forensic-learning.ts  → [Phase 12.1] Bayesian beliefs + fitness modifiers
+│   ├── regime-intelligence.ts → [Phase 11] MRTI predictive engine (740 lines)
+│   ├── persistence-bridge.ts → [Phase 13] Dual-write bridge (IndexedDB + Supabase)
+│   ├── overmind/             → [Phase 15] Strategic Overmind (15 files)
+│   │   ├── strategic-overmind.ts → 6-phase cycle orchestrator (805 lines)
+│   │   ├── opus-client.ts    → Opus 4.6 API client (singleton)
+│   │   ├── prompt-engine.ts  → LLM prompt construction
+│   │   ├── response-parser.ts → 4-tier JSON extraction
+│   │   ├── hypothesis-engine.ts → Market hypothesis generation
+│   │   ├── evolution-director.ts → GA directives
+│   │   ├── adversarial-tester.ts → ACE strategy stress testing
+│   │   ├── pair-specialist.ts → Pair-specific profiling
+│   │   ├── emergent-indicator.ts → Novel indicator discovery
+│   │   ├── strategy-decomposer.ts → RSRD synthesis
+│   │   ├── episodic-memory.ts → CCR episode storage
+│   │   ├── counterfactual-engine.ts → CCR "what if" analysis
+│   │   ├── meta-cognition.ts → CCR self-reflection
+│   │   ├── predictive-orchestrator.ts → PSPP bridge (MRTI → Overmind)
+│   │   └── reasoning-journal.ts → Decision reasoning log
+│   ├── microstructure-genes.ts → [Phase 9] Volume Profile, Acceleration, Candle Anatomy
+│   ├── price-action-genes.ts  → [Phase 9] 10 candlestick formations, structural breaks
+│   ├── composite-functions.ts → [Phase 9] Mathematical indicator evolution (9 ops × 4 norms)
+│   ├── directional-change.ts  → [Phase 9] Event-based DC analysis (Kampouridis)
+│   ├── backtester.ts         → [Phase 10] Core backtest engine + IndicatorCache (PFLM)
+│   └── market-simulator.ts   → [Phase 10] Realistic execution (slippage, commission, impact)
 ├── lib/risk/
 │   └── manager.ts            → 8 hardcoded, non-negotiable risk safety rails
 ├── lib/store/
-│   └── index.ts              → 6 Zustand stores (Brain, Cortex, Portfolio, Trade, Market, Config)
+│   ├── index.ts              → 6 Zustand stores (Brain, Cortex, Portfolio, Trade, Market, Config)
+│   └── persistence.ts        → [Phase 13] IndexedDB provider (584 lines)
+├── lib/db/
+│   └── supabase.ts           → [Phase 14] Supabase cloud provider (381 lines)
 └── app/
     ├── layout.tsx             → Root layout with Inter + JetBrains Mono fonts
-    ├── globals.css            → Premium dark glassmorphism design system (1960+ lines)
+    ├── globals.css            → Premium dark glassmorphism + holographic design system (2580+ lines)
     ├── page.tsx               → Main dashboard: 9 panels + Cortex Neural Map (1300+ lines)
+    ├── brain/
+    │   └── page.tsx           → [Phase 18] Holographic Neural Cortex visualization (675 lines)
     └── pipeline/
-        └── page.tsx           → Pipeline dashboard: 8 panels + Strategy Archaeology (1400+ lines)
+        └── page.tsx           → Pipeline + Archaeology + Overmind Hub (~2050 lines)
+```
+
+### Scripts
+```
+scripts/
+├── validate-skills.js         → Skill Integrity Validator (detects orphans, stale refs, missing links)
+└── generate-skill-map.js      → Auto-Activation Intelligence (static import analysis → skill-map.json)
 ```
 
 ---
@@ -151,5 +194,5 @@ src/
 
 ---
 
-*Last Updated: 2026-03-06 17:06 (UTC+3)*
+*Last Updated: 2026-03-07 01:20 (UTC+3)*
 *Build Status: ✅ Passing (zero errors)*

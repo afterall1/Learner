@@ -44,12 +44,16 @@ graph TD
         RISK[risk/manager.ts]
     end
 
-    subgraph "Layer 4: State"
+    subgraph "Layer 4: State & Persistence"
         STORE[store/index.ts]
+        PERSIST[store/persistence.ts]
+        SUPABASE[db/supabase.ts]
+        BRIDGE[persistence-bridge.ts]
     end
 
     subgraph "Layer 5: Presentation"
         PAGE[app/page.tsx]
+        BRAIN_VIS[app/brain/page.tsx]
         PIPELINE[app/pipeline/page.tsx]
         CSS[app/globals.css]
         LAYOUT[app/layout.tsx]
@@ -105,10 +109,79 @@ graph TD
     CSS --> PAGE
     CSS --> PIPELINE
     STORE --> PIPELINE
+
+    BRIDGE --> PERSIST
+    BRIDGE --> SUPABASE
+    ISLAND --> BRIDGE
+    STORE --> PERSIST
 end
 ```
 
 ---
+
+## Persistence Data Flow (Phase 14 — Hybrid Architecture)
+
+```mermaid
+sequenceDiagram
+    participant E as Engine (Island)
+    participant B as PersistenceBridge
+    participant IDB as IndexedDB (Local)
+    participant S as Supabase (Cloud)
+    participant D as Dashboard
+
+    Note over B: Lazy auto-init on first call
+
+    E->>B: onTradeRecorded(trade)
+    par Cloud (immediate, stateless HTTP)
+        B->>S: cloudSaveTrade(trade)
+        S-->>B: OK / Error (isolated)
+    and Local (needs init)
+        B->>B: ensureIndexedDB()
+        B->>IDB: saveTrade(trade)
+        IDB-->>B: OK
+    end
+
+    E->>B: onGenerationEvolved(...)
+    par
+        B->>S: cloudSaveEvolutionSnapshot()
+        B->>S: cloudSaveStrategies()
+    and
+        B->>IDB: saveEvolutionSnapshot()
+        B->>IDB: saveStrategies()
+    end
+
+    D->>B: loadLastCheckpoint()
+    B->>S: cloudLoadEngineCheckpoint()
+    alt Cloud has data
+        S-->>B: checkpoint
+        B-->>D: checkpoint (cloud)
+    else Cloud empty
+        B->>IDB: loadEngineCheckpoint()
+        IDB-->>B: checkpoint
+        B-->>D: checkpoint (local)
+    end
+```
+
+### Key Design Decisions
+- **Cloud writes fire first** — Supabase is stateless HTTP, no init needed
+- **Local writes need lazy init** — IndexedDB requires `ensureIndexedDB()` on first call
+- **Error isolation** — Cloud failure NEVER blocks local persistence (and vice versa)
+- **Cloud-first reads** — `loadLastCheckpoint()` tries Supabase first, IndexedDB fallback
+- **Singleton init promise** — Prevents race conditions on concurrent first writes
+
+### Data Types Persisted
+
+| Data | Frequency | Cloud Table | IndexedDB Store |
+|------|-----------|-------------|-----------------|
+| Trades | On every close | `trades` | `trades` |
+| Strategies | On generation evolved | `strategies` | `strategies` |
+| Evolution Snapshots | On generation evolved | `evolution_snapshots` | `evolution_snapshots` |
+| Forensic Reports | On trade close | `forensic_reports` | `forensic_reports` |
+| Portfolio Snapshots | Every 60s (throttled) | `portfolio_snapshots` | `portfolio_snapshots` |
+| Engine State | Every 30s (auto-checkpoint) | `engine_state` | `engine_state` |
+
+---
+
 
 ## Data Flow
 

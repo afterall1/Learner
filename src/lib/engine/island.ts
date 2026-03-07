@@ -41,6 +41,7 @@ import {
 } from './regime-intelligence';
 import { TradeForensicsEngine } from './trade-forensics';
 import { ForensicLearningEngine } from './forensic-learning';
+import { getPersistenceBridge, type PersistenceBridge } from './persistence-bridge';
 import { calculateATR } from './regime-detector';
 
 // ─── Island Configuration ────────────────────────────────────
@@ -104,6 +105,9 @@ export class Island {
 
     // ─── Phase 12.1: Forensic Learning (Closed Loop) ─────────
     private readonly forensicLearning: ForensicLearningEngine = new ForensicLearningEngine();
+
+    // ─── Phase 13.1: Persistence Bridge ──────────────────
+    private readonly persistenceBridge: PersistenceBridge = getPersistenceBridge();
 
     constructor(slot: TradingSlot, config: Partial<IslandConfig> = {}, hyperDna?: HyperDNA) {
         this.slot = slot;
@@ -348,7 +352,13 @@ export class Island {
 
                 // Phase 12.1: Feed lessons into Bayesian learning engine (CLOSES THE LOOP)
                 this.forensicLearning.ingestLessons(forensicReport.lessons);
+
+                // Phase 13.1: Persist forensic report to IndexedDB
+                this.persistenceBridge.onForensicReportGenerated(forensicReport);
             }
+
+            // Phase 13.1: Persist closed trade to IndexedDB
+            this.persistenceBridge.onTradeRecorded(trade);
 
             const closedCount = (this.tradesByStrategy.get(trade.strategyId) ?? [])
                 .filter(t => t.status === TradeStatus.CLOSED).length;
@@ -569,6 +579,19 @@ export class Island {
         }
 
         this.state = BrainState.TRADING;
+
+        // Phase 13.1: Persist evolution to IndexedDB
+        const best = this.evolutionEngine.getBestStrategyAllTime();
+        this.persistenceBridge.onGenerationEvolved(
+            this.evolutionEngine.getCurrentGenerationNumber(),
+            bestFitness,
+            nextGen.averageFitnessScore,
+            nextGen.population.length,
+            this.evolutionEngine.getCurrentMutationRate(),
+            best ?? null,
+            this.slot.id,
+            nextGen.population,
+        );
     }
 
     private rotateToNextStrategy(): void {

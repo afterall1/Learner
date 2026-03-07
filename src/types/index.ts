@@ -160,6 +160,17 @@ export interface StrategyDNA {
   confluenceGenes?: TimeframeConfluenceGene[];       // Multi-TF alignment
   dcGenes?: DirectionalChangeGene[];                 // Event-based directional changes
 
+  // ─── Order Flow Intelligence (Phase 9.5) ──────────────────
+  orderFlowGenes?: OrderFlowGene[];                   // Volume delta, large trades, liquidations
+
+  // ─── Quality-Diversity (Phase 18) ─────────────────────────
+  behaviorDescriptor?: BehaviorDescriptor;            // Behavioral niche in MAP-Elites grid
+  tradeStyleClassification?: TradeStyle;              // Derived from avg hold duration
+
+  // ─── Genome Topology (Phase 18.2 — NEAT-Inspired) ────────
+  innovationNumbers?: Record<string, number>;         // geneId → innovation number for alignment
+  speciesId?: number;                                 // Species membership for speciated evolution
+
   metadata: {
     mutationHistory: string[];
     fitnessScore: number;
@@ -167,6 +178,20 @@ export interface StrategyDNA {
     lastEvaluated: number | null;
     validation: StrategyValidation | null;
     structuralComplexity?: number;  // 0-1 measure of genome structural diversity
+
+    // ─── Strategic Overmind (Phase 15) ──────────────────────
+    /** Which Overmind subsystem originated this strategy */
+    overmindOrigin?: 'hypothesis' | 'rsrd' | 'emergent' | 'adversarial_hardened';
+    /** Link to the hypothesis that created this seed */
+    hypothesisId?: string;
+    /** Link to the directive that guided mutation */
+    directiveId?: string;
+    /** Resilience score from adversarial testing (0-100) */
+    resilienceScore?: number;
+
+    // ─── Coevolutionary Robustness (Phase 18.1) ─────────────
+    /** Composite robustness from coevolutionary testing */
+    robustnessScore?: RobustnessScore;
   };
 }
 
@@ -476,6 +501,8 @@ export interface CortexSnapshot {
   migrationHistory: MigrationEvent[];
   globalLogs: BrainLog[];
   totalCapital: number;
+  /** Strategic Overmind snapshot (Phase 15) — null if Overmind disabled */
+  overmindSnapshot?: import('./overmind').OvermindSnapshot;
 }
 
 export interface MigrationEvent {
@@ -774,6 +801,304 @@ export interface ExperienceMemorySnapshot {
   oldestPattern: number;                        // Timestamp
   newestPattern: number;
 }
+
+// ─── Quality-Diversity Evolution (MAP-Elites) ────────────────
+
+/**
+ * Phase 18: Trade style classification for behavioral diversity.
+ * Derived from a strategy's average trade hold duration.
+ */
+export enum TradeStyle {
+  SCALPER = 'SCALPER',             // avg hold < 4 candles
+  SWING = 'SWING',                 // avg hold 4-20 candles
+  POSITION = 'POSITION',           // avg hold > 20 candles
+}
+
+/**
+ * Phase 18: Behavioral descriptor for MAP-Elites grid placement.
+ * Defines the behavioral niche of a strategy along two axes:
+ * BD1: Which market regime the strategy specializes in
+ * BD2: What trade style (hold duration) the strategy exhibits
+ */
+export interface BehaviorDescriptor {
+  regimeSpecialization: MarketRegime;
+  tradeStyle: TradeStyle;
+}
+
+/**
+ * Phase 18: A single cell in the MAP-Elites behavioral grid.
+ * Each cell holds the best-performing strategy for its behavioral niche.
+ */
+export interface MAPElitesCell {
+  descriptor: BehaviorDescriptor;
+  elite: StrategyDNA | null;
+  fitness: number;
+  timesImproved: number;
+  lastUpdated: number;
+}
+
+/**
+ * Phase 18: Configuration for the Quality-Diversity system.
+ */
+export interface QualityDiversityConfig {
+  enabled: boolean;
+  minTradesForClassification: number;   // Minimum trades to classify behavior (default: 10)
+  scalperThresholdCandles: number;      // Max avg hold for SCALPER (default: 4)
+  positionThresholdCandles: number;     // Min avg hold for POSITION (default: 20)
+  repertoireSelectionMode: 'regime_match' | 'best_overall' | 'ensemble';
+}
+
+export const DEFAULT_QD_CONFIG: QualityDiversityConfig = {
+  enabled: true,
+  minTradesForClassification: 10,
+  scalperThresholdCandles: 4,
+  positionThresholdCandles: 20,
+  repertoireSelectionMode: 'regime_match',
+};
+
+/**
+ * Phase 18: Snapshot of the MAP-Elites repertoire for dashboard display.
+ */
+export interface RepertoireSnapshot {
+  totalCells: number;
+  occupiedCells: number;
+  coveragePercent: number;
+  avgEliteFitness: number;
+  bestEliteFitness: number;
+  grid: MAPElitesCell[];
+  regimeCoverage: Record<MarketRegime, number>;
+  styleCoverage: Record<TradeStyle, number>;
+}
+
+// ─── Order Flow Intelligence (Phase 9.5) ─────────────────────
+
+/**
+ * Phase 9.5: Aggregated trade from Binance aggTrade stream.
+ */
+export interface AggTrade {
+  tradeId: number;
+  price: number;
+  quantity: number;
+  timestamp: number;
+  isBuyerMaker: boolean;           // true = seller aggressor, false = buyer aggressor
+}
+
+/**
+ * Phase 9.5: Forced liquidation order from Binance forceOrder stream.
+ */
+export interface ForceOrder {
+  symbol: string;
+  side: 'BUY' | 'SELL';
+  orderType: 'LIMIT';
+  price: number;
+  quantity: number;
+  averagePrice: number;
+  status: 'FILLED' | 'EXPIRED';
+  timestamp: number;
+}
+
+/**
+ * Phase 9.5: Volume Delta calculation result.
+ */
+export interface VolumeDeltaResult {
+  delta: number;                     // Buy volume - Sell volume
+  cumulativeDelta: number;           // Running total CVD
+  buyVolume: number;
+  sellVolume: number;
+  deltaPercent: number;              // delta / total volume (-1 to 1)
+  trendStrength: number;             // 0-1 consistency of delta direction
+}
+
+/**
+ * Phase 9.5: Detected large trade (institutional footprint).
+ */
+export interface LargeTradeSignal {
+  price: number;
+  quantity: number;
+  totalValue: number;
+  isBuy: boolean;
+  sizeMultiple: number;              // How many times larger than average
+  timestamp: number;
+}
+
+/**
+ * Phase 9.5: Liquidation cascade detection result.
+ */
+export interface CascadeSignal {
+  detected: boolean;
+  direction: TradeDirection;
+  totalLiquidatedQuantity: number;
+  cascadeCount: number;              // Number of liquidations in window
+  estimatedPriceImpact: number;      // Estimated price move from cascade
+  severity: number;                  // 0-1 cascade severity
+}
+
+/**
+ * Phase 9.5: Funding rate pressure signal.
+ */
+export interface FundingSignal {
+  currentRate: number;
+  annualizedRate: number;
+  pressure: 'long_pays' | 'short_pays' | 'neutral';
+  extremity: number;                 // 0-1 how extreme the rate is
+  nextFundingIn: number;             // ms until next funding
+  expectedPressureDirection: TradeDirection;  // Direction that funding pushes price
+}
+
+/**
+ * Phase 9.5: Volume absorption detection (whale activity at key levels).
+ */
+export interface AbsorptionSignal {
+  detected: boolean;
+  level: number;                     // Price level of absorption
+  absorptionType: 'bid' | 'ask';     // Buying (bid) or selling (ask) absorption
+  strength: number;                  // 0-1 absorption strength
+  volumeAbsorbed: number;
+}
+
+/**
+ * Phase 9.5: Order Flow Intelligence gene — evolvable parameters for
+ * analyzing trade flow, liquidations, and funding dynamics.
+ */
+export interface OrderFlowGene {
+  id: string;
+  volumeDeltaWindow: number;         // 5-100 candle equivalent lookback
+  deltaThreshold: number;            // 0.2-0.8 normalized threshold for delta-based signals
+  largeTradeSizeMultiplier: number;  // 3-10x average trade size
+  liquidationSensitivity: number;    // 0.1-1.0 cascade detection sensitivity
+  fundingRateThreshold: number;      // 0.001-0.01 extreme funding rate threshold
+  absorptionDetectionMode: 'volume_profile' | 'delta_divergence' | 'large_trade_cluster';
+  params: {
+    cvdMomentumPeriod?: number;      // 5-30 CVD rate of change lookback
+    largeTradeCooldown?: number;     // 1-10 candles cooldown between large trade signals
+    cascadeWindowMs?: number;        // 1000-30000 ms window for cascade grouping
+    absorptionVolumeThreshold?: number; // 2.0-8.0x average candle volume
+  };
+}
+
+// ─── Coevolutionary Strategy Tournaments (Phase 18.1) ────────
+
+/**
+ * Phase 18.1: Evolved adversarial market scenario DNA.
+ * The parasite GA evolves these to break host strategies.
+ */
+export interface MarketScenarioDNA {
+  id: string;
+  generation: number;
+  parentIds: string[];
+  createdAt: number;
+
+  // Scenario structure
+  volatilityProfile: number[];       // Volatility multipliers over scenario (length 50-200)
+  trendPattern: 'v_reversal' | 'head_shoulders' | 'flash_crash' | 'slow_bleed' | 'whipsaw' | 'gap_and_go' | 'chop';
+  regimeSequence: MarketRegime[];    // Forced regime transitions
+  slippageMultiplier: number;        // 1.0-5.0 elevated slippage
+  liquidityDrain: number;            // 0.0-0.8 reduced market depth
+  newsSpike: {
+    candle: number;                  // Which candle gets the spike
+    magnitude: number;               // 0.5-5.0% price shock
+    direction: 'up' | 'down';
+  } | null;
+
+  metadata: {
+    fitnessScore: number;            // Parasite fitness (damage dealt)
+    strategiesKilled: number;        // How many strategies suffered >10% DD
+    avgDamage: number;               // Average fitness reduction caused
+    worstVictimId: string | null;    // Strategy hurt the most
+  };
+}
+
+/**
+ * Phase 18.1: Robustness score from coevolutionary testing.
+ */
+export interface RobustnessScore {
+  backtestFitness: number;           // Standard backtest fitness score
+  survivalRate: number;              // 0-1 survival across top-5 scenarios
+  worstCaseDrawdown: number;         // Worst DD under adversarial attack
+  recoverySpeed: number;             // 0-1 how quickly strategy recovers
+  compositeRobustness: number;       // Weighted combination
+}
+
+/**
+ * Phase 18.1: Coevolution engine configuration.
+ */
+export interface CoevolutionConfig {
+  enabled: boolean;
+  parasitePopulationSize: number;    // Default: 8
+  coevolutionInterval: number;       // Every Nth generation (default: 5)
+  scenarioDurationCandles: number;   // Length of synthetic scenario (default: 200)
+  robustnessWeight: number;          // 0-1 weight of robustness in final fitness (default: 0.3)
+  mutationRate: number;              // Parasite mutation rate (default: 0.4)
+  crossoverRate: number;             // Parasite crossover rate (default: 0.6)
+}
+
+export const DEFAULT_COEVOLUTION_CONFIG: CoevolutionConfig = {
+  enabled: true,
+  parasitePopulationSize: 8,
+  coevolutionInterval: 5,
+  scenarioDurationCandles: 200,
+  robustnessWeight: 0.3,
+  mutationRate: 0.4,
+  crossoverRate: 0.6,
+};
+
+// ─── Adaptive Genome Topology (NEAT-Inspired, Phase 18.2) ────
+
+/**
+ * Phase 18.2: Innovation tracking for structural genome mutations.
+ * Each new structural gene gets a unique, monotonically increasing
+ * innovation number. This prevents crossover from misaligning
+ * unrelated structural additions.
+ */
+export interface InnovationRecord {
+  innovationNumber: number;
+  geneType: 'indicator' | 'entry_rule' | 'exit_rule' | 'advanced_gene';
+  originStrategyId: string;
+  originGeneration: number;
+  createdAt: number;
+  description: string;
+}
+
+/**
+ * Phase 18.2: Species profile for speciation-based evolution.
+ * Strategies within the same species compete for offspring.
+ * Strategies in different species are protected from competition.
+ */
+export interface SpeciesProfile {
+  id: number;
+  representative: StrategyDNA;       // The prototype member of this species
+  memberCount: number;
+  avgFitness: number;
+  bestFitness: number;
+  stagnationCounter: number;         // Generations without improvement
+  offspringAllocation: number;       // How many offspring this species gets
+  createdGeneration: number;
+}
+
+/**
+ * Phase 18.2: Genome topology configuration.
+ */
+export interface GenomeTopologyConfig {
+  enabled: boolean;
+  structuralMutationRate: number;    // Chance of structural vs parametric mutation (default: 0.15)
+  addGeneProbability: number;        // P(add gene | structural mutation) (default: 0.5)
+  removeGeneProbability: number;     // P(remove gene | structural) (default: 0.2)
+  chainGeneProbability: number;      // P(indicator chain | structural) (default: 0.3)
+  speciationThreshold: number;       // Jaccard distance for species membership (default: 0.4)
+  speciesStagnationLimit: number;    // Generations before dissolving species (default: 10)
+  minimalGenomeSize: number;         // Minimum genes for initial random strategy (default: 2)
+}
+
+export const DEFAULT_GENOME_TOPOLOGY_CONFIG: GenomeTopologyConfig = {
+  enabled: true,
+  structuralMutationRate: 0.15,
+  addGeneProbability: 0.5,
+  removeGeneProbability: 0.2,
+  chainGeneProbability: 0.3,
+  speciationThreshold: 0.4,
+  speciesStagnationLimit: 10,
+  minimalGenomeSize: 2,
+};
 
 // ─── Advanced Gene Types (Phase 9) ───────────────────────────
 // These gene types allow the GA to evolve BEYOND standard indicator
@@ -1130,4 +1455,261 @@ export interface TradeForensicReport {
   pnlPercent: number;
   pnlUSD: number;
   wasSuccessful: boolean;
+}
+
+// ═══════════════════════════════════════════════════════════════
+// SURROGATE-ASSISTED ILLUMINATION ENGINE (SAIE) — Phase 18.3
+// ═══════════════════════════════════════════════════════════════
+
+/** Configuration for the SAIE meta-controller. */
+export interface SurrogateConfig {
+  enabled: boolean;
+  /** Number of candidate strategies generated per amplification round */
+  candidatePoolSize: number;
+  /** Number of candidates selected for full backtest (top-K) */
+  topKForBacktest: number;
+  /** Number of decision stumps in the surrogate forest */
+  forestSize: number;
+  /** Max depth per decision stump */
+  maxStumpDepth: number;
+  /** UCB kappa — exploration weight (higher = more exploration) */
+  ucbKappa: number;
+  /** Minimum training samples before surrogate predictions are trusted */
+  minTrainingSamples: number;
+  /** How often (in evaluations) to recalculate gene importance via MI */
+  geneImportanceInterval: number;
+  /** Minimum MI score for a feature to be considered "important" */
+  minImportanceThreshold: number;
+}
+
+export const DEFAULT_SAIE_CONFIG: SurrogateConfig = {
+  enabled: true,
+  candidatePoolSize: 500,
+  topKForBacktest: 20,
+  forestSize: 50,
+  maxStumpDepth: 4,
+  ucbKappa: 1.5,
+  minTrainingSamples: 30,
+  geneImportanceInterval: 100,
+  minImportanceThreshold: 0.05,
+};
+
+/** Prediction from the surrogate model. */
+export interface SurrogatePrediction {
+  mean: number;            // Predicted fitness score
+  variance: number;        // Uncertainty estimate
+  ucbScore: number;        // Upper Confidence Bound score
+  confidence: number;      // 0-1 confidence in prediction
+}
+
+/** Mutual-Information-based gene importance score. */
+export interface GeneImportanceScore {
+  featureName: string;
+  featureIndex: number;
+  mutualInformation: number;   // Bits of information shared with fitness
+  normalizedImportance: number; // 0-1 normalized score
+  rank: number;                // 1 = most important
+}
+
+/** Dashboard-friendly snapshot of SAIE state. */
+export interface SAIESnapshot {
+  totalTrainingSamples: number;
+  surrogateAccuracy: number;         // Mean absolute error on last 20 predictions
+  avgPredictionTimeMs: number;
+  amplificationRatio: number;        // candidatePoolSize / topKForBacktest
+  lastGeneImportance: GeneImportanceScore[];
+  ucbKappa: number;
+  modelReady: boolean;               // Has enough training samples?
+  totalCandidatesScreened: number;
+  totalBacktestsSaved: number;       // Candidates screened - backtests run
+}
+
+// ═══════════════════════════════════════════════════════════════
+// ADAPTIVE COGNITIVE CORE (ACC) — Phase 19
+// ═══════════════════════════════════════════════════════════════
+
+// ── Module A: Bayesian Signal Calibrator ─────────────────────
+
+/** Beta distribution parameters for Bayesian belief. */
+export interface BetaParams {
+  alpha: number;   // Success pseudo-count
+  beta: number;    // Failure pseudo-count
+}
+
+/** Unique key identifying a signal belief: (indicator, condition, regime). */
+export interface SignalBeliefKey {
+  indicatorType: IndicatorType;
+  condition: SignalCondition;
+  regime: MarketRegime;
+}
+
+/** A single Bayesian belief about a signal's reliability. */
+export interface SignalBelief {
+  key: SignalBeliefKey;
+  prior: BetaParams;
+  posterior: BetaParams;
+  sampleCount: number;
+  lastUpdated: number;             // Timestamp
+  calibratedConfidence: number;    // α / (α + β) — calibrated probability
+  thompsonSample: number;          // Last Thompson sample drawn
+}
+
+/** Configuration for the Bayesian Signal Calibrator. */
+export interface CalibrationConfig {
+  priorAlpha: number;              // Initial alpha (default: 2 — mild optimism)
+  priorBeta: number;               // Initial beta (default: 2 — mild pessimism)
+  decayRate: number;               // Exponential decay per day (0-1)
+  minSamplesForConfidence: number; // Min observations before trusting belief
+  successThreshold: number;        // PnL% above this = "success" (default: 0)
+}
+
+export const DEFAULT_CALIBRATION_CONFIG: CalibrationConfig = {
+  priorAlpha: 2,
+  priorBeta: 2,
+  decayRate: 0.02,
+  minSamplesForConfidence: 5,
+  successThreshold: 0,
+};
+
+/** Dashboard snapshot of signal reliability across regimes. */
+export interface ReliabilityMatrix {
+  beliefs: SignalBelief[];
+  totalObservations: number;
+  avgConfidence: number;
+  mostReliableSignals: Array<{ key: SignalBeliefKey; confidence: number }>;
+  leastReliableSignals: Array<{ key: SignalBeliefKey; confidence: number }>;
+  coveragePercent: number;          // % of (indicator, condition, regime) combos observed
+}
+
+// ── Module B: Market Intelligence Cortex ─────────────────────
+
+/** Market mood classification based on Fear & Greed Index. */
+export type MarketMood = 'EXTREME_FEAR' | 'FEAR' | 'NEUTRAL' | 'GREED' | 'EXTREME_GREED';
+
+/** Composite market intelligence from external sources. */
+export interface MarketIntelligence {
+  fearGreedIndex: number;          // 0-100 (from API or synthetic)
+  fearGreedClassification: MarketMood;
+  fundingRate: number;             // Current funding rate
+  fundingBias: 'BULLISH' | 'BEARISH' | 'NEUTRAL';
+  volatilityPercentile: number;    // 0-100: current vol vs historical
+  compositeScore: number;          // -1 to +1: overall market mood
+  aggressivenessMultiplier: number; // 0.5-1.5: position size modifier
+  timestamp: number;
+  dataAge: number;                 // Seconds since last fetch
+  sourcesAvailable: number;        // How many external sources responded
+}
+
+/** Configuration for the Market Intelligence Cortex. */
+export interface IntelligenceConfig {
+  fearGreedApiUrl: string;
+  fetchIntervalMs: number;         // How often to fetch external data
+  maxDataAgeMs: number;            // Max age before data is considered stale
+  enableFearGreed: boolean;
+  enableFundingRate: boolean;
+  enableVolatilityContext: boolean;
+  extremeFearThreshold: number;    // Below this = extreme fear (default: 20)
+  extremeGreedThreshold: number;   // Above this = extreme greed (default: 80)
+}
+
+export const DEFAULT_INTELLIGENCE_CONFIG: IntelligenceConfig = {
+  fearGreedApiUrl: 'https://api.alternative.me/fng/',
+  fetchIntervalMs: 300_000,        // 5 minutes
+  maxDataAgeMs: 600_000,           // 10 minutes
+  enableFearGreed: true,
+  enableFundingRate: true,
+  enableVolatilityContext: true,
+  extremeFearThreshold: 20,
+  extremeGreedThreshold: 80,
+};
+
+// ── Module C: Metacognitive Monitor ──────────────────────────
+
+/** A single entry in the Decision Journal. */
+export interface DecisionJournalEntry {
+  id: string;
+  timestamp: number;
+  strategyId: string;
+  action: 'ENTRY_LONG' | 'ENTRY_SHORT' | 'EXIT' | 'SKIP';
+  signalConfidence: number;        // From Bayesian calibrator
+  marketMood: MarketMood;          // From Market Intelligence
+  epistemicUncertainty: number;    // 0-1: overall system uncertainty
+  aggressiveness: number;          // Position size multiplier applied
+  reasoning: string[];             // Human-readable decision chain
+  outcome?: {                      // Filled after trade closes
+    pnlPercent: number;
+    wasCorrect: boolean;
+    lessonLearned: string;
+  };
+}
+
+/** Dashboard snapshot of metacognitive state. */
+export interface MetacognitiveSnapshot {
+  calibrationQuality: number;      // 0-1: how well-calibrated are beliefs?
+  beliefDriftRate: number;         // Rate of change in beliefs (0-1)
+  epistemicUncertainty: number;    // 0-1: aggregate uncertainty
+  aggressivenessMultiplier: number;
+  recentDecisions: DecisionJournalEntry[];
+  totalDecisions: number;
+  correctDecisionRate: number;     // Accuracy of past decisions
+  avgSignalConfidence: number;
+}
+
+// ═══════════════════════════════════════════════════════════════
+// KNOWLEDGE-DIRECTED STRATEGY SYNTHESIS (KDSS) — Phase 20
+// ═══════════════════════════════════════════════════════════════
+
+/** Configuration for the KDSS engine. */
+export interface KDSSConfig {
+  /** Fraction of new generation created via KDSS (rest via standard GA) */
+  synthesisRatio: number;
+  /** Noise level injected for diversity (0-1, default 0.15) */
+  noiseLevel: number;
+  /** Prefer empty grid cells first? */
+  prioritizeEmptyCells: boolean;
+  /** Min gene importance score to include an indicator */
+  minGeneImportance: number;
+}
+
+export const DEFAULT_KDSS_CONFIG: KDSSConfig = {
+  synthesisRatio: 0.30,
+  noiseLevel: 0.15,
+  prioritizeEmptyCells: true,
+  minGeneImportance: 0.04,
+};
+
+/** Aggregated knowledge from all 6 sources. */
+export interface KnowledgeContext {
+  /** Signal reliability per (indicator, condition, regime) from Bayesian Calibrator */
+  signalReliability: Map<string, number>;
+  /** Gene importance rankings from SAIE */
+  geneImportance: GeneImportanceScore[];
+  /** Empty or weak MAP-Elites cells to target */
+  gridGaps: Array<{ regime: MarketRegime; style: TradeStyle; currentFitness: number }>;
+  /** Proven patterns from Experience Replay */
+  provenPatterns: Array<{ indicatorTypes: IndicatorType[]; regime: MarketRegime; fitness: number }>;
+  /** Current market regime */
+  currentRegime: MarketRegime;
+  /** Epistemic uncertainty level */
+  epistemicUncertainty: number;
+}
+
+/** Blueprint for a strategy to be synthesized. */
+export interface SynthesisBlueprint {
+  targetRegime: MarketRegime;
+  targetStyle: TradeStyle;
+  selectedIndicators: IndicatorType[];
+  parameterRanges: Map<string, { min: number; max: number; center: number }>;
+  riskProfile: { sl: number; tp: number; leverage: number; positionSize: number };
+  confidence: number;  // 0-1: how confident is KDSS in this blueprint
+  reasoning: string[];
+}
+
+/** Report from a KDSS synthesis batch. */
+export interface SynthesisReport {
+  strategiesSynthesized: number;
+  targetedNiches: number;
+  avgBlueprintConfidence: number;
+  knowledgeSourcesUsed: string[];
+  timestamp: number;
 }

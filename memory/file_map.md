@@ -59,8 +59,29 @@
 | `meta-evolution.ts` | Meta-Evolution Engine (GA²). HyperDNA genome generation/crossover/mutation, 4-component meta-fitness evaluation, stability guard, HyperDNA→EvolutionConfig bridge. | 🔴 |
 | `migration.ts` | Cross-island knowledge transfer. 3 topologies: Neighborhood (affinity-based), Ring (sequential), Star (best broadcasts). Affinity scoring: same pair/different TF = 0.8, same TF/different pair = 0.5. Adapter re-scopes strategies and resets fitness. | 🟡 |
 | `capital-allocator.ts` | Dynamic capital distribution. 3-factor weighting: lifetime fitness (60%), recent trend (30%), diversity contribution (10%). Per-island floor (5%) and cap (30%). Periodic rebalancing. | 🟡 |
+| `paper-trade-executor.ts` | Paper trade execution and management. Simulates trade entries/exits without real capital exposure. | 🟡 |
 
 ---
+
+## 🧠 Strategic Overmind Layer (`src/lib/engine/overmind/`) [Phase 15]
+
+| File | Purpose | Importance |
+|------|---------|------------|
+| `strategic-overmind.ts` | **Core Orchestrator** (~805 lines). 6-phase reasoning cycle (OBSERVE→ANALYZE→HYPOTHESIZE→DIRECT→VERIFY→LEARN). Supervises GA, Meta-Evolution, and MRTI. Coordinates all Overmind sub-engines. | 🔴 |
+| `opus-client.ts` | **Opus 4.6 API Client** (~314 lines). Singleton Anthropic API wrapper. Adaptive thinking, token budget management, graceful degradation (system runs without Opus). | 🔴 |
+| `prompt-engine.ts` | LLM prompt construction engine. Builds structured prompts for all Overmind reasoning phases. Context-aware prompt assembly. | 🔴 |
+| `response-parser.ts` | 4-tier JSON extraction from LLM responses. Handles structured/unstructured output, markdown artifacts, and fallback parsing. | 🟡 |
+| `hypothesis-engine.ts` | Market hypothesis generation (~339 lines). Opus-driven market hypothesis creation, tracking, and retirement. Generates testable market theories. | 🔴 |
+| `evolution-director.ts` | GA directive generation (~274 lines). Opus analyzes generation results, proposes mutations, crossovers, gene proposals. Guides GA direction. | 🔴 |
+| `adversarial-tester.ts` | ACE strategy stress testing (~377 lines). Opus generates adversarial scenarios. Evaluates strategy resilience. Produces stress reports. | 🔴 |
+| `pair-specialist.ts` | Pair-specific profiling. Builds behavioral profiles per trading pair. Customizes evolution parameters per pair. | 🟡 |
+| `emergent-indicator.ts` | Novel indicator discovery. Opus proposes new composite indicator formulas. Evaluates indicator originality vs existing library. | 🟡 |
+| `strategy-decomposer.ts` | RSRD synthesis. Decomposes winning strategies into reusable components. Identifies transferable patterns. | 🟡 |
+| `episodic-memory.ts` | CCR episode storage. Records key decision moments with full context snapshots. Enables later counterfactual analysis. | 🔴 |
+| `counterfactual-engine.ts` | CCR "what-if" analysis. Generates alternative scenarios from past episodes. Extracts causal insights. | 🔴 |
+| `meta-cognition.ts` | CCR self-reflection loop. Reviews Overmind’s own decisions. Updates beliefs and biases. Feeds into reasoning journal. | 🟡 |
+| `predictive-orchestrator.ts` | **PSPP bridge** (MRTI → Overmind). Evaluates regime forecasts, determines pre-positioning actions (HOLD/PREPARE/SWITCH). Dual primary skill: `regime-intelligence` + `strategic-overmind`. | 🔴 |
+| `reasoning-journal.ts` | Decision reasoning log. Stores Overmind’s reasoning chain per cycle. Auditable decision trail. | 🟡 |
 
 ## 🔬 Backtesting Engine Layer (`src/lib/engine/`)
 
@@ -70,6 +91,7 @@
 | `market-simulator.ts` | **Phase 10 — Realistic execution modeling**. ATR-adaptive slippage, Binance taker commission (0.04%), Almgren-Chriss square-root market impact model, intra-candle SL/TP detection (conservative: SL wins ties), direction-aware fill simulation, position quantity calculation, SL/TP level computation. ~280 lines. | 🔴 |
 | `trade-forensics.ts` | **Phase 12 — Trade Forensics Engine** (~620 lines). 3-layer: `TradeBlackBox` (flight recorder, 8 event types, MFE/MAE/near-miss), `ForensicAnalyzer` (3 efficiency scores, 4-factor Bayesian causal attribution, 8 lesson types), `TradeForensicsEngine` (lifecycle orchestrator, query API, stats). Integrated into Island. | 🔴 |
 | `forensic-learning.ts` | **Phase 12.1 — Forensic Learning Engine** (~310 lines). CLOSES the feedback loop: aggregates TradeLesson objects into Bayesian beliefs per regime×lesson_type, calculates fitness modifiers (±10 points) for Evolution Engine, DNA similarity matching, exponential generational decay. Integrated into evaluator + Island. | 🔴 |
+| `persistence-bridge.ts` | **Phase 13.1→14 — Persistence Bridge** (~320 lines). Dual-write singleton: wires engine lifecycle events (trade close, forensic report, generation evolved, portfolio update) to BOTH IndexedDB and Supabase. Lazy auto-init (no manual `initialize()` needed), cloud-first checkpoint loading, SSR-safe, race-condition-safe singleton init promise. | 🔴 |
 
 ---
 
@@ -81,11 +103,13 @@
 
 ---
 
-## 📦 State Layer (`src/lib/store/`)
+## 📦 State & Persistence Layer (`src/lib/store/` + `src/lib/db/`)
 
 | File | Purpose | Importance |
 |------|---------|------------|
-| `index.ts` | 6 Zustand stores: `useBrainStore` (AI state/evolution/validation), `useCortexStore` (multi-island orchestration, 12 actions), `usePortfolioStore` (balance/positions), `useTradeStore` (persistent trade history), `useMarketStore` (live tickers), `useDashboardConfigStore` (persistent UI config). | 🟡 |
+| `store/index.ts` | 6 Zustand stores: `useBrainStore` (AI state/evolution/validation), `useCortexStore` (multi-island orchestration, 12 actions), `usePortfolioStore` (balance/positions, IndexedDB persist), `useTradeStore` (persistent trade history, IndexedDB dual-write), `useMarketStore` (live tickers), `useDashboardConfigStore` (persistent UI config). | 🟡 |
+| `store/persistence.ts` | **Phase 13 — IndexedDB Persistence Layer** (~480 lines). 6 object stores (trades, strategies, evolution_snapshots, forensic_reports, portfolio_snapshots, engine_state), `createIndexedDBStorage()` Zustand adapter, `startAutoCheckpoint()` scheduler, full CRUD for all data types, `getStorageStats()`, `clearAllData()`. | 🔴 |
+| `db/supabase.ts` | **Phase 14 — Supabase Cloud Database Client** (~340 lines). PostgreSQL cloud client with graceful degradation (returns null if env vars missing). Full CRUD: `cloudSaveTrade()`, `cloudSaveStrategies()`, `cloudSaveEvolutionSnapshot()`, `cloudSaveForensicReport()`, `cloudSavePortfolioSnapshot()`, `cloudSaveEngineCheckpoint()`, `cloudLoadEngineCheckpoint()`, `cloudGetStats()`. JSONB data pattern for full object storage. | 🔴 |
 
 ---
 
@@ -94,8 +118,9 @@
 | File | Purpose | Importance |
 |------|---------|------------|
 | `page.tsx` | Main dashboard page. Contains 9 panel components (including **CortexNeuralMapPanel** for live island visualization) + `useAnimatedValue` hook + demo data generators. ~1300 lines. Gradient card accents, stagger fade-in, animated counters. | 🟡 |
+| `brain/page.tsx` | **Phase 18 — Neural Brain Visualization** (~675 lines). Holographic JARVIS-style 3D cortex: 10 neuron nodes (hex wireframe inner + circle wireframe outer), 15 synapses with animated signal propagation, CSS 3D perspective, scanline overlay, hex grid background, HUD system (Stats bar + Target Lock + Consciousness Arc), floating data particles, Multi-Color Memory Trace Heatmap (10 HSLA hues per row), biological refractory period (800ms cooldown). | 🟡 |
 | `pipeline/page.tsx` | **Pipeline Dashboard**. 8 panels: Pipeline Flow (7-stage animated), Generation Fitness (area chart), 4-Gate Validation (animated gates), Strategy Roster (radar), Experience Replay (heatmap), **Gene Lineage Tree** (family tree), **Gene Survival Heatmap** (persistence grid), **Decision Explainer** (regime change reasoning). Live state machine + demo data. ~1400 lines. | 🟡 |
-| `globals.css` | Premium design system. CSS custom properties for dark glassmorphism theme + gradient accents, stagger animations, neural map styles, pipeline stages, archaeology panels. ~1960 lines. | 🟡 |
+| `globals.css` | Premium design system. CSS custom properties for dark glassmorphism theme + gradient accents, stagger animations, neural map styles, pipeline stages, archaeology panels, **holographic brain theme** (3D canvas, scanlines, hex grid, neuron wireframes, synapse animations, HUD, consciousness arc, heatmap multi-color). ~2580 lines. | 🟡 |
 | `layout.tsx` | Root layout. Google Fonts (Inter, JetBrains Mono), SEO metadata. | 🟢 |
 
 ---
@@ -126,10 +151,20 @@
 | `adr/004-meta-evolution-ga2.md` | ADR: Meta-Evolution (GA²) — second-layer GA for per-island HyperDNA optimization | 🟢 |
 | `adr/005-strategy-archaeology.md` | ADR: Strategy Archaeology — Explainable AI for genetic strategy evolution (Gene Lineage + Gene Survival + Decision Explainer) | 🟢 |
 | `adr/006-advanced-genome.md` | ADR: Advanced Strategy Genome Architecture — 5 evolvable gene families, composite function evolution, directional change framework, structural novelty bonus | 🟢 |
+| `adr/009-neural-brain-visualization.md` | ADR: Neural Brain Visualization Architecture — Holographic 3D cortex, biological refractory period, multi-color HSLA heatmap | 🟢 |
 | `changelog.md` | Version history | 🟢 |
 | `_SYNC_CHECKLIST.md` | End-of-session verification checklist | 🟡 |
 | `_FINGERPRINT.json` | Context DNA Fingerprint — SHA-256 hashes of all source + memory files, cross-reference matrix, structural integrity record | 🟡 |
 | `scripts/context-fingerprint.js` | Context DNA Fingerprint CLI tool — `--generate`, `--verify`, `--report` commands for drift detection | 🟡 |
+
+---
+
+## 🛠️ Scripts (`scripts/`)
+
+| File | Purpose | Importance |
+|------|---------|------------|
+| `validate-skills.js` | **Skill Integrity Validator** (~252 lines). Detects orphaned source files, stale skill references, and missing/one-way cross-links. Self-auditing knowledge graph. | 🔴 |
+| `generate-skill-map.js` | **Skill Auto-Activation Intelligence** (~330 lines). Static import analysis builds `skill-map.json` (file→skill index) + `skill-graph.md` (Mermaid DAG). Transforms passive skills into active intelligence. | 🔴 |
 
 ---
 
@@ -157,7 +192,20 @@
 | `motion-design` | `SKILL.md` | Animation engineering: timing/easing reference, state transitions, skeletons, counter animation, stagger, ping, reduced motion | 🟡 |
 | `binance-integration` | `SKILL.md`, `references/api-endpoints.md` | Binance Futures REST/WebSocket endpoints, authentication, error handling, rate limiting | 🟡 |
 | `performance-analysis` | `SKILL.md`, `references/fitness-formula.md` | Composite fitness formula, individual metric calculations, normalization, ranking | 🟡 |
+| `regime-intelligence` | `SKILL.md` | MRTI predictive engine: Markov chain, early-warning signals, PSPP bridge, pre-warming lifecycle | 🔴 |
+| `strategic-overmind` | `SKILL.md` | Strategic Overmind: 6-phase cycle, CCR, PSPP, OpusClient, 15 sub-engines, adversarial testing | 🔴 |
+| `hybrid-persistence` | `SKILL.md` | Hybrid dual-write persistence: PersistenceBridge, IndexedDB, Supabase, cloud-first hydration | 🔴 |
+| `trade-forensics` | `SKILL.md` | Trade Forensics: TradeBlackBox, ForensicAnalyzer, Bayesian learning, fitness modifier feedback | 🔴 |
 
 ---
 
-*Last Updated: 2026-03-06 17:06 (UTC+3)*
+## 🧩 Auto-Generated Files (`.agent/`)
+
+| File | Purpose | Importance |
+|------|---------|------------|
+| `skill-map.json` | Machine-readable file→skill index (auto-generated by `generate-skill-map.js`). 55 file mappings with primary/secondary/conventions priorities. | 🔴 |
+| `skill-graph.md` | Mermaid DAG of skill dependencies (auto-generated). 16 nodes, 76 edges, 5 color-coded layers. | 🟡 |
+
+---
+
+*Last Updated: 2026-03-07 03:55 (UTC+3)*

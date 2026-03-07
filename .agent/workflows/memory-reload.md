@@ -24,7 +24,9 @@ cat memory/overview.md
 - **Advanced Strategy Genome (Phase 9)**: 5 evolvable gene families (Microstructure, Price Action, Composite Functions, Multi-TF Confluence, Directional Changes)
 - Risk rails are hardcoded and non-overridable (GLOBAL across all islands)
 - Paper trading + 4-Gate Validation is mandatory before live trading
-- **Dashboard**: 2 pages — Main (9 panels + Cortex Neural Map) + Pipeline (8 panels + Strategy Archaeology)
+- **Dashboard**: 3 pages — Main (9 panels + Cortex Neural Map) + Pipeline (8 panels + Strategy Archaeology + Overmind Hub) + Brain (Holographic Neural Cortex)
+- **Strategic Overmind**: Opus 4.6 AI supervisor with 6-phase reasoning cycle (OBSERVE→ANALYZE→HYPOTHESIZE→DIRECT→VERIFY→LEARN), 15 modules, PSPP + CCR systems
+- **Neural Brain Visualization**: Phase 18 — Holographic JARVIS-style 3D cortex, multi-color heatmap, biological refractory period
 
 ---
 
@@ -58,8 +60,12 @@ cat memory/architecture/system_design.md
 ```
 
 **After reading**, confirm you understand:
-- Module dependency graph (Types → Engine → Advanced Genes → Anti-Overfitting → Island Model → Risk → Store → Dashboard)
+- Module dependency graph (Types → Engine → Advanced Genes → Anti-Overfitting → Island Model → Risk → Store & Persistence → Overmind → Dashboard)
 - Island Model architecture (Cortex → Islands → Migration → Capital Allocator)
+- **Persistence Architecture**: PersistenceBridge → IndexedDB (local) + Supabase (cloud)
+- **Strategic Overmind**: 6-phase cycle, OpusClient, HypothesisEngine, EvolutionDirector, AdversarialTester
+- **PSPP**: PredictiveOrchestrator → MRTI forecasts → proactive strategy pre-warming
+- **CCR**: EpisodicMemory + CounterfactualEngine + MetaCognition → self-improving decisions
 - **Advanced Gene Signal Flow**: Microstructure/PriceAction/Composite/DC → aggregateBias + advancedConfidence
 - **Meta-Evolution (GA²)**: HyperDNA → Island → Meta-Fitness → Meta-Crossover cycle
 - 4-Gate Validation Pipeline (WFA → Monte Carlo → Overfitting → Regime Diversity)
@@ -85,9 +91,10 @@ cat memory/file_map.md
 - **Anti-Overfitting**: `walk-forward.ts`, `monte-carlo.ts`, `regime-detector.ts`, `overfitting-detector.ts`
 - **Island Model**: `island.ts`, `cortex.ts`, `meta-evolution.ts`, `migration.ts`, `capital-allocator.ts`
 - **Risk**: `manager.ts`
-- **State**: `store/index.ts` (6 stores including CortexStore)
-- **Dashboard**: `page.tsx` (9 panels + CortexNeuralMap), `pipeline/page.tsx` (8 panels + Strategy Archaeology), `globals.css` (1960+ lines), `layout.tsx`
-- **Memory**: Overview, Active Context, System Design, File Map, ADRs (6), Changelog
+- **State & Persistence**: `store/index.ts` (6 stores), `store/persistence.ts` (IndexedDB), `db/supabase.ts` (cloud)
+- **Persistence Bridge**: `persistence-bridge.ts` (dual-write, lazy auto-init)
+- **Dashboard**: `page.tsx` (9 panels + CortexNeuralMap), `brain/page.tsx` (Holographic Neural Cortex), `pipeline/page.tsx` (8 panels + Strategy Archaeology), `globals.css` (2580+ lines), `layout.tsx`
+- **Memory**: Overview, Active Context, System Design, File Map, ADRs (9), Changelog
 
 ---
 
@@ -106,6 +113,9 @@ Get-ChildItem memory/adr/*.md | ForEach-Object { Write-Host "=== $($_.Name) ==="
 - **ADR-004**: Meta-Evolution (GA²) — Second-layer GA for per-island HyperDNA optimization
 - **ADR-005**: Strategy Archaeology — Explainable AI through Gene Lineage, Gene Survival, and Decision Explainer
 - **ADR-006**: Advanced Strategy Genome Architecture — 5 evolvable gene families, structural evolution, composite function evolution, directional change framework
+- **ADR-007**: Hybrid Persistence Architecture — IndexedDB local cache + Supabase cloud PostgreSQL, PersistenceBridge dual-write, lazy auto-init
+- **ADR-008**: Strategic Overmind Architecture — Opus 4.6 AI supervisor, 6-phase reasoning cycle, PSPP, CCR, graceful degradation
+- **ADR-009**: Neural Brain Visualization Architecture — Holographic 3D cortex, biological refractory period, multi-color HSLA heatmap
 
 ---
 
@@ -130,7 +140,11 @@ Scan available agent skills to understand domain-specific development rules:
 Get-ChildItem .agent/skills -Directory | ForEach-Object { Write-Host "=== $($_.Name) ==="; Get-Content "$($_.FullName)/SKILL.md" -TotalCount 5; Write-Host "" }
 ```
 
-**Critical skills**: `learner-conventions` (mandatory for all code), `evolution-engine`, `risk-management`, `meta-evolution`, `anti-overfitting-validation`
+**Critical skills**: `learner-conventions` (mandatory for all code), `evolution-engine`, `risk-management`, `meta-evolution`, `anti-overfitting-validation`, `strategic-overmind`, `hybrid-persistence`, `trade-forensics`
+
+Also check the auto-generated skill intelligence:
+- `.agent/skill-map.json` — file→skill mapping (55 files, 3 priority levels)
+- `.agent/skill-graph.md` — Mermaid dependency DAG (16 nodes, 76 edges)
 
 ---
 
@@ -154,8 +168,12 @@ After completing all steps, provide the following confirmation to the user:
 - **Meta-Evolution**: GA² [Active/Inactive], HyperDNA per-island
 - **Validation**: 4-Gate Pipeline (WFA + MC + Overfitting + Regime)
 - **Promotion**: Paper → Candidate → Active
-- **Dashboard**: 2 pages, 17 panels total (Main 9 + Pipeline 8)
+- **Dashboard**: 3 pages, 18 panels total (Main 9 + Pipeline 8 + Brain 1)
 - **Pipeline**: Strategy Archaeology (Gene Lineage + Gene Survival + Decision Explainer)
+- **Brain Visualization**: Holographic Neural Cortex (10 neurons, 15 synapses, Memory Trace Heatmap)
+- **Persistence**: Hybrid (IndexedDB local + Supabase cloud), PersistenceBridge dual-write
+- **Strategic Overmind**: Opus 4.6 AI supervisor, 6-phase cycle, 15 modules (PSPP + CCR + ACE)
+- **Agent Skills**: 16 domain-specific skills, Auto-Activation Intelligence (skill-map.json)
 - **Advanced Genome**: Phase 9 — 5 gene families (Microstructure, Price Action, Composite, Multi-TF Confluence, DC)
 
 ### AI Brain / Cortex Status

@@ -108,6 +108,27 @@ if (this.regimeIntelligence.isCalibrated()) {
 5. Early warning weights MUST sum to 1.0
 6. `calibrate()` needs minimum 100 candles (200+ recommended)
 
+## 🛰️ PSPP Bridge: Predictive Strategic Pre-Positioning
+
+MRTI forecasts are consumed by the `PredictiveOrchestrator` in the Strategic Overmind to enable **proactive** strategy preparation:
+
+```
+MRTI.forecast() → RegimeTransitionForecast
+  → PredictiveOrchestrator.evaluateForecasts()
+    → PrePositionAction[] (HOLD/PREPARE/SWITCH per island)
+      → MarketHypothesis[] injected into Overmind HYPOTHESIZE phase
+        → GA pre-warmed for predicted regime BEFORE transition occurs
+```
+
+**Key Bridge Method in StrategicOvermind:**
+```typescript
+private collectMRTIForecasts(islands): RegimeTransitionForecast[]
+// Synthesizes forecasts from island snapshot data
+// Uses: stagnation detection, fitness decay, mutation rate heuristics
+```
+
+See `strategic-overmind` skill for full PSPP documentation.
+
 ## 📁 Key Files
 
 - `src/lib/engine/regime-intelligence.ts` → All MRTI logic (TransitionMatrix, EarlyWarningDetector, RegimeIntelligence)
@@ -115,15 +136,18 @@ if (this.regimeIntelligence.isCalibrated()) {
 - `src/lib/engine/island.ts` → MRTI auto-calibration + `handleRegimeForecast()`
 - `src/lib/engine/strategy-roster.ts` → `preWarmForRegime()` + `hasCoverageForRegime()`
 - `src/lib/engine/cortex.ts` → `evaluateGlobalRegimeRisk()` + `adjustAllocationsForRegimeForecast()`
+- `src/lib/engine/overmind/predictive-orchestrator.ts` → PSPP bridge (MRTI → Overmind)
 - `src/types/index.ts` → `MarketRegime` enum
 
 ## 🔗 Cross-References
 
 | Related Skill | Relationship | When to Co-Activate |
 |--------------|-------------|---------------------|
+| `strategic-overmind` | Consumer | PSPP bridge consumes MRTI forecasts for pre-positioning |
 | `evolution-engine` | Consumer | MRTI biases evolution toward regime-gap coverage |
 | `performance-analysis` | Data Source | Fitness scores feed roster confidence |
 | `risk-management` | Safety Layer | MRTI respects all 8 non-negotiable risk rules |
 | `anti-overfitting-validation` | Upstream | Validated strategies enter roster for pre-warming |
 | `backtesting-simulation` | Calibration | Historical backtests provide regime sequence for matrix |
 | `multi-island-ui` | Dashboard | MRTI forecasts displayed in island panels |
+| `trade-forensics` | Downstream | Forensic reports feed regime-awareness into beliefs |

@@ -4,6 +4,108 @@ All notable changes to this project are documented here.
 
 ---
 
+## [v0.18.0] — 2026-03-07
+
+### Added
+- **Neural Brain Visualization (Phase 18)**
+  - `src/app/brain/page.tsx` — Holographic JARVIS-style 3D cortex visualization (~675 lines)
+    - 10 neuron nodes: hex wireframe (inner/core tier) + circle wireframe (outer tier)
+    - 15 synapses with animated signal propagation (CSS `signalPulse`)
+    - CSS 3D perspective (`perspective: 1200px` + `preserve-3d`), scanline overlay, hex grid background
+    - HUD System: Stats bar, Target Lock detail panel, Consciousness Arc gauge (SVG, 0-100)
+    - Floating holographic data particles orbiting neurons
+    - Multi-Color Memory Trace Heatmap: 10 curated HSLA hues per neuron row, activity→lightness+alpha
+    - Colored dot indicators next to heatmap row labels
+  - **Biological Refractory Period**: 800ms per-neuron cooldown via `cooldownRef` Map — prevents cascade fire storms
+  - **6-Point Stability Fix**: Decay 1.1→4.5x/sec, gain 0.5→0.35, CSS bloom removed, scan ring capped, signal speed 2.2→1.2x
+  - `src/app/globals.css` — +600 lines: holographic theme (3D canvas, scanlines, hex grid, neuron wireframes, synapse animations, HUD elements, consciousness arc, particles, heatmap multi-color)
+
+### Build Status
+✅ Passing (zero errors)
+
+## [v0.17.0] — 2026-03-07
+
+### Added
+- **Skill Auto-Activation Intelligence (Phase 17)**
+  - `scripts/generate-skill-map.js` — Static import analyzer (~330 lines)
+    - Parses all source file `import` statements
+    - Maps 55 files to skill dependencies with 3 priority levels (primary/secondary/conventions)
+    - Generates `.agent/skill-map.json` (932 lines, machine-readable file→skill index)
+    - Generates `.agent/skill-graph.md` (138 lines, Mermaid DAG with 16 nodes, 76 edges, 5 color layers)
+    - Transforms passive skill documents into an active intelligence layer
+
+### Build Status
+✅ Passing (zero errors)
+
+## [v0.16.0] — 2026-03-07
+
+### Added
+- **Skill Architecture Audit & New Skills (Phase 16)**
+  - `.agent/skills/strategic-overmind/SKILL.md` — 285 lines, covers 15 Overmind modules, 6-phase cycle, CCR, PSPP, OpusClient
+  - `.agent/skills/hybrid-persistence/SKILL.md` — 165 lines, covers PersistenceBridge, IndexedDB, Supabase, cloud-first hydration
+  - `.agent/skills/trade-forensics/SKILL.md` — 215 lines, covers TradeBlackBox, ForensicAnalyzer, Bayesian learning
+  - `scripts/validate-skills.js` — Skill Integrity Validator (~252 lines), self-auditing knowledge graph
+
+### Changed
+- `.agent/skills/regime-intelligence/SKILL.md` — +PSPP bridge section, +predictive-orchestrator.ts key file, +2 cross-refs
+- `.agent/skills/learner-conventions/SKILL.md` — +Overmind dir (15 files), +persistence paths, +7 module log prefixes, +3 cross-refs
+
+### Build Status
+✅ Passing (zero errors)
+
+## [v0.15.0] — 2026-03-07
+
+### Added
+- **Strategic Overmind Architecture (Phase 15)**
+  - `src/lib/engine/overmind/` — 15 modules (~3200 lines total)
+    - `strategic-overmind.ts` — 6-phase reasoning cycle orchestrator (~805 lines)
+    - `opus-client.ts` — Opus 4.6 API client singleton (~314 lines)
+    - `hypothesis-engine.ts` — Market hypothesis generation (~339 lines)
+    - `evolution-director.ts` — GA directive generation (~274 lines)
+    - `adversarial-tester.ts` — ACE strategy stress testing (~377 lines)
+    - `predictive-orchestrator.ts` — PSPP bridge (MRTI → Overmind)
+    - `episodic-memory.ts` + `counterfactual-engine.ts` + `meta-cognition.ts` — CCR system
+    - `prompt-engine.ts`, `response-parser.ts`, `pair-specialist.ts`, `emergent-indicator.ts`, `strategy-decomposer.ts`, `reasoning-journal.ts` — Supporting modules
+  - `src/types/overmind.ts` — 23 interfaces for Overmind, PSPP, CCR type system
+  - `src/app/pipeline/page.tsx` — Overmind Hub panel added (~650 lines added, now ~2050 total)
+
+### Architecture
+- ADR-008: Strategic Overmind Architecture decision documented
+
+### Build Status
+✅ Passing (zero errors)
+
+## [v0.14.0] — 2026-03-06
+
+### Added
+- **Supabase Cloud Database (Phase 14)**
+  - `src/lib/db/supabase.ts` — PostgreSQL cloud client with graceful degradation (~340 lines)
+  - 6 tables created: trades, strategies, evolution_snapshots, forensic_reports, portfolio_snapshots, engine_state
+  - JSONB data pattern + indexed scalar columns
+
+### Changed
+- `src/lib/engine/persistence-bridge.ts` — Complete rewrite: dual-write (IndexedDB + Supabase), lazy auto-init, cloud-first checkpoint loading, race-condition-safe singleton init
+- `.env.local` — Added Supabase URL + anon key
+
+### Architecture
+- ADR-007: Hybrid Persistence Architecture decision documented
+
+### Build Status
+- ✅ `npx next build` — zero errors
+
+## [v0.13.0] — 2026-03-06
+
+### Added
+- **IndexedDB Persistence Layer (Phase 13)**
+  - `src/lib/store/persistence.ts` — 6 object stores, Zustand adapter, auto-checkpoint (~480 lines)
+  - `idb` dependency added
+
+### Changed
+- `src/lib/store/index.ts` — TradeStore + PortfolioStore migrated from localStorage to IndexedDB
+
+### Build Status
+- ✅ `npx next build` — zero errors
+
 ## [v0.12.0] — 2026-03-06
 
 ### Added

@@ -12,6 +12,7 @@ import {
     AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer,
     RadarChart, PolarGrid, PolarAngleAxis, Radar as RechartsRadar,
     BarChart, Bar, CartesianGrid, ReferenceLine,
+    LineChart, Line,
 } from 'recharts';
 import { MarketRegime } from '@/types';
 
@@ -1308,6 +1309,630 @@ function DecisionExplainerPanel({ decisions }: { decisions: DecisionEvent[] }) {
 }
 
 // ═══════════════════════════════════════════════════════════════
+// PANEL 9: Overmind Intelligence Hub (Phase 15 + CCR)
+// ═══════════════════════════════════════════════════════════════
+
+interface OvermindDemoHypothesis {
+    id: string;
+    hypothesis: string;
+    slotLabel: string;
+    confidence: number;
+    status: 'ACTIVE' | 'CONFIRMED' | 'INVALIDATED';
+}
+
+interface OvermindDemoEpisode {
+    id: string;
+    type: 'hypothesis' | 'directive' | 'adversarial';
+    summary: string;
+    timestamp: number;
+    success: boolean | null; // null = pending
+    importance: number;
+}
+
+interface OvermindDemoInsight {
+    id: string;
+    insight: string;
+    engine: string;
+    confidence: number;
+    isActive: boolean;
+}
+
+interface CounterfactualPoint {
+    cycle: number;
+    actualFitness: number;
+    counterfactualFitness: number;
+    gap: number;
+}
+
+function generateDemoOvermindData() {
+    const now = Date.now();
+
+    const hypotheses: OvermindDemoHypothesis[] = [
+        { id: 'H-1', hypothesis: 'BTCUSDT Trending rejimde EMA(50)+MACD combo en yüksek fitness verir', slotLabel: 'BTC/1H', confidence: 78, status: 'ACTIVE' },
+        { id: 'H-2', hypothesis: 'ETHUSDT Ranging rejimde RSI-based stratejiler Bollinger-based stratejilerden üstün', slotLabel: 'ETH/15M', confidence: 62, status: 'CONFIRMED' },
+        { id: 'H-3', hypothesis: 'Yüksek volatilitede kısa SL (%1) uzun SL (%3) den iyi sonuç verir', slotLabel: 'Global', confidence: 45, status: 'ACTIVE' },
+        { id: 'H-4', hypothesis: 'SOLUSDT düşen trendde short-bias stratejilerin win-rate %60 üstü', slotLabel: 'SOL/4H', confidence: 33, status: 'INVALIDATED' },
+    ];
+
+    const episodes: OvermindDemoEpisode[] = [
+        { id: 'E-1', type: 'hypothesis', summary: 'EMA+MACD hipotezi BTC/1H için oluşturuldu', timestamp: now - 3600000 * 12, success: true, importance: 0.85 },
+        { id: 'E-2', type: 'directive', summary: 'Yüksek mutasyon oranı directifi ETH/15M ye verildi', timestamp: now - 3600000 * 10, success: false, importance: 0.62 },
+        { id: 'E-3', type: 'adversarial', summary: 'Flash-crash senaryosunda Nova Tiger dayanamadı', timestamp: now - 3600000 * 8, success: false, importance: 0.91 },
+        { id: 'E-4', type: 'hypothesis', summary: 'RSI-temelli ranging hipotezi onayları topluyor', timestamp: now - 3600000 * 5, success: true, importance: 0.73 },
+        { id: 'E-5', type: 'directive', summary: 'Diversity pressure artırımı SOL/4H ada', timestamp: now - 3600000 * 3, success: null, importance: 0.58 },
+        { id: 'E-6', type: 'adversarial', summary: 'Likidite krizi testinde Legacy Alpha %92 hayatta kaldı', timestamp: now - 3600000 * 1, success: true, importance: 0.88 },
+    ];
+
+    const insights: OvermindDemoInsight[] = [
+        { id: 'I-1', insight: 'Trending rejimde EMA(50) geni kullanılmalı — RSI(14) çok geç sinyalleri tetikliyor', engine: 'HypothesisEngine', confidence: 0.82, isActive: true },
+        { id: 'I-2', insight: 'Adversarial test başarısızlıklarının %70 i SL %1 altında', engine: 'AdversarialTester', confidence: 0.74, isActive: true },
+        { id: 'I-3', insight: 'BTCUSDT ve ETHUSDT hipotezleri birbirine transfer edilebilir', engine: 'EvolutionDirector', confidence: 0.56, isActive: false },
+    ];
+
+    // Counterfactual Comparison Data—actual vs "what would have happened"
+    const counterfactualData: CounterfactualPoint[] = [];
+    let actualBase = 35;
+    let cfBase = 45;
+    for (let i = 1; i <= 20; i++) {
+        // Actual fitness improves over time (Overmind learning)
+        actualBase += rng(-3, 6) + (i > 10 ? 1.5 : 0);
+        // Counterfactual alternatives start better but converge
+        cfBase += rng(-2, 4) - (i > 10 ? 0.5 : 0);
+        const actual = Math.max(10, Math.min(95, Math.round(actualBase * 10) / 10));
+        const cf = Math.max(10, Math.min(95, Math.round(cfBase * 10) / 10));
+        counterfactualData.push({
+            cycle: i,
+            actualFitness: actual,
+            counterfactualFitness: cf,
+            gap: Math.round((cf - actual) * 10) / 10,
+        });
+    }
+
+    return { hypotheses, episodes, insights, counterfactualData };
+}
+
+function OvermindIntelligenceHub({
+    hypotheses,
+    episodes,
+    insights,
+    counterfactualData,
+}: {
+    hypotheses: OvermindDemoHypothesis[];
+    episodes: OvermindDemoEpisode[];
+    insights: OvermindDemoInsight[];
+    counterfactualData: CounterfactualPoint[];
+}) {
+    const phases = ['OBSERVE', 'ANALYZE', 'HYPOTHESIZE', 'DIRECT', 'VERIFY', 'LEARN'];
+    const [activePhaseIdx, setActivePhaseIdx] = useState(0);
+
+    // Animate through phases
+    useEffect(() => {
+        const timer = setInterval(() => {
+            setActivePhaseIdx(prev => (prev + 1) % phases.length);
+        }, 3000);
+        return () => clearInterval(timer);
+    }, [phases.length]);
+
+    const phaseColors: Record<string, string> = {
+        OBSERVE: '#60a5fa',
+        ANALYZE: '#a78bfa',
+        HYPOTHESIZE: '#f472b6',
+        DIRECT: '#34d399',
+        VERIFY: '#fbbf24',
+        LEARN: '#6366f1',
+    };
+
+    const statusColor = (status: string) => {
+        if (status === 'CONFIRMED') return 'var(--success)';
+        if (status === 'INVALIDATED') return 'var(--danger)';
+        return 'var(--accent-primary)';
+    };
+
+    const typeEmoji = (type: string) => {
+        if (type === 'hypothesis') return '💡';
+        if (type === 'directive') return '🎯';
+        return '🛡️';
+    };
+
+    const successEmoji = (success: boolean | null) => {
+        if (success === true) return '✅';
+        if (success === false) return '❌';
+        return '⏳';
+    };
+
+    // Calculate overall learning rate from counterfactual gap
+    const initialGap = counterfactualData[0]?.gap ?? 0;
+    const finalGap = counterfactualData[counterfactualData.length - 1]?.gap ?? 0;
+    const learningRate = initialGap !== 0
+        ? Math.round(((initialGap - finalGap) / Math.abs(initialGap)) * 100)
+        : 0;
+
+    const formatTimeAgo = (ts: number): string => {
+        const mins = Math.floor((Date.now() - ts) / 60000);
+        if (mins < 60) return `${mins}m`;
+        const hours = Math.floor(mins / 60);
+        return `${hours}h`;
+    };
+
+    return (
+        <section id="overmind-hub" className="glass-card glass-card-accent accent-purple col-12 stagger-in stagger-9">
+            <div className="card-header">
+                <div className="card-title">
+                    <Brain size={18} style={{ color: '#a78bfa' }} />
+                    <span>Strategic Overmind Intelligence Hub</span>
+                </div>
+                <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                    <span className="card-badge badge-primary">{episodes.length} EPISODES</span>
+                    <span className="card-badge badge-success">{insights.filter(i => i.isActive).length} INSIGHTS</span>
+                </div>
+            </div>
+            <div className="card-body">
+                {/* Row 1: Phase Indicator + CCR Metrics */}
+                <div style={{ display: 'flex', gap: 16, marginBottom: 16, flexWrap: 'wrap' }}>
+                    {/* Phase Wheel */}
+                    <div style={{
+                        flex: '1 1 280px',
+                        display: 'flex',
+                        gap: 4,
+                        alignItems: 'center',
+                        padding: '8px 12px',
+                        background: 'rgba(14, 17, 30, 0.5)',
+                        borderRadius: 8,
+                        border: '1px solid rgba(99, 102, 241, 0.08)',
+                    }}>
+                        {phases.map((phase, idx) => {
+                            const isActive = idx === activePhaseIdx;
+                            const isDone = idx < activePhaseIdx;
+                            return (
+                                <div
+                                    key={phase}
+                                    style={{
+                                        flex: 1,
+                                        textAlign: 'center',
+                                        padding: '6px 2px',
+                                        borderRadius: 6,
+                                        fontSize: '0.55rem',
+                                        fontWeight: 700,
+                                        letterSpacing: '0.04em',
+                                        textTransform: 'uppercase',
+                                        background: isActive ? `${phaseColors[phase]}20` : 'transparent',
+                                        color: isActive ? phaseColors[phase] : isDone ? 'var(--text-muted)' : 'rgba(148, 163, 184, 0.4)',
+                                        border: isActive ? `1px solid ${phaseColors[phase]}40` : '1px solid transparent',
+                                        transition: 'all 0.5s ease',
+                                        position: 'relative',
+                                    }}
+                                >
+                                    {isDone && <span style={{ marginRight: 2 }}>✓</span>}
+                                    {phase}
+                                    {isActive && (
+                                        <div style={{
+                                            position: 'absolute',
+                                            bottom: -2,
+                                            left: '20%',
+                                            right: '20%',
+                                            height: 2,
+                                            borderRadius: 1,
+                                            background: phaseColors[phase],
+                                            animation: 'pulse-glow 2s ease-in-out infinite',
+                                        }} />
+                                    )}
+                                </div>
+                            );
+                        })}
+                    </div>
+
+                    {/* CCR Metrics */}
+                    <div style={{ display: 'flex', gap: 8, flex: '0 0 auto' }}>
+                        {[
+                            { label: 'Episodes', value: episodes.length, color: '#6366f1' },
+                            { label: 'Counterfactuals', value: counterfactualData.length, color: '#f97316' },
+                            { label: 'Meta-Insights', value: insights.filter(i => i.isActive).length, color: '#34d399' },
+                            { label: 'Learning Rate', value: `${learningRate > 0 ? '+' : ''}${learningRate}%`, color: learningRate > 0 ? '#34d399' : '#f87171' },
+                        ].map(metric => (
+                            <div key={metric.label} className="metric-card" style={{ minWidth: 70, padding: '6px 10px', textAlign: 'center' }}>
+                                <div className="metric-value" style={{ fontSize: '1rem', color: metric.color }}>
+                                    {metric.value}
+                                </div>
+                                <div className="metric-label" style={{ fontSize: '0.55rem' }}>{metric.label}</div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+
+                {/* Row 2: Counterfactual Comparison Chart (Radical Innovation #5) */}
+                <div style={{
+                    marginBottom: 16,
+                    padding: '12px 14px',
+                    background: 'rgba(14, 17, 30, 0.5)',
+                    borderRadius: 10,
+                    border: '1px solid rgba(99, 102, 241, 0.08)',
+                }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                        <div style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--text-primary)', letterSpacing: '0.02em' }}>
+                            🔮 Counterfactual Comparison — Actual vs “What If?”
+                        </div>
+                        <div style={{ display: 'flex', gap: 12 }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: '0.6rem', color: 'var(--text-muted)' }}>
+                                <div style={{ width: 16, height: 2, borderRadius: 1, background: '#6366f1' }} />
+                                Actual Decisions
+                            </div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: '0.6rem', color: 'var(--text-muted)' }}>
+                                <div style={{ width: 16, height: 2, borderRadius: 1, background: '#f97316', opacity: 0.6 }} />
+                                Best Alternative
+                            </div>
+                        </div>
+                    </div>
+                    <ResponsiveContainer width="100%" height={180}>
+                        <LineChart data={counterfactualData}>
+                            <CartesianGrid strokeDasharray="3 3" stroke="rgba(99, 115, 171, 0.06)" />
+                            <XAxis
+                                dataKey="cycle"
+                                tick={{ fill: '#64748b', fontSize: 10 }}
+                                tickLine={false}
+                                axisLine={{ stroke: 'rgba(99, 115, 171, 0.1)' }}
+                                label={{ value: 'Overmind Cycle', position: 'insideBottom', offset: -2, fill: '#475569', fontSize: 9 }}
+                            />
+                            <YAxis
+                                tick={{ fill: '#64748b', fontSize: 10 }}
+                                tickLine={false}
+                                axisLine={{ stroke: 'rgba(99, 115, 171, 0.1)' }}
+                                label={{ value: 'Fitness', angle: -90, position: 'insideLeft', fill: '#475569', fontSize: 9 }}
+                            />
+                            <Tooltip
+                                contentStyle={TOOLTIP_STYLE}
+                                formatter={((value: number) => [value.toFixed(1)]) as never}
+                                labelFormatter={((label: number) => `Cycle ${label}`) as never}
+                            />
+                            {/* Counterfactual line (dashed, orange) */}
+                            <Line
+                                type="monotone"
+                                dataKey="counterfactualFitness"
+                                stroke="#f97316"
+                                strokeWidth={2}
+                                strokeDasharray="6 3"
+                                dot={false}
+                                strokeOpacity={0.6}
+                            />
+                            {/* Actual fitness line (solid, indigo) */}
+                            <Line
+                                type="monotone"
+                                dataKey="actualFitness"
+                                stroke="#6366f1"
+                                strokeWidth={2.5}
+                                dot={false}
+                                activeDot={{ r: 4, fill: '#6366f1', stroke: '#1e1b4b', strokeWidth: 2 }}
+                            />
+                        </LineChart>
+                    </ResponsiveContainer>
+                    <div style={{ textAlign: 'center', fontSize: '0.6rem', color: 'var(--text-muted)', marginTop: 4 }}>
+                        {learningRate > 0
+                            ? `✅ Öğrenme kanıtlandı: gerçek kararlar karşı-olgusal alternatiflere yakınlaşıyor (+${learningRate}% gelişim)`
+                            : '⏳ Daha fazla döngü gerekli — öğrenme henüz başlamadı'}
+                    </div>
+                </div>
+
+                {/* Row 3: Hypotheses + Episodes + Insights */}
+                <div style={{ display: 'flex', gap: 14, flexWrap: 'wrap' }}>
+                    {/* Active Hypotheses */}
+                    <div style={{
+                        flex: '1 1 260px',
+                        padding: '10px 12px',
+                        background: 'rgba(14, 17, 30, 0.4)',
+                        borderRadius: 8,
+                        border: '1px solid rgba(99, 102, 241, 0.06)',
+                    }}>
+                        <div style={{ fontSize: '0.6rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 8 }}>
+                            💡 Active Hypotheses
+                        </div>
+                        {hypotheses.map(h => (
+                            <div key={h.id} style={{
+                                padding: '6px 0',
+                                borderBottom: '1px solid rgba(99, 115, 171, 0.06)',
+                                display: 'flex',
+                                flexDirection: 'column',
+                                gap: 3,
+                            }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                    <span style={{ fontSize: '0.65rem', color: 'var(--text-primary)', fontWeight: 600 }}>
+                                        {h.hypothesis.length > 60 ? h.hypothesis.substring(0, 60) + '…' : h.hypothesis}
+                                    </span>
+                                    <span style={{ fontSize: '0.55rem', color: statusColor(h.status), fontWeight: 700 }}>
+                                        {h.status}
+                                    </span>
+                                </div>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                                    <span style={{ fontSize: '0.55rem', color: 'var(--text-muted)' }}>{h.slotLabel}</span>
+                                    <div style={{
+                                        flex: 1,
+                                        height: 3,
+                                        borderRadius: 2,
+                                        background: 'rgba(99, 115, 171, 0.1)',
+                                        overflow: 'hidden',
+                                    }}>
+                                        <div style={{
+                                            width: `${h.confidence}%`,
+                                            height: '100%',
+                                            borderRadius: 2,
+                                            background: h.confidence >= 60 ? '#34d399' : h.confidence >= 40 ? '#6366f1' : '#94a3b8',
+                                            transition: 'width 1s ease',
+                                        }} />
+                                    </div>
+                                    <span style={{ fontSize: '0.55rem', fontFamily: "'JetBrains Mono', monospace", color: 'var(--text-secondary)' }}>
+                                        {h.confidence}%
+                                    </span>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+
+                    {/* Episodic Memory Timeline */}
+                    <div style={{
+                        flex: '1 1 300px',
+                        padding: '10px 12px',
+                        background: 'rgba(14, 17, 30, 0.4)',
+                        borderRadius: 8,
+                        border: '1px solid rgba(99, 102, 241, 0.06)',
+                    }}>
+                        <div style={{ fontSize: '0.6rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 8 }}>
+                            🧠 Episodic Memory Timeline
+                        </div>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                            {episodes.map(ep => (
+                                <div key={ep.id} style={{
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: 8,
+                                    padding: '5px 8px',
+                                    borderRadius: 6,
+                                    background: ep.success === true
+                                        ? 'rgba(52, 211, 153, 0.05)'
+                                        : ep.success === false
+                                            ? 'rgba(248, 113, 113, 0.05)'
+                                            : 'rgba(99, 115, 171, 0.03)',
+                                    border: `1px solid ${ep.success === true ? 'rgba(52, 211, 153, 0.1)' : ep.success === false ? 'rgba(248, 113, 113, 0.1)' : 'rgba(99, 115, 171, 0.05)'}`,
+                                }}>
+                                    <span style={{ fontSize: '0.8rem' }}>{typeEmoji(ep.type)}</span>
+                                    <span style={{ fontSize: '0.7rem' }}>{successEmoji(ep.success)}</span>
+                                    <span style={{ fontSize: '0.6rem', color: 'var(--text-secondary)', flex: 1 }}>
+                                        {ep.summary}
+                                    </span>
+                                    <span style={{ fontSize: '0.5rem', color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>
+                                        {formatTimeAgo(ep.timestamp)}
+                                    </span>
+                                    {/* Importance bar */}
+                                    <div style={{
+                                        width: 30,
+                                        height: 3,
+                                        borderRadius: 2,
+                                        background: 'rgba(99, 115, 171, 0.1)',
+                                        overflow: 'hidden',
+                                    }}>
+                                        <div style={{
+                                            width: `${ep.importance * 100}%`,
+                                            height: '100%',
+                                            borderRadius: 2,
+                                            background: ep.importance >= 0.8 ? '#f97316' : ep.importance >= 0.6 ? '#6366f1' : '#475569',
+                                        }} />
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+
+                    {/* Meta-Insights */}
+                    <div style={{
+                        flex: '1 1 240px',
+                        padding: '10px 12px',
+                        background: 'rgba(14, 17, 30, 0.4)',
+                        borderRadius: 8,
+                        border: '1px solid rgba(99, 102, 241, 0.06)',
+                    }}>
+                        <div style={{ fontSize: '0.6rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 8 }}>
+                            ✨ Meta-Insights (Self-Improvement)
+                        </div>
+                        {insights.map(ins => (
+                            <div key={ins.id} style={{
+                                padding: '8px 10px',
+                                marginBottom: 6,
+                                borderRadius: 6,
+                                background: ins.isActive ? 'rgba(52, 211, 153, 0.06)' : 'rgba(99, 115, 171, 0.03)',
+                                border: `1px solid ${ins.isActive ? 'rgba(52, 211, 153, 0.12)' : 'rgba(99, 115, 171, 0.06)'}`,
+                            }}>
+                                <div style={{ fontSize: '0.65rem', color: ins.isActive ? 'var(--text-primary)' : 'var(--text-muted)', marginBottom: 4 }}>
+                                    {ins.insight}
+                                </div>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                    <span style={{
+                                        fontSize: '0.5rem',
+                                        padding: '1px 6px',
+                                        borderRadius: 3,
+                                        background: 'rgba(99, 102, 241, 0.1)',
+                                        color: 'var(--accent-primary)',
+                                        fontWeight: 600,
+                                    }}>
+                                        {ins.engine}
+                                    </span>
+                                    <span style={{ fontSize: '0.55rem', color: ins.isActive ? 'var(--success)' : 'var(--text-muted)', fontWeight: 600 }}>
+                                        {ins.isActive ? '● Active' : '○ Decayed'}
+                                        {' · '}
+                                        {(ins.confidence * 100).toFixed(0)}%
+                                    </span>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+
+                {/* Row 4: Regime Transition Radar (Radical Innovation #6: PSPP) */}
+                <div style={{ marginTop: 14 }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+                        <div style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--text-primary)', letterSpacing: '0.02em' }}>
+                            🛰️ Regime Transition Radar — Predictive Pre-Positioning
+                        </div>
+                        <div style={{
+                            fontSize: '0.55rem',
+                            padding: '2px 8px',
+                            borderRadius: 4,
+                            background: 'rgba(234, 179, 8, 0.08)',
+                            color: '#eab308',
+                            fontWeight: 700,
+                            border: '1px solid rgba(234, 179, 8, 0.15)',
+                        }}>
+                            PSPP Active
+                        </div>
+                    </div>
+                    <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+                        {/* Demo radar cards for 4 islands */}
+                        {[
+                            { slot: 'BTCUSDT·15m', risk: 0.72, current: 'TRENDING_UP', predicted: 'RANGING', candles: 18, status: 'SWITCH' as const, warnings: ['ADX declining', 'Duration 1.8×'] },
+                            { slot: 'ETHUSDT·1h', risk: 0.41, current: 'RANGING', predicted: 'TRENDING_UP', candles: 65, status: 'PREPARE' as const, warnings: ['ATR accelerating'] },
+                            { slot: 'SOLUSDT·15m', risk: 0.15, current: 'LOW_VOLATILITY', predicted: 'TRENDING_UP', candles: 112, status: 'HOLD' as const, warnings: [] },
+                            { slot: 'BNBUSDT·4h', risk: 0.58, current: 'HIGH_VOLATILITY', predicted: 'RANGING', candles: 34, status: 'PREPARE' as const, warnings: ['Confidence decay 62%', 'Duration 1.4×'] },
+                        ].map((item, idx) => {
+                            const isImminent = item.risk >= 0.6;
+                            const isPrepare = item.status === 'PREPARE';
+                            const borderColor = isImminent
+                                ? 'rgba(239, 68, 68, 0.25)'
+                                : isPrepare
+                                    ? 'rgba(234, 179, 8, 0.15)'
+                                    : 'rgba(99, 102, 241, 0.06)';
+                            const glowColor = isImminent
+                                ? 'rgba(239, 68, 68, 0.06)'
+                                : isPrepare
+                                    ? 'rgba(234, 179, 8, 0.04)'
+                                    : 'rgba(14, 17, 30, 0.4)';
+                            const statusBadgeColor = isImminent
+                                ? '#ef4444'
+                                : isPrepare
+                                    ? '#eab308'
+                                    : '#34d399';
+                            const statusBadgeBg = isImminent
+                                ? 'rgba(239, 68, 68, 0.1)'
+                                : isPrepare
+                                    ? 'rgba(234, 179, 8, 0.1)'
+                                    : 'rgba(52, 211, 153, 0.08)';
+
+                            return (
+                                <div key={idx} style={{
+                                    flex: '1 1 200px',
+                                    padding: '10px 12px',
+                                    background: glowColor,
+                                    borderRadius: 8,
+                                    border: `1px solid ${borderColor}`,
+                                    position: 'relative',
+                                    overflow: 'hidden',
+                                    transition: 'border-color 0.3s ease, box-shadow 0.3s ease',
+                                    boxShadow: isImminent ? '0 0 16px rgba(239, 68, 68, 0.08)' : 'none',
+                                }}>
+                                    {/* Pulsing indicator for imminent transitions */}
+                                    {isImminent && (
+                                        <div style={{
+                                            position: 'absolute',
+                                            top: 8,
+                                            right: 8,
+                                            width: 8,
+                                            height: 8,
+                                            borderRadius: '50%',
+                                            background: '#ef4444',
+                                            animation: 'pulse 1.5s ease-in-out infinite',
+                                            boxShadow: '0 0 6px rgba(239, 68, 68, 0.5)',
+                                        }} />
+                                    )}
+
+                                    {/* Slot label */}
+                                    <div style={{ fontSize: '0.65rem', fontWeight: 700, color: 'var(--text-primary)', marginBottom: 6 }}>
+                                        {item.slot}
+                                    </div>
+
+                                    {/* Risk bar */}
+                                    <div style={{ marginBottom: 6 }}>
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 3 }}>
+                                            <span style={{ fontSize: '0.5rem', color: 'var(--text-muted)' }}>Transition Risk</span>
+                                            <span style={{ fontSize: '0.55rem', fontWeight: 700, color: isImminent ? '#ef4444' : isPrepare ? '#eab308' : '#34d399' }}>
+                                                {(item.risk * 100).toFixed(0)}%
+                                            </span>
+                                        </div>
+                                        <div style={{ width: '100%', height: 4, borderRadius: 2, background: 'rgba(99, 115, 171, 0.1)', overflow: 'hidden' }}>
+                                            <div style={{
+                                                width: `${item.risk * 100}%`,
+                                                height: '100%',
+                                                borderRadius: 2,
+                                                background: isImminent
+                                                    ? 'linear-gradient(90deg, #f97316, #ef4444)'
+                                                    : isPrepare
+                                                        ? 'linear-gradient(90deg, #34d399, #eab308)'
+                                                        : 'linear-gradient(90deg, #34d399, #60a5fa)',
+                                                transition: 'width 0.5s ease',
+                                            }} />
+                                        </div>
+                                    </div>
+
+                                    {/* Regime transition arrow */}
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginBottom: 6 }}>
+                                        <span style={{
+                                            fontSize: '0.5rem',
+                                            padding: '1px 5px',
+                                            borderRadius: 3,
+                                            background: 'rgba(99, 102, 241, 0.08)',
+                                            color: '#818cf8',
+                                            fontWeight: 600,
+                                        }}>
+                                            {item.current.replace('_', ' ')}
+                                        </span>
+                                        <span style={{ fontSize: '0.55rem', color: isImminent ? '#ef4444' : '#475569' }}>→</span>
+                                        <span style={{
+                                            fontSize: '0.5rem',
+                                            padding: '1px 5px',
+                                            borderRadius: 3,
+                                            background: isImminent ? 'rgba(239, 68, 68, 0.08)' : 'rgba(234, 179, 8, 0.08)',
+                                            color: isImminent ? '#f87171' : '#fbbf24',
+                                            fontWeight: 600,
+                                        }}>
+                                            {item.predicted.replace('_', ' ')}
+                                        </span>
+                                    </div>
+
+                                    {/* Estimated candles + recommendation */}
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+                                        <span style={{ fontSize: '0.5rem', color: 'var(--text-muted)' }}>
+                                            ~{item.candles} candles left
+                                        </span>
+                                        <span style={{
+                                            fontSize: '0.5rem',
+                                            padding: '1px 6px',
+                                            borderRadius: 3,
+                                            background: statusBadgeBg,
+                                            color: statusBadgeColor,
+                                            fontWeight: 700,
+                                        }}>
+                                            {item.status}
+                                        </span>
+                                    </div>
+
+                                    {/* Early warnings */}
+                                    {item.warnings.length > 0 && (
+                                        <div style={{ borderTop: '1px solid rgba(99, 115, 171, 0.06)', paddingTop: 4, marginTop: 4 }}>
+                                            {item.warnings.map((w, wi) => (
+                                                <div key={wi} style={{ fontSize: '0.5rem', color: '#f59e0b', lineHeight: 1.4 }}>
+                                                    ⚠ {w}
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
+                            );
+                        })}
+                    </div>
+                    <div style={{ textAlign: 'center', fontSize: '0.55rem', color: 'var(--text-muted)', marginTop: 6 }}>
+                        MRTI → Overmind köprüsü aktif · Rejim değişiminden ÖNCE strateji hazırlığı yapılıyor
+                    </div>
+                </div>
+            </div>
+        </section>
+    );
+}
+
+// ═══════════════════════════════════════════════════════════════
 // MAIN PIPELINE PAGE
 // ═══════════════════════════════════════════════════════════════
 
@@ -1322,6 +1947,7 @@ export default function PipelinePage() {
         lineageNodes: LineageNode[];
         survivalRows: SurvivalRow[];
         decisions: DecisionEvent[];
+        overmind: ReturnType<typeof generateDemoOvermindData>;
     } | null>(null);
 
     useEffect(() => {
@@ -1332,6 +1958,7 @@ export default function PipelinePage() {
             lineageNodes: generateDemoLineage(),
             survivalRows: generateDemoSurvival(),
             decisions: generateDemoDecisions(),
+            overmind: generateDemoOvermindData(),
         });
     }, []);
 
@@ -1402,6 +2029,14 @@ export default function PipelinePage() {
                 {/* Row 5: Gene Survival Heatmap + Decision Explainer */}
                 <GeneSurvivalPanel rows={demoData.survivalRows} />
                 <DecisionExplainerPanel decisions={demoData.decisions} />
+
+                {/* Row 6: Strategic Overmind Intelligence Hub (Phase 15 + CCR) */}
+                <OvermindIntelligenceHub
+                    hypotheses={demoData.overmind.hypotheses}
+                    episodes={demoData.overmind.episodes}
+                    insights={demoData.overmind.insights}
+                    counterfactualData={demoData.overmind.counterfactualData}
+                />
             </main>
         </>
     );

@@ -8,7 +8,7 @@ description: End-of-session memory persistence — saves current state to the 5-
 
 // turbo-all
 
-## Step 1: Session Change Analysis
+## Step 0: Memory Health Dashboard (Pre-Sync Diagnostic)\r\n\r\nRun the Memory Health Dashboard to see the current state before making updates:\r\n\r\n```\r\nnode scripts/memory-health.js\r\n```\r\n\r\nThis will show:\r\n- Memory Freshness (which docs are stale vs fresh)\r\n- File Map Coverage (undocumented source files)\r\n- ADR Coverage (missing architectural decisions)\r\n- Skill System Health (skill-map freshness, skill count)\r\n- Workflow Completeness (missing keywords)\r\n\r\nUse the output to prioritize which memory docs need the most urgent attention.\r\n\r\n---\r\n\r\n## Step 1: Session Change Analysis
 
 Analyze all changes made during this session. Identify:
 - New files created
@@ -52,7 +52,10 @@ cat memory/_SYNC_CHECKLIST.md
 - **Island Model Layer**: `island.ts`, `cortex.ts`, `meta-evolution.ts`, `migration.ts`, `capital-allocator.ts`
 - **Core Engine Layer**: `strategy-dna.ts`, `evaluator.ts`, `evolution.ts`, `brain.ts`, `signal-engine.ts`, `experience-replay.ts`
 - **Advanced Gene Layer**: `microstructure-genes.ts`, `price-action-genes.ts`, `composite-functions.ts`, `directional-change.ts`
-- **Dashboard Layer**: `page.tsx` (panels, components), `pipeline/page.tsx` (pipeline panels, archaeology), `globals.css` (design system, animations)
+- **Dashboard Layer**: `page.tsx` (panels, components), `brain/page.tsx` (holographic neural cortex), `pipeline/page.tsx` (pipeline panels, archaeology), `globals.css` (design system, animations, holographic theme)
+- **Persistence Layer**: `persistence.ts` (IndexedDB), `supabase.ts` (cloud DB), `persistence-bridge.ts` (dual-write bridge)
+- **Overmind Layer**: `overmind/strategic-overmind.ts`, `overmind/opus-client.ts`, `overmind/hypothesis-engine.ts`, `overmind/evolution-director.ts`, `overmind/adversarial-tester.ts`, `overmind/predictive-orchestrator.ts`, `overmind/episodic-memory.ts`, `overmind/counterfactual-engine.ts`, `overmind/meta-cognition.ts`, and 6 supporting modules
+- **Skill Layer**: All `.agent/skills/*/SKILL.md` files, `.agent/skill-map.json`, `.agent/skill-graph.md`
 
 ---
 
@@ -110,7 +113,8 @@ If any new source files were created during this session, add them to `memory/fi
 - `src/types/` → Type Layer
 - `src/lib/engine/` → Core Engine / Anti-Overfitting / Island Model Layer
 - `src/lib/risk/` → Risk Layer
-- `src/lib/store/` → State Layer
+- `src/lib/store/` → State & Persistence Layer
+- `src/lib/db/` → Cloud Database Layer
 - `src/app/` → Presentation Layer
 
 ---
@@ -149,15 +153,29 @@ If significant architectural changes were made:
 - ADR-004: Meta-Evolution (GA²)
 - ADR-005: Strategy Archaeology (Explainable AI)
 - ADR-006: Advanced Strategy Genome Architecture
+- ADR-007: Hybrid Persistence Architecture (IndexedDB + Supabase)
+- ADR-008: Strategic Overmind Architecture (Opus 4.6 AI Supervisor, PSPP, CCR)
+- ADR-009: Neural Brain Visualization Architecture (Holographic 3D Cortex, Biological Refractory Period, Multi-Color HSLA Heatmap)
 
 ---
 
-## Step 7: Update Agent Skills (if applicable)
+## Step 7: Update Agent Skills & Skill Map (if applicable)
 
 If engine behavior changed in a way that affects skill documentation:
 - Read the relevant `SKILL.md` file from `.agent/skills/`
 - Update the skill with new patterns, constraints, or references
 - Update any reference files in `references/` if formulas or schemas changed
+- **Regenerate the Skill Map** to reflect structural changes:
+
+```
+node scripts/generate-skill-map.js
+```
+
+- **Validate Skill Integrity** to detect orphans, stale refs, and missing links:
+
+```
+node scripts/validate-skills.js
+```
 
 ---
 

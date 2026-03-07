@@ -1,8 +1,8 @@
-/* ============================================================
-   Learner: Premium Design System — Dark Glassmorphism Theme
+﻿/* ============================================================
+   Learner: Premium Design System â€” Dark Glassmorphism Theme
    ============================================================ */
 
-/* ─── CSS Custom Properties ─────────────────────────────────── */
+/* â”€â”€â”€ CSS Custom Properties â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 
 :root {
   /* Core Palette */
@@ -71,7 +71,7 @@
   --transition-slow: 400ms cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-/* ─── Reset & Base ──────────────────────────────────────────── */
+/* â”€â”€â”€ Reset & Base â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 
 *,
 *::before,
@@ -98,7 +98,7 @@ body {
   overflow-x: hidden;
 }
 
-/* ─── Animated Background ───────────────────────────────────── */
+/* â”€â”€â”€ Animated Background â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 
 body::before {
   content: '';
@@ -115,7 +115,7 @@ body::before {
   pointer-events: none;
 }
 
-/* ─── Scrollbar ─────────────────────────────────────────────── */
+/* â”€â”€â”€ Scrollbar â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 
 ::-webkit-scrollbar {
   width: 6px;
@@ -135,7 +135,7 @@ body::before {
   background: rgba(99, 115, 171, 0.5);
 }
 
-/* ─── Glass Card ────────────────────────────────────────────── */
+/* â”€â”€â”€ Glass Card â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 
 .glass-card {
   background: var(--glass-bg);
@@ -159,7 +159,7 @@ body::before {
   border-radius: var(--radius-lg);
 }
 
-/* ─── Dashboard Layout ──────────────────────────────────────── */
+/* â”€â”€â”€ Dashboard Layout â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 
 .dashboard-grid {
   display: grid;
@@ -207,7 +207,7 @@ body::before {
   }
 }
 
-/* ─── Card Components ───────────────────────────────────────── */
+/* â”€â”€â”€ Card Components â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 
 .card-header {
   display: flex;
@@ -280,7 +280,7 @@ body::before {
   border: 1px solid rgba(99, 102, 241, 0.2);
 }
 
-/* ─── Stat Display ──────────────────────────────────────────── */
+/* â”€â”€â”€ Stat Display â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 
 .stat-value {
   font-size: 1.75rem;
@@ -325,7 +325,7 @@ body::before {
   color: var(--danger);
 }
 
-/* ─── Metric Cards ──────────────────────────────────────────── */
+/* â”€â”€â”€ Metric Cards â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 
 .metric-grid {
   display: grid;
@@ -361,7 +361,7 @@ body::before {
   margin-top: 4px;
 }
 
-/* ─── Progress Bar ──────────────────────────────────────────── */
+/* â”€â”€â”€ Progress Bar â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 
 .progress-bar {
   width: 100%;
@@ -393,7 +393,7 @@ body::before {
   background: var(--gradient-amber);
 }
 
-/* ─── Table ─────────────────────────────────────────────────── */
+/* â”€â”€â”€ Table â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 
 .data-table {
   width: 100%;
@@ -428,7 +428,7 @@ body::before {
   background: rgba(99, 102, 241, 0.04);
 }
 
-/* ─── Log Feed ──────────────────────────────────────────────── */
+/* â”€â”€â”€ Log Feed â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 
 .log-feed {
   display: flex;
@@ -506,7 +506,7 @@ body::before {
   flex: 1;
 }
 
-/* ─── Buttons ───────────────────────────────────────────────── */
+/* â”€â”€â”€ Buttons â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 
 .btn {
   display: inline-flex;
@@ -568,7 +568,7 @@ body::before {
   font-size: 0.75rem;
 }
 
-/* ─── Gauge ─────────────────────────────────────────────────── */
+/* â”€â”€â”€ Gauge â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 
 .risk-gauge-container {
   position: relative;
@@ -581,7 +581,7 @@ body::before {
   transition: stroke-dasharray var(--transition-slow), stroke var(--transition-slow);
 }
 
-/* ─── Pill Tabs ─────────────────────────────────────────────── */
+/* â”€â”€â”€ Pill Tabs â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 
 .pill-tabs {
   display: flex;
@@ -614,7 +614,7 @@ body::before {
   color: var(--text-secondary);
 }
 
-/* ─── Pulse Animation ───────────────────────────────────────── */
+/* â”€â”€â”€ Pulse Animation â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 
 @keyframes pulse-glow {
 
@@ -648,7 +648,7 @@ body::before {
   animation: fadeIn 0.4s ease-out forwards;
 }
 
-/* ─── Strategy DNA Visualization ────────────────────────────── */
+/* â”€â”€â”€ Strategy DNA Visualization â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 
 .dna-strand {
   display: flex;
@@ -692,7 +692,7 @@ body::before {
   border: 1px solid rgba(139, 92, 246, 0.2);
 }
 
-/* ─── Brain State Indicator ─────────────────────────────────── */
+/* â”€â”€â”€ Brain State Indicator â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 
 .brain-state {
   display: inline-flex;
@@ -780,7 +780,7 @@ body::before {
   animation: pulse-glow 0.5s ease-in-out infinite;
 }
 
-/* ─── Header ────────────────────────────────────────────────── */
+/* â”€â”€â”€ Header â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 
 .app-header {
   display: flex;
@@ -823,7 +823,7 @@ body::before {
   gap: 12px;
 }
 
-/* ─── Empty State ───────────────────────────────────────────── */
+/* â”€â”€â”€ Empty State â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 
 .empty-state {
   display: flex;
@@ -848,14 +848,14 @@ body::before {
   line-height: 1.6;
 }
 
-/* ─── Sparkline ─────────────────────────────────────────────── */
+/* â”€â”€â”€ Sparkline â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 
 .sparkline-container {
   height: 32px;
   opacity: 0.7;
 }
 
-/* ─── Evolution Timeline ────────────────────────────────────── */
+/* â”€â”€â”€ Evolution Timeline â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 
 .evolution-timeline {
   display: flex;
@@ -905,7 +905,7 @@ body::before {
   opacity: 1;
 }
 
-/* ─── Gradient Card Accents ─────────────────────────────────── */
+/* â”€â”€â”€ Gradient Card Accents â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 
 .glass-card-accent {
   position: relative;
@@ -987,7 +987,7 @@ body::before {
   }
 }
 
-/* ─── Stagger Fade-In ───────────────────────────────────────── */
+/* â”€â”€â”€ Stagger Fade-In â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 
 @keyframes staggerIn {
   from {
@@ -1042,14 +1042,14 @@ body::before {
   animation-delay: 480ms;
 }
 
-/* ─── Animated Counter ──────────────────────────────────────── */
+/* â”€â”€â”€ Animated Counter â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 
 .counter-value {
   font-variant-numeric: tabular-nums;
   transition: color 0.3s ease;
 }
 
-/* ─── Cortex Neural Map ─────────────────────────────────────── */
+/* â”€â”€â”€ Cortex Neural Map â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 
 .neural-map-container {
   position: relative;
@@ -1310,11 +1310,11 @@ body::before {
   font-weight: 600;
 }
 
-/* ═══════════════════════════════════════════════════════════════ */
-/* PIPELINE VISUALIZATION — Phase 8                              */
-/* ═══════════════════════════════════════════════════════════════ */
+/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
+/* PIPELINE VISUALIZATION â€” Phase 8                              */
+/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
 
-/* ─── Pipeline Flow Container ───────────────────────────────── */
+/* â”€â”€â”€ Pipeline Flow Container â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 
 .pipeline-flow {
   display: flex;
@@ -1325,7 +1325,7 @@ body::before {
   scroll-snap-type: x mandatory;
 }
 
-/* ─── Pipeline Stage Card ───────────────────────────────────── */
+/* â”€â”€â”€ Pipeline Stage Card â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 
 .pipeline-stage {
   flex: 1;
@@ -1421,7 +1421,7 @@ body::before {
   color: var(--danger);
 }
 
-/* ─── Pipeline Connector Arrow ──────────────────────────────── */
+/* â”€â”€â”€ Pipeline Connector Arrow â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 
 .pipeline-connector {
   display: flex;
@@ -1441,7 +1441,7 @@ body::before {
 }
 
 .pipeline-connector .connector-line::after {
-  content: '›';
+  content: 'â€º';
   position: absolute;
   right: -4px;
   top: 50%;
@@ -1476,7 +1476,7 @@ body::before {
   animation: connectorFlow 1.5s linear infinite;
 }
 
-/* ─── Validation Gate Bar ───────────────────────────────────── */
+/* â”€â”€â”€ Validation Gate Bar â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 
 .gate-bar {
   display: flex;
@@ -1546,7 +1546,7 @@ body::before {
   color: var(--warning);
 }
 
-/* ─── Regime Heatmap ────────────────────────────────────────── */
+/* â”€â”€â”€ Regime Heatmap â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 
 .regime-heatmap {
   display: grid;
@@ -1590,7 +1590,7 @@ body::before {
   opacity: 0.7;
 }
 
-/* ─── Roster Entry Row ──────────────────────────────────────── */
+/* â”€â”€â”€ Roster Entry Row â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 
 .roster-entry {
   display: flex;
@@ -1647,7 +1647,7 @@ body::before {
   text-align: right;
 }
 
-/* ─── Pipeline Page Nav Tab ─────────────────────────────────── */
+/* â”€â”€â”€ Pipeline Page Nav Tab â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 
 .nav-tabs {
   display: flex;
@@ -1684,7 +1684,7 @@ body::before {
   color: var(--text-secondary);
 }
 
-/* ─── Pipeline Page Responsive ──────────────────────────────── */
+/* â”€â”€â”€ Pipeline Page Responsive â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 
 @media (max-width: 768px) {
   .pipeline-flow {
@@ -1703,11 +1703,11 @@ body::before {
   }
 }
 
-/* ═══════════════════════════════════════════════════════════════ */
-/* STRATEGY ARCHAEOLOGY — Phase 8.5                              */
-/* ═══════════════════════════════════════════════════════════════ */
+/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
+/* STRATEGY ARCHAEOLOGY â€” Phase 8.5                              */
+/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
 
-/* ─── Gene Lineage Tree ─────────────────────────────────────── */
+/* â”€â”€â”€ Gene Lineage Tree â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 
 .lineage-tree-container {
   position: relative;
@@ -1786,7 +1786,7 @@ body::before {
   font-weight: 600;
 }
 
-/* ─── Gene Survival Heatmap ─────────────────────────────────── */
+/* â”€â”€â”€ Gene Survival Heatmap â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 
 .survival-heatmap {
   display: grid;
@@ -1853,7 +1853,7 @@ body::before {
   font-family: var(--font-mono);
 }
 
-/* ─── Decision Explainer ────────────────────────────────────── */
+/* â”€â”€â”€ Decision Explainer â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 
 .decision-card {
   padding: 14px 16px;
@@ -1961,5 +1961,628 @@ body::before {
   .decision-regime-change {
     flex-wrap: wrap;
     font-size: 0.7rem;
+  }
+}
+
+/* ============================================================
+   NEURAL CORTEX â€” Holographic Interface (Iron Man / JARVIS)
+   ============================================================
+   Monochrome cyan palette Â· Scanline overlay Â· 3D perspective
+   Hex grid background Â· HUD frame corners Â· Wire-frame neurons
+   ============================================================ */
+
+/* â”€â”€â”€ Hologram Color Tokens â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+
+:root {
+  --holo-cyan: #00eaff;
+  --holo-cyan-dim: rgba(0, 234, 255, 0.35);
+  --holo-white: #e0faff;
+  --holo-dim: rgba(0, 234, 255, 0.18);
+  --holo-bg: #020a0e;
+  --holo-panel: rgba(0, 20, 28, 0.7);
+  --holo-border: rgba(0, 234, 255, 0.12);
+  --holo-border-bright: rgba(0, 234, 255, 0.3);
+  --holo-glow: 0 0 12px rgba(0, 234, 255, 0.15);
+  --holo-glow-strong: 0 0 24px rgba(0, 234, 255, 0.3);
+  --holo-font: 'JetBrains Mono', 'Fira Code', monospace;
+}
+
+/* â”€â”€â”€ Page â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+
+.holo-page {
+  min-height: 100vh;
+  background: var(--holo-bg);
+  padding: 0 20px 32px;
+  max-width: 1440px;
+  margin: 0 auto;
+  position: relative;
+  overflow: hidden;
+}
+
+/* â”€â”€â”€ Scanline Overlay â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+
+.holo-scanline-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  pointer-events: none;
+  z-index: 999;
+  background:
+    repeating-linear-gradient(0deg,
+      transparent,
+      transparent 2px,
+      rgba(0, 234, 255, 0.015) 2px,
+      rgba(0, 234, 255, 0.015) 4px);
+  mix-blend-mode: screen;
+}
+
+/* â”€â”€â”€ Header HUD â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+
+.holo-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 0;
+  border-bottom: 1px solid var(--holo-border);
+  margin-bottom: 14px;
+}
+
+.holo-header-left {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+.holo-logo {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-family: var(--holo-font);
+}
+
+.holo-logo-bracket {
+  font-size: 1.2rem;
+  font-weight: 300;
+  color: var(--holo-cyan-dim);
+}
+
+.holo-logo-text {
+  font-size: 1rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  color: var(--holo-cyan);
+  text-shadow: 0 0 10px rgba(0, 234, 255, 0.4);
+}
+
+.holo-header-sub {
+  font-family: var(--holo-font);
+  font-size: 0.6rem;
+  font-weight: 500;
+  letter-spacing: 0.1em;
+  color: var(--holo-dim);
+}
+
+.holo-header-right {
+  display: flex;
+  gap: 8px;
+}
+
+.holo-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 16px;
+  border: 1px solid var(--holo-border);
+  border-radius: 2px;
+  background: transparent;
+  color: var(--holo-cyan);
+  font-family: var(--holo-font);
+  font-size: 0.65rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  cursor: pointer;
+  transition: all 150ms ease;
+  text-decoration: none;
+}
+
+.holo-btn:hover {
+  border-color: var(--holo-border-bright);
+  box-shadow: var(--holo-glow);
+  color: var(--holo-white);
+}
+
+.holo-btn.warn {
+  border-color: rgba(255, 180, 0, 0.3);
+  color: #ffb400;
+}
+
+/* â”€â”€â”€ Stats HUD Bar â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+
+.holo-stats-bar {
+  display: flex;
+  gap: 2px;
+  margin-bottom: 14px;
+  padding: 8px 0;
+  border-top: 1px solid var(--holo-border);
+  border-bottom: 1px solid var(--holo-border);
+}
+
+.hud-metric {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 4px 6px;
+}
+
+.hud-metric.accent .hud-metric-value {
+  color: var(--holo-cyan);
+  text-shadow: 0 0 8px rgba(0, 234, 255, 0.3);
+}
+
+.hud-metric-label {
+  font-family: var(--holo-font);
+  font-size: 0.5rem;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  color: var(--holo-dim);
+}
+
+.hud-metric-value {
+  font-family: var(--holo-font);
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--holo-white);
+  font-variant-numeric: tabular-nums;
+}
+
+.hud-metric-unit {
+  font-size: 0.65rem;
+  font-weight: 500;
+  color: var(--holo-dim);
+  margin-left: 1px;
+}
+
+/* â”€â”€â”€ Main Content â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+
+.holo-content {
+  display: grid;
+  grid-template-columns: 1fr 260px;
+  gap: 14px;
+}
+
+@media (max-width: 960px) {
+  .holo-content {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* â”€â”€â”€ 3D Canvas Wrapper â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+
+.holo-canvas-wrapper {
+  position: relative;
+  background: var(--holo-panel);
+  border: 1px solid var(--holo-border);
+  border-radius: 3px;
+  padding: 8px;
+  perspective: 1200px;
+}
+
+.holo-canvas-3d {
+  transform: rotateX(4deg);
+  transform-style: preserve-3d;
+  transition: transform 600ms ease;
+}
+
+.holo-canvas-wrapper:hover .holo-canvas-3d {
+  transform: rotateX(1deg);
+}
+
+.holo-canvas {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+/* Corner bracket frames */
+.holo-frame-corner {
+  position: absolute;
+  width: 20px;
+  height: 20px;
+  border-color: var(--holo-cyan);
+  border-style: solid;
+  border-width: 0;
+  opacity: 0.4;
+}
+
+.holo-frame-corner.tl {
+  top: 4px;
+  left: 4px;
+  border-top-width: 1px;
+  border-left-width: 1px;
+}
+
+.holo-frame-corner.tr {
+  top: 4px;
+  right: 4px;
+  border-top-width: 1px;
+  border-right-width: 1px;
+}
+
+.holo-frame-corner.bl {
+  bottom: 4px;
+  left: 4px;
+  border-bottom-width: 1px;
+  border-left-width: 1px;
+}
+
+.holo-frame-corner.br {
+  bottom: 4px;
+  right: 4px;
+  border-bottom-width: 1px;
+  border-right-width: 1px;
+}
+
+/* â”€â”€â”€ Neuron Animations â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+
+@keyframes holo-scan-spin {
+  0% {
+    stroke-dashoffset: 0;
+  }
+
+  100% {
+    stroke-dashoffset: -60;
+  }
+}
+
+.holo-scan-ring {
+  animation: holo-scan-spin 3s linear infinite;
+}
+
+@keyframes holo-fire-anim {
+
+  0%,
+  100% {
+    opacity: 0.5;
+  }
+
+  50% {
+    opacity: 1;
+  }
+}
+
+.holo-fire {
+  animation: holo-fire-anim 0.6s ease-in-out;
+}
+
+@keyframes holo-ripple-anim {
+  0% {
+    r: 15;
+    opacity: 0.7;
+  }
+
+  100% {
+    r: 50;
+    opacity: 0;
+  }
+}
+
+.holo-ripple {
+  animation: holo-ripple-anim 0.7s ease-out forwards;
+}
+
+.holo-neuron-group {
+  transition: filter 150ms ease;
+}
+
+.holo-neuron-group:hover {
+  filter: drop-shadow(0 0 4px rgba(0, 234, 255, 0.35));
+}
+
+/* â”€â”€â”€ Synapse Animations â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+
+@keyframes holo-synapse-flow {
+  0% {
+    stroke-dashoffset: 18;
+  }
+
+  100% {
+    stroke-dashoffset: 0;
+  }
+}
+
+.holo-synapse-active {
+  animation: holo-synapse-flow 0.5s linear infinite;
+}
+
+/* â”€â”€â”€ Consciousness Arc Glow â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+
+@keyframes holo-arc-pulse {
+
+  0%,
+  100% {
+    filter: drop-shadow(0 0 2px rgba(0, 234, 255, 0.3));
+  }
+
+  50% {
+    filter: drop-shadow(0 0 8px rgba(0, 234, 255, 0.6));
+  }
+}
+
+.holo-arc-glow {
+  animation: holo-arc-pulse 2s ease-in-out infinite;
+}
+
+/* â”€â”€â”€ Sidebar â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+
+.holo-sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+/* â”€â”€â”€ HUD Detail Panel â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+
+.hud-detail {
+  background: var(--holo-panel);
+  border: 1px solid var(--holo-border);
+  border-radius: 3px;
+  padding: 18px;
+}
+
+.hud-detail-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 36px 0;
+}
+
+.hud-detail-crosshair {
+  font-size: 28px;
+  color: var(--holo-dim);
+  animation: holo-fire-anim 2s ease-in-out infinite;
+}
+
+.hud-detail-empty span {
+  font-family: var(--holo-font);
+  font-size: 0.6rem;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  color: var(--holo-dim);
+}
+
+.hud-detail-header {
+  margin-bottom: 12px;
+}
+
+.hud-detail-tag {
+  font-family: var(--holo-font);
+  font-size: 0.55rem;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  color: var(--holo-cyan);
+  display: block;
+  margin-bottom: 6px;
+}
+
+.hud-detail-name {
+  font-family: var(--holo-font);
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  color: var(--holo-white);
+  text-shadow: 0 0 6px rgba(0, 234, 255, 0.2);
+}
+
+.hud-detail-separator {
+  height: 1px;
+  background: var(--holo-border);
+  margin-bottom: 12px;
+}
+
+.hud-detail-desc {
+  font-family: var(--holo-font);
+  font-size: 0.65rem;
+  color: var(--holo-dim);
+  line-height: 1.5;
+  margin-bottom: 16px;
+}
+
+.hud-detail-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.hud-detail-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.hud-detail-item-label {
+  font-family: var(--holo-font);
+  font-size: 0.55rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  color: var(--holo-dim);
+  min-width: 70px;
+}
+
+.hud-detail-bar {
+  flex: 1;
+  height: 3px;
+  background: rgba(0, 234, 255, 0.08);
+  border-radius: 1px;
+  overflow: hidden;
+}
+
+.hud-detail-bar-fill {
+  height: 100%;
+  background: var(--holo-cyan);
+  border-radius: 1px;
+  transition: width 200ms ease;
+  box-shadow: 0 0 6px rgba(0, 234, 255, 0.4);
+}
+
+.hud-detail-item-val {
+  font-family: var(--holo-font);
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: var(--holo-white);
+  min-width: 36px;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+/* â”€â”€â”€ Consciousness Meter â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+
+.hud-consciousness {
+  background: var(--holo-panel);
+  border: 1px solid var(--holo-border);
+  border-radius: 3px;
+  padding: 12px;
+  display: flex;
+  justify-content: center;
+}
+
+.hud-consciousness-svg {
+  width: 100%;
+  max-width: 180px;
+  height: auto;
+}
+
+/* â”€â”€â”€ Activity Heatmap â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+
+.holo-heatmap {
+  margin-top: 14px;
+  background: var(--holo-panel);
+  border: 1px solid var(--holo-border);
+  border-radius: 3px;
+  padding: 14px 18px;
+}
+
+.holo-heatmap-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+.holo-heatmap-title {
+  font-family: var(--holo-font);
+  font-size: 0.65rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  color: var(--holo-cyan);
+}
+
+.holo-heatmap-sub {
+  font-family: var(--holo-font);
+  font-size: 0.55rem;
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  color: var(--holo-dim);
+}
+
+.holo-heatmap-body {
+  display: flex;
+  gap: 8px;
+}
+
+.holo-heatmap-labels {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.holo-heatmap-label {
+  height: 14px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-family: var(--holo-font);
+  font-size: 0.5rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  color: var(--holo-dim);
+  white-space: nowrap;
+}
+
+.holo-heatmap-label-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.holo-heatmap-label {
+  height: 18px;
+}
+
+.holo-heatmap-grid {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  overflow-x: auto;
+}
+
+.holo-heatmap-row {
+  display: flex;
+  gap: 2px;
+  height: 18px;
+}
+
+.holo-heatmap-cell {
+  flex: 1;
+  min-width: 12px;
+  height: 18px;
+  border-radius: 2px;
+  background: rgba(0, 234, 255, 0.02);
+  transition: transform 80ms ease, filter 80ms ease;
+}
+
+.holo-heatmap-cell:hover {
+  transform: scaleY(1.3);
+  filter: brightness(1.3);
+  z-index: 1;
+}
+
+/* ─── Floating Data Particles ───────────────────────────────── */
+
+@keyframes holo-particle-orbit {
+  0% {
+    transform: rotate(0deg) translateX(var(--orbit-r, 20px));
+  }
+
+  100% {
+    transform: rotate(360deg) translateX(var(--orbit-r, 20px));
+  }
+}
+
+.holo-data-particle {
+  animation: holo-particle-orbit 6s linear infinite;
+}
+
+/* â”€â”€â”€ Reduced Motion â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+
+@media (prefers-reduced-motion: reduce) {
+
+  .holo-scan-ring,
+  .holo-fire,
+  .holo-ripple,
+  .holo-synapse-active,
+  .holo-arc-glow,
+  .holo-data-particle {
+    animation: none !important;
+  }
+
+  .holo-scanline-overlay {
+    display: none;
   }
 }

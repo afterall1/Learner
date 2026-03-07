@@ -28,6 +28,7 @@ import { Island, IslandConfig, DEFAULT_ISLAND_CONFIG } from './island';
 import { MigrationEngine, MigrationConfig, DEFAULT_MIGRATION_CONFIG } from './migration';
 import { CapitalAllocator, AllocationConfig, DEFAULT_ALLOCATION_CONFIG, calculateEqualAllocation } from './capital-allocator';
 import { MetaEvolutionEngine } from './meta-evolution';
+import { StrategicOvermind } from './overmind/strategic-overmind';
 
 // ─── Cortex Configuration ────────────────────────────────────
 
@@ -67,11 +68,17 @@ export class Cortex {
     private metaEvolutionEngine: MetaEvolutionEngine;
     private totalStrategyGenerations: number = 0;
 
+    // ─── Strategic Overmind (Phase 15) ───────────────────────
+    private overmind: StrategicOvermind;
+    private overmindCycleInterval: number = 0;
+    private readonly OVERMIND_CYCLE_EVERY_N_TRADES: number = 50;
+
     constructor(config: Partial<CortexConfig> = {}) {
         this.config = { ...DEFAULT_CORTEX_CONFIG, ...config };
         this.migrationEngine = new MigrationEngine(this.config.migrationConfig);
         this.capitalAllocator = new CapitalAllocator(this.config.allocationConfig);
         this.metaEvolutionEngine = new MetaEvolutionEngine();
+        this.overmind = StrategicOvermind.getInstance();
     }
 
     // ─── Island Lifecycle ────────────────────────────────────────
@@ -218,6 +225,13 @@ export class Cortex {
 
         // GA²: Check if meta-evolution cycle should trigger
         this.checkMetaEvolutionCycle();
+
+        // Strategic Overmind: Periodic cycle trigger
+        this.overmindCycleInterval++;
+        if (this.overmindCycleInterval >= this.OVERMIND_CYCLE_EVERY_N_TRADES) {
+            this.overmindCycleInterval = 0;
+            this.triggerOvermindCycle();
+        }
 
         return this.getSnapshot();
     }
@@ -403,6 +417,11 @@ export class Cortex {
             s => s.state !== BrainState.PAUSED && s.state !== BrainState.EMERGENCY_STOP && s.state !== BrainState.IDLE
         ).length;
 
+        // Populate Overmind snapshot if active
+        const overmindSnapshot = this.overmind.isEnabled()
+            ? this.overmind.getSnapshot()
+            : undefined;
+
         return {
             islands: islandSnapshots,
             globalState: this.globalState,
@@ -414,6 +433,7 @@ export class Cortex {
             migrationHistory: this.migrationHistory.slice(-50),
             globalLogs: this.globalLogs.slice(-100),
             totalCapital: this.config.totalCapital,
+            overmindSnapshot,
         };
     }
 
@@ -686,6 +706,30 @@ export class Cortex {
         );
 
         return allocations;
+    }
+
+    // ─── Strategic Overmind Cycle ─────────────────────────────────
+
+    /**
+     * Trigger an Overmind reasoning cycle.
+     * Runs asynchronously — does not block the main Cortex loop.
+     * Passes current island snapshots as context.
+     */
+    private triggerOvermindCycle(): void {
+        if (!this.overmind.isEnabled()) return;
+
+        const islands: import('@/types').IslandSnapshot[] = [];
+        for (const [, island] of this.islands) {
+            islands.push(island.getSnapshot());
+        }
+
+        // Fire-and-forget async — Overmind runs in background
+        this.overmind.runCycle(islands).then(() => {
+            this.globalLog(LogLevel.INFO, '🧠 Overmind cycle completed');
+        }).catch((error: unknown) => {
+            const msg = error instanceof Error ? error.message : 'Unknown error';
+            this.globalLog(LogLevel.ERROR, `🧠 Overmind cycle error: ${msg}`);
+        });
     }
 
     // ─── Private ─────────────────────────────────────────────────
