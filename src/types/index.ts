@@ -1909,3 +1909,122 @@ export interface CircuitBreakerStatus {
   tripCount: number;            // How many times circuit has tripped
   nextProbeAt: number | null;   // When HALF_OPEN probe will be attempted
 }
+
+// ─── Atomic Order Lifecycle Engine (AOLE, Phase 19.1) ────────
+
+/**
+ * State machine states for atomic multi-leg order orchestration.
+ * Core invariant: A position NEVER exists without stop-loss protection.
+ */
+export enum OrderLifecycleState {
+  PENDING = 'PENDING',                     // Initial: awaiting execution
+  SETTING_LEVERAGE = 'SETTING_LEVERAGE',   // Setting leverage for symbol
+  PLACING_ENTRY = 'PLACING_ENTRY',         // Entry order submitted
+  ENTRY_FILLED = 'ENTRY_FILLED',           // Entry filled, SL needed NOW
+  PLACING_SL = 'PLACING_SL',              // SL order being placed
+  SL_PLACED = 'SL_PLACED',                // SL confirmed, TP optional
+  PLACING_TP = 'PLACING_TP',              // TP order being placed
+  FULLY_ARMED = 'FULLY_ARMED',            // All legs placed: Entry + SL + TP
+  SL_ONLY = 'SL_ONLY',                    // SL placed, TP failed (acceptable)
+  EMERGENCY_CLOSE = 'EMERGENCY_CLOSE',     // SL FAILED → force-closing position
+  CLOSED = 'CLOSED',                       // Position closed (SL/TP hit or manual)
+  FAILED = 'FAILED',                       // Entry failed, nothing to rollback
+  ROLLED_BACK = 'ROLLED_BACK',            // Emergency close completed
+}
+
+/**
+ * Configuration for an atomic multi-leg order group.
+ */
+export interface OrderGroupConfig {
+  symbol: string;
+  side: OrderSide;
+  quantity: number;
+  entryType: 'LIMIT' | 'MARKET';
+  entryPrice?: number;           // Required for LIMIT
+  stopLossPrice: number;         // MANDATORY — absolute price
+  takeProfitPrice?: number;      // Optional — if omitted, SL_ONLY is terminal state
+  leverage: number;              // Capped at 10
+  marginType?: 'ISOLATED' | 'CROSSED';
+  maxSlRetries: number;          // Retries before EMERGENCY_CLOSE (default: 3)
+}
+
+/**
+ * A state transition record for the audit trail.
+ */
+export interface StateTransition {
+  fromState: OrderLifecycleState;
+  toState: OrderLifecycleState;
+  timestamp: number;
+  reason: string;
+  orderId?: number;              // Associated order, if any
+  error?: string;                // Error message, if transition was due to failure
+}
+
+/**
+ * An atomic order group — tracks the full lifecycle of a multi-leg position.
+ */
+export interface OrderGroup {
+  groupId: string;               // UUID v4
+  config: OrderGroupConfig;
+  state: OrderLifecycleState;
+  stateHistory: StateTransition[];
+  entryOrder: OrderResult | null;
+  slOrder: OrderResult | null;
+  tpOrder: OrderResult | null;
+  emergencyCloseOrder: OrderResult | null;
+  slRetryCount: number;
+  createdAt: number;
+  completedAt: number | null;
+  executionQuality: ExecutionRecord | null;
+}
+
+// ─── Execution Quality Tracking (AOLE Phase 19.1) ────────────
+
+/**
+ * Records the quality of a single order execution.
+ * Measures actual fill vs expected for slippage attribution.
+ */
+export interface ExecutionRecord {
+  orderId: number;
+  groupId: string;
+  symbol: string;
+  side: OrderSide;
+  expectedPrice: number;          // Market price at time of submission
+  fillPrice: number;              // Actual average fill price
+  slippageBps: number;            // Actual slippage in basis points
+  latencyMs: number;              // Submission-to-fill latency
+  orderBookSpreadBps: number;     // Bid-ask spread at submission time
+  fillRatio: number;              // executedQty / origQty (0-1)
+  timestamp: number;
+}
+
+/**
+ * Aggregated execution quality statistics per symbol.
+ */
+export interface ExecutionQualityStats {
+  symbol: string;
+  avgSlippageBps: number;
+  p95SlippageBps: number;
+  avgLatencyMs: number;
+  p95LatencyMs: number;
+  avgFillRatio: number;
+  sampleCount: number;
+  lastUpdated: number;
+}
+
+// ─── Adaptive Rate Governor (AOLE Phase 19.1) ────────────────
+
+/**
+ * Real-time rate limit status from Binance response headers.
+ */
+export interface AdaptiveRateStatus {
+  usedWeight1m: number;           // X-MBX-USED-WEIGHT-1m
+  maxWeight1m: number;            // 2400 for Futures
+  orderCount1m: number;           // X-MBX-ORDER-COUNT-1m
+  maxOrderCount1m: number;        // 300 for Futures
+  weightUtilization: number;      // 0-1 ratio
+  orderUtilization: number;       // 0-1 ratio
+  currentConcurrency: number;     // Dynamically adjusted 1-10
+  lastUpdated: number;
+}
+

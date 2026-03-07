@@ -21,6 +21,7 @@ import {
     OrderResult,
     PositionInfo,
     OrderBookSnapshot,
+    AdaptiveRateStatus,
 } from '@/types';
 
 // ─── Configuration ───────────────────────────────────────────
@@ -62,21 +63,43 @@ const RETRY_CONFIG = {
 const RETRYABLE_ERROR_CODES = new Set([-1000, -1003, -1021]);
 const NON_RETRYABLE_ERROR_CODES = new Set([-2010, -2019, -4003]);
 
-// ─── Rate Limiter ────────────────────────────────────────────
+// ─── Adaptive Rate Governor (AOLE Sub-Innovation 2) ─────────
+// Reads X-MBX-USED-WEIGHT-1m and X-MBX-ORDER-COUNT-1m from
+// every Binance response to dynamically adjust concurrency.
+//
+// Weight Utilization → Concurrency:
+//   < 50%  → 10 (aggressive)
+//   50-75% → 5  (normal)
+//   75-92% → 2  (cautious)
+//   > 92%  → 1  (emergency) + 5s pause
 
-class RateLimiter {
+class AdaptiveRateGovernor {
     private queue: Array<() => void> = [];
     private activeRequests = 0;
-    private readonly maxConcurrent: number;
+    private maxConcurrent = 5;           // Dynamically adjusted
     private readonly intervalMs: number;
     private timer: ReturnType<typeof setInterval> | null = null;
 
-    constructor(maxConcurrent: number = 5, intervalMs: number = 200) {
-        this.maxConcurrent = maxConcurrent;
+    // Rate limit state from response headers
+    private usedWeight1m = 0;
+    private orderCount1m = 0;
+    private readonly maxWeight1m = 2400;
+    private readonly maxOrderCount1m = 300;
+    private pauseUntil = 0;              // Timestamp: block all requests until this time
+
+    constructor(intervalMs: number = 200) {
         this.intervalMs = intervalMs;
     }
 
     async acquire(): Promise<void> {
+        // Check if we're in emergency pause
+        const now = Date.now();
+        if (now < this.pauseUntil) {
+            const waitMs = this.pauseUntil - now;
+            console.warn(`[RateGovernor] Emergency pause: waiting ${waitMs}ms`);
+            await new Promise<void>(r => setTimeout(r, waitMs));
+        }
+
         if (this.activeRequests < this.maxConcurrent) {
             this.activeRequests++;
             return;
@@ -99,6 +122,72 @@ class RateLimiter {
     release(): void {
         this.activeRequests = Math.max(0, this.activeRequests - 1);
         this.processQueue();
+    }
+
+    /**
+     * Update rate limit state from Binance response headers.
+     * Called after every API response.
+     */
+    updateFromHeaders(headers: Headers): void {
+        const weightStr = headers.get('X-MBX-USED-WEIGHT-1m');
+        const orderStr = headers.get('X-MBX-ORDER-COUNT-1m');
+
+        if (weightStr) {
+            this.usedWeight1m = parseInt(weightStr, 10);
+        }
+        if (orderStr) {
+            this.orderCount1m = parseInt(orderStr, 10);
+        }
+
+        this.adjustConcurrency();
+    }
+
+    /**
+     * Get current adaptive rate status for monitoring.
+     */
+    getStatus(): AdaptiveRateStatus {
+        return {
+            usedWeight1m: this.usedWeight1m,
+            maxWeight1m: this.maxWeight1m,
+            orderCount1m: this.orderCount1m,
+            maxOrderCount1m: this.maxOrderCount1m,
+            weightUtilization: this.usedWeight1m / this.maxWeight1m,
+            orderUtilization: this.orderCount1m / this.maxOrderCount1m,
+            currentConcurrency: this.maxConcurrent,
+            lastUpdated: Date.now(),
+        };
+    }
+
+    private adjustConcurrency(): void {
+        const utilization = this.usedWeight1m / this.maxWeight1m;
+        const orderUtil = this.orderCount1m / this.maxOrderCount1m;
+        const prevConcurrency = this.maxConcurrent;
+
+        if (utilization > 0.92 || orderUtil > 0.90) {
+            // EMERGENCY: almost at limit
+            this.maxConcurrent = 1;
+            this.pauseUntil = Date.now() + 5000; // 5s pause
+            console.error(
+                `[RateGovernor] EMERGENCY: weight=${this.usedWeight1m}/${this.maxWeight1m} ` +
+                `orders=${this.orderCount1m}/${this.maxOrderCount1m} → concurrency=1, pausing 5s`
+            );
+        } else if (utilization > 0.75 || orderUtil > 0.67) {
+            // CAUTIOUS
+            this.maxConcurrent = 2;
+        } else if (utilization > 0.50) {
+            // NORMAL
+            this.maxConcurrent = 5;
+        } else {
+            // AGGRESSIVE
+            this.maxConcurrent = 10;
+        }
+
+        if (prevConcurrency !== this.maxConcurrent) {
+            console.log(
+                `[RateGovernor] Concurrency ${prevConcurrency}→${this.maxConcurrent} ` +
+                `(weight: ${(utilization * 100).toFixed(1)}%, orders: ${(orderUtil * 100).toFixed(1)}%)`
+            );
+        }
     }
 
     private processQueue(): void {
@@ -142,7 +231,7 @@ export class BinanceApiError extends Error {
 export class BinanceRestClient {
     private readonly config: BinanceRestConfig;
     private readonly baseUrl: string;
-    private readonly rateLimiter: RateLimiter;
+    private readonly rateLimiter: AdaptiveRateGovernor;
     private serverTimeDelta: number = 0;  // ms difference: server - local
     private lastTimeSyncAt: number = 0;
 
@@ -155,7 +244,7 @@ export class BinanceRestClient {
 
         const urls = getBaseUrls(this.config.isTestnet);
         this.baseUrl = urls.rest;
-        this.rateLimiter = new RateLimiter(5, 200);
+        this.rateLimiter = new AdaptiveRateGovernor(200);
     }
 
     // ─── Public Market Data Endpoints ──────────────────────────
@@ -547,6 +636,13 @@ export class BinanceRestClient {
         this.rateLimiter.destroy();
     }
 
+    /**
+     * Get the current rate limit status from the Adaptive Rate Governor.
+     */
+    getRateStatus(): AdaptiveRateStatus {
+        return this.rateLimiter.getStatus();
+    }
+
     // ─── Internal: Order Result Mapper ─────────────────────────
 
     private mapOrderResult(data: Record<string, unknown>): OrderResult {
@@ -683,11 +779,15 @@ export class BinanceRestClient {
                 headers,
             };
 
-            if (method === 'POST') {
+            if (method === 'POST' || method === 'DELETE') {
                 fetchOptions.body = queryString;
             }
 
             const response = await fetch(url, fetchOptions);
+
+            // Adaptive Rate Governor: read weight/order headers
+            this.rateLimiter.updateFromHeaders(response.headers);
+
             const data = await response.json();
 
             if (!response.ok) {
