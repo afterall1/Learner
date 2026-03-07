@@ -1713,3 +1713,199 @@ export interface SynthesisReport {
   knowledgeSourcesUsed: string[];
   timestamp: number;
 }
+
+// ─── Order Execution Types (Phase 19) ────────────────────────
+
+export enum OrderSide {
+  BUY = 'BUY',
+  SELL = 'SELL',
+}
+
+export enum OrderType {
+  LIMIT = 'LIMIT',
+  MARKET = 'MARKET',
+  STOP_MARKET = 'STOP_MARKET',
+  TAKE_PROFIT_MARKET = 'TAKE_PROFIT_MARKET',
+  STOP = 'STOP',
+  TAKE_PROFIT = 'TAKE_PROFIT',
+  TRAILING_STOP_MARKET = 'TRAILING_STOP_MARKET',
+}
+
+export enum OrderStatus {
+  NEW = 'NEW',
+  PARTIALLY_FILLED = 'PARTIALLY_FILLED',
+  FILLED = 'FILLED',
+  CANCELED = 'CANCELED',
+  EXPIRED = 'EXPIRED',
+  REJECTED = 'REJECTED',
+  NEW_INSURANCE = 'NEW_INSURANCE',
+  NEW_ADL = 'NEW_ADL',
+}
+
+/**
+ * Order request — sent to Binance via the REST client.
+ * `stopLoss` is MANDATORY — Risk Manager Rule #5 enforced at type level.
+ */
+export interface OrderRequest {
+  symbol: string;
+  side: OrderSide;
+  type: OrderType;
+  quantity: number;
+  price?: number;                   // Required for LIMIT orders
+  stopLoss: number;                 // MANDATORY — absolute price level
+  takeProfit?: number;              // Optional TP price level
+  leverage: number;                 // Capped at 10 by Risk Manager
+  reduceOnly?: boolean;             // true = closing position only
+  timeInForce?: 'GTC' | 'IOC' | 'FOK';  // Default: GTC for LIMIT
+  newClientOrderId?: string;        // Custom order ID for tracking
+}
+
+/**
+ * Order result — received from Binance after order placement/query.
+ */
+export interface OrderResult {
+  orderId: number;
+  clientOrderId: string;
+  symbol: string;
+  side: OrderSide;
+  type: OrderType;
+  status: OrderStatus;
+  price: number;
+  avgPrice: number;
+  origQty: number;
+  executedQty: number;
+  cumQuote: number;                 // Cumulative quote asset value
+  reduceOnly: boolean;
+  stopPrice: number;
+  timeInForce: string;
+  updateTime: number;
+  workingType: 'MARK_PRICE' | 'CONTRACT_PRICE';
+}
+
+/**
+ * Position information from /fapi/v2/positionRisk.
+ */
+export interface PositionInfo {
+  symbol: string;
+  side: 'LONG' | 'SHORT' | 'BOTH';
+  positionAmt: number;              // Positive = long, negative = short
+  entryPrice: number;
+  markPrice: number;
+  unrealizedProfit: number;
+  leverage: number;
+  marginType: 'isolated' | 'cross';
+  isolatedMargin: number;
+  liquidationPrice: number;
+  maxNotionalValue: number;
+  notional: number;                 // Position value = positionAmt * markPrice
+  updateTime: number;
+}
+
+/**
+ * Order book depth level [price, quantity].
+ */
+export interface DepthLevel {
+  price: number;
+  quantity: number;
+}
+
+/**
+ * Order book snapshot from /fapi/v1/depth.
+ */
+export interface OrderBookSnapshot {
+  symbol: string;
+  lastUpdateId: number;
+  bids: DepthLevel[];               // Buy side, sorted high→low
+  asks: DepthLevel[];               // Sell side, sorted low→high
+  timestamp: number;
+}
+
+// ─── User Data Stream Events (Phase 19) ──────────────────────
+
+export interface UserDataAccountUpdate {
+  eventType: 'ACCOUNT_UPDATE';
+  eventTime: number;
+  balances: Array<{
+    asset: string;
+    walletBalance: number;
+    crossWalletBalance: number;
+    balanceChange: number;
+  }>;
+  positions: Array<{
+    symbol: string;
+    positionAmount: number;
+    entryPrice: number;
+    accumulatedRealized: number;
+    unrealizedPnl: number;
+    marginType: 'isolated' | 'cross';
+    isolatedWallet: number;
+    positionSide: 'LONG' | 'SHORT' | 'BOTH';
+  }>;
+}
+
+export interface UserDataOrderUpdate {
+  eventType: 'ORDER_TRADE_UPDATE';
+  eventTime: number;
+  order: {
+    symbol: string;
+    clientOrderId: string;
+    side: OrderSide;
+    type: OrderType;
+    timeInForce: string;
+    origQty: number;
+    origPrice: number;
+    avgPrice: number;
+    stopPrice: number;
+    executionType: 'NEW' | 'CANCELED' | 'CALCULATED' | 'EXPIRED' | 'TRADE';
+    orderStatus: OrderStatus;
+    orderId: number;
+    lastFilledQty: number;
+    filledAccumulatedQty: number;
+    lastFilledPrice: number;
+    commissionAsset: string;
+    commission: number;
+    tradeTime: number;
+    tradeId: number;
+    realizedProfit: number;
+    reduceOnly: boolean;
+    positionSide: 'LONG' | 'SHORT' | 'BOTH';
+  };
+}
+
+export interface UserDataMarginCall {
+  eventType: 'MARGIN_CALL';
+  eventTime: number;
+  crossWalletBalance: number;
+  positions: Array<{
+    symbol: string;
+    positionSide: 'LONG' | 'SHORT' | 'BOTH';
+    positionAmount: number;
+    marginType: 'isolated' | 'cross';
+    isolatedWallet: number;
+    markPrice: number;
+    unrealizedPnl: number;
+    maintenanceMarginRequired: number;
+  }>;
+}
+
+export type UserDataEvent =
+  | UserDataAccountUpdate
+  | UserDataOrderUpdate
+  | UserDataMarginCall;
+
+// ─── Exchange Circuit Breaker (Phase 19) ─────────────────────
+
+export enum CircuitBreakerState {
+  CLOSED = 'CLOSED',         // Normal — all requests pass through
+  OPEN = 'OPEN',             // Tripped — all requests rejected
+  HALF_OPEN = 'HALF_OPEN',   // Testing — single probe request allowed
+}
+
+export interface CircuitBreakerStatus {
+  state: CircuitBreakerState;
+  failureCount: number;
+  lastFailure: number | null;
+  lastSuccess: number | null;
+  tripCount: number;            // How many times circuit has tripped
+  nextProbeAt: number | null;   // When HALF_OPEN probe will be attempted
+}

@@ -13,7 +13,15 @@
 // ============================================================
 
 import crypto from 'crypto';
-import { OHLCV, MarketTick, ExchangeSymbolInfo, Timeframe } from '@/types';
+import {
+    OHLCV,
+    MarketTick,
+    ExchangeSymbolInfo,
+    Timeframe,
+    OrderResult,
+    PositionInfo,
+    OrderBookSnapshot,
+} from '@/types';
 
 // ─── Configuration ───────────────────────────────────────────
 
@@ -329,6 +337,186 @@ export class BinanceRestClient {
         };
     }
 
+    /**
+     * Set margin type for a symbol (ISOLATED or CROSSED).
+     * Only call when NOT in a position — Binance rejects if position exists.
+     */
+    async setMarginType(symbol: string, marginType: 'ISOLATED' | 'CROSSED'): Promise<{ success: boolean }> {
+        try {
+            await this.signedPost('/fapi/v1/marginType', {
+                symbol: symbol.toUpperCase(),
+                marginType,
+            });
+            return { success: true };
+        } catch (error) {
+            // Binance returns -4046 if margin type is already set
+            if (error instanceof BinanceApiError && error.code === -4046) {
+                return { success: true }; // Already set, not an error
+            }
+            throw error;
+        }
+    }
+
+    // ─── Order Execution Endpoints ────────────────────────────
+
+    /**
+     * Place a new order on Binance Futures.
+     * 
+     * CRITICAL SAFETY RULES:
+     * - NEVER retried (POST request — duplicate order risk)
+     * - Leverage capped at 10 (Risk Manager Rule #4)
+     * - stopLoss is REQUIRED (type-enforced via OrderRequest)
+     * - Quantity/Price should be pre-adjusted via ExchangeInfoCache
+     */
+    async placeOrder(params: {
+        symbol: string;
+        side: 'BUY' | 'SELL';
+        type: 'LIMIT' | 'MARKET' | 'STOP_MARKET' | 'TAKE_PROFIT_MARKET';
+        quantity: number;
+        price?: number;
+        stopPrice?: number;
+        timeInForce?: 'GTC' | 'IOC' | 'FOK';
+        reduceOnly?: boolean;
+        newClientOrderId?: string;
+    }): Promise<OrderResult> {
+        const orderParams: Record<string, string | number> = {
+            symbol: params.symbol.toUpperCase(),
+            side: params.side,
+            type: params.type,
+            quantity: params.quantity,
+        };
+
+        // LIMIT orders require price and timeInForce
+        if (params.type === 'LIMIT') {
+            if (!params.price) {
+                throw new BinanceApiError('LIMIT order requires price', -1, 400, false);
+            }
+            orderParams.price = params.price;
+            orderParams.timeInForce = params.timeInForce ?? 'GTC';
+        }
+
+        // STOP_MARKET and TAKE_PROFIT_MARKET require stopPrice
+        if ((params.type === 'STOP_MARKET' || params.type === 'TAKE_PROFIT_MARKET') && params.stopPrice) {
+            orderParams.stopPrice = params.stopPrice;
+        }
+
+        if (params.reduceOnly) {
+            orderParams.reduceOnly = 'true';
+        }
+
+        if (params.newClientOrderId) {
+            orderParams.newClientOrderId = params.newClientOrderId;
+        }
+
+        const data = await this.signedPost('/fapi/v1/order', orderParams);
+
+        return this.mapOrderResult(data);
+    }
+
+    /**
+     * Cancel a specific order by orderId or clientOrderId.
+     * NEVER retried — order may already be filled.
+     */
+    async cancelOrder(symbol: string, orderId?: number, clientOrderId?: string): Promise<OrderResult> {
+        if (!orderId && !clientOrderId) {
+            throw new BinanceApiError('Either orderId or origClientOrderId is required', -1, 400, false);
+        }
+
+        const params: Record<string, string | number> = {
+            symbol: symbol.toUpperCase(),
+        };
+
+        if (orderId) params.orderId = orderId;
+        if (clientOrderId) params.origClientOrderId = clientOrderId;
+
+        const data = await this.signedDelete('/fapi/v1/order', params);
+
+        return this.mapOrderResult(data);
+    }
+
+    /**
+     * Cancel ALL open orders for a symbol.
+     * Emergency function — use with caution.
+     */
+    async cancelAllOrders(symbol: string): Promise<{ code: number; msg: string }> {
+        const data = await this.signedDelete('/fapi/v1/allOpenOrders', {
+            symbol: symbol.toUpperCase(),
+        });
+
+        return {
+            code: data.code ?? 200,
+            msg: data.msg ?? 'success',
+        };
+    }
+
+    /**
+     * Get all open orders for a symbol (or all symbols if omitted).
+     */
+    async getOpenOrders(symbol?: string): Promise<OrderResult[]> {
+        const params: Record<string, string | number> = {};
+        if (symbol) params.symbol = symbol.toUpperCase();
+
+        const data = await this.signedGet('/fapi/v1/openOrders', params);
+
+        if (!Array.isArray(data)) return [];
+        return data.map((o: Record<string, unknown>) => this.mapOrderResult(o));
+    }
+
+    /**
+     * Get position risk for all symbols or a specific symbol.
+     * Returns only positions with non-zero amounts.
+     */
+    async getPositionRisk(symbol?: string): Promise<PositionInfo[]> {
+        const params: Record<string, string | number> = {};
+        if (symbol) params.symbol = symbol.toUpperCase();
+
+        const data = await this.signedGet('/fapi/v2/positionRisk', params);
+
+        if (!Array.isArray(data)) return [];
+
+        return data
+            .filter((p: Record<string, string>) => parseFloat(p.positionAmt) !== 0)
+            .map((p: Record<string, string>): PositionInfo => ({
+                symbol: p.symbol,
+                side: parseFloat(p.positionAmt) > 0 ? 'LONG' : 'SHORT',
+                positionAmt: parseFloat(p.positionAmt),
+                entryPrice: parseFloat(p.entryPrice),
+                markPrice: parseFloat(p.markPrice),
+                unrealizedProfit: parseFloat(p.unRealizedProfit),
+                leverage: parseInt(p.leverage, 10),
+                marginType: p.marginType as 'isolated' | 'cross',
+                isolatedMargin: parseFloat(p.isolatedMargin ?? '0'),
+                liquidationPrice: parseFloat(p.liquidationPrice),
+                maxNotionalValue: parseFloat(p.maxNotionalValue ?? '0'),
+                notional: parseFloat(p.notional ?? '0'),
+                updateTime: parseInt(p.updateTime, 10),
+            }));
+    }
+
+    /**
+     * Get order book depth for a symbol.
+     */
+    async getOrderBook(symbol: string, limit: 5 | 10 | 20 | 50 | 100 = 10): Promise<OrderBookSnapshot> {
+        const data = await this.publicGet('/fapi/v1/depth', {
+            symbol: symbol.toUpperCase(),
+            limit,
+        });
+
+        return {
+            symbol: symbol.toUpperCase(),
+            lastUpdateId: data.lastUpdateId,
+            bids: (data.bids as string[][]).map(([p, q]) => ({
+                price: parseFloat(p),
+                quantity: parseFloat(q),
+            })),
+            asks: (data.asks as string[][]).map(([p, q]) => ({
+                price: parseFloat(p),
+                quantity: parseFloat(q),
+            })),
+            timestamp: Date.now(),
+        };
+    }
+
     // ─── Utility Methods ───────────────────────────────────────
 
     /**
@@ -359,6 +547,29 @@ export class BinanceRestClient {
         this.rateLimiter.destroy();
     }
 
+    // ─── Internal: Order Result Mapper ─────────────────────────
+
+    private mapOrderResult(data: Record<string, unknown>): OrderResult {
+        return {
+            orderId: Number(data.orderId),
+            clientOrderId: String(data.clientOrderId ?? ''),
+            symbol: String(data.symbol),
+            side: String(data.side) as OrderResult['side'],
+            type: String(data.type) as OrderResult['type'],
+            status: String(data.status) as OrderResult['status'],
+            price: parseFloat(String(data.price ?? '0')),
+            avgPrice: parseFloat(String(data.avgPrice ?? '0')),
+            origQty: parseFloat(String(data.origQty ?? '0')),
+            executedQty: parseFloat(String(data.executedQty ?? '0')),
+            cumQuote: parseFloat(String(data.cumQuote ?? data.cumQty ?? '0')),
+            reduceOnly: data.reduceOnly === true || data.reduceOnly === 'true',
+            stopPrice: parseFloat(String(data.stopPrice ?? '0')),
+            timeInForce: String(data.timeInForce ?? 'GTC'),
+            updateTime: Number(data.updateTime ?? Date.now()),
+            workingType: (String(data.workingType ?? 'CONTRACT_PRICE')) as OrderResult['workingType'],
+        };
+    }
+
     // ─── Internal: HTTP Methods ────────────────────────────────
 
     private async publicGet(
@@ -384,6 +595,15 @@ export class BinanceRestClient {
     ): Promise<any> {
         // NEVER retry POST requests (risk of duplicate orders)
         return this.request('POST', endpoint, params, true);
+    }
+
+    private async signedDelete(
+        endpoint: string,
+        params: Record<string, string | number>,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    ): Promise<any> {
+        // NEVER retry DELETE requests (order may already be filled/cancelled)
+        return this.request('DELETE', endpoint, params, true);
     }
 
     private async requestWithRetry(
