@@ -863,6 +863,10 @@ import {
     evaluateDCGene,
     type DCSignalResult,
 } from './directional-change';
+import {
+    calculateConfluenceSignals,
+    type ConfluenceResult,
+} from './confluence-genes';
 
 /**
  * Complete advanced signal evaluation result.
@@ -873,6 +877,7 @@ export interface AdvancedSignalResults {
     priceAction: Map<string, PriceActionResult>;
     composite: Map<string, CompositeResult>;
     dc: Map<string, DCSignalResult>;
+    confluence: Map<string, ConfluenceResult>;
     /** Aggregate bullish/bearish/neutral signal from all advanced genes */
     aggregateBias: 'bullish' | 'bearish' | 'neutral';
     /** 0-1 confidence from advanced genes */
@@ -887,12 +892,14 @@ export interface AdvancedSignalResults {
 export function calculateAdvancedSignals(
     dna: StrategyDNA,
     candles: OHLCV[],
+    higherTimeframeCandles?: Map<import('@/types').Timeframe, OHLCV[]>,
 ): AdvancedSignalResults {
     const results: AdvancedSignalResults = {
         microstructure: new Map(),
         priceAction: new Map(),
         composite: new Map(),
         dc: new Map(),
+        confluence: new Map(),
         aggregateBias: 'neutral',
         advancedConfidence: 0,
     };
@@ -946,6 +953,22 @@ export function calculateAdvancedSignals(
                     if (dcResult.currentValue > 60) bullishSignals++;
                     else if (dcResult.currentValue < 40) bearishSignals++;
                 }
+            }
+        }
+    }
+
+    // Confluence genes (Phase 23)
+    if (dna.confluenceGenes && dna.confluenceGenes.length > 0 && higherTimeframeCandles) {
+        results.confluence = calculateConfluenceSignals(
+            dna.confluenceGenes,
+            candles,
+            higherTimeframeCandles,
+        );
+        for (const r of results.confluence.values()) {
+            totalSignals++;
+            if (r.confluent) {
+                if (r.direction === 'bullish') bullishSignals++;
+                else if (r.direction === 'bearish') bearishSignals++;
             }
         }
     }

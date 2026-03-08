@@ -22,6 +22,7 @@ import {
     IslandSnapshot,
     StrategyValidation,
     RegimeGeneMemory,
+    Timeframe,
 } from '@/types';
 import type { HyperDNA } from '@/types';
 import { TradingSlot, TradingSlotStatus } from '@/types/trading-slot';
@@ -87,6 +88,9 @@ export class Island {
     private currentRegime: MarketRegime | null = null;
     private marketCandles: OHLCV[] = [];
     private allocatedCapital: number = 0;
+
+    // ─── Phase 23: HTF Candle Cache (Confluence Gene Runtime) ─
+    private higherTimeframeCandles: Map<Timeframe, OHLCV[]> = new Map();
 
     // ─── Meta-Evolution (GA²) ────────────────────────────────
     private hyperDna: HyperDNA | null = null;
@@ -531,7 +535,7 @@ export class Island {
         return trades.map(t => this.tradeRegimeMap.get(t.id)).filter((r): r is MarketRegime => r !== undefined);
     }
 
-    private evolve(): void {
+    evolve(): void {
         this.state = BrainState.EVOLVING;
         const currentGen = this.evolutionEngine.getLatestGeneration();
         if (!currentGen) return;
@@ -721,6 +725,97 @@ export class Island {
      */
     getRegimeIntelligence(): RegimeIntelligence {
         return this.regimeIntelligence;
+    }
+
+    /**
+     * Phase 20: Get the current market candle history.
+     * Used by EvolutionScheduler + CortexLiveEngine for backtesting.
+     */
+    getMarketCandles(): OHLCV[] {
+        return this.marketCandles;
+    }
+
+    /**
+     * Phase 23: Set higher timeframe candles for confluence gene evaluation.
+     * Called by Cortex when it routes candle data across timeframes.
+     */
+    setHigherTimeframeCandles(timeframe: Timeframe, candles: OHLCV[]): void {
+        this.higherTimeframeCandles.set(timeframe, candles);
+    }
+
+    /**
+     * Phase 23: Get the higher timeframe candle map.
+     * Used by signal engine when evaluating confluence genes.
+     */
+    getHigherTimeframeCandles(): Map<Timeframe, OHLCV[]> {
+        return this.higherTimeframeCandles;
+    }
+
+    /**
+     * Phase 20: Get the current generation (delegated to EvolutionEngine).
+     */
+    getCurrentGeneration(): EvolutionGeneration | null {
+        return this.evolutionEngine.getLatestGeneration();
+    }
+
+    /**
+     * Phase 20: Receive a Cross-Island Regime Propagation warning.
+     * Synthesizes a RegimeTransitionForecast from the CIRPN warning
+     * and triggers handleRegimeForecast() for pre-warming.
+     *
+     * This gives the island 5-60 minutes of advance preparation
+     * based on regime shifts detected in correlated "leader" pairs.
+     */
+    receiveCrossIslandWarning(warning: {
+        sourcePair: string;
+        predictedRegime: MarketRegime;
+        expectedArrivalMs: number;
+        confidence: number;
+    }): void {
+        // Determine recommendation based on confidence + expected arrival
+        let recommendation: 'HOLD' | 'PREPARE' | 'SWITCH';
+        if (warning.confidence >= 0.7 && warning.expectedArrivalMs < 60_000) {
+            recommendation = 'SWITCH'; // High confidence + imminent → switch now
+        } else if (warning.confidence >= 0.4) {
+            recommendation = 'PREPARE'; // Moderate confidence → pre-warm
+        } else {
+            recommendation = 'HOLD'; // Low confidence → log only
+        }
+
+        // Synthesize a RegimeTransitionForecast from the CIRPN warning
+        const syntheticForecast: RegimeTransitionForecast = {
+            currentRegime: this.currentRegime ?? MarketRegime.RANGING,
+            currentConfidence: 0.5, // Unknown — we trust the cross-island data
+            transitionRisk: warning.confidence,
+            predictedNextRegime: warning.predictedRegime,
+            predictedNextProbability: warning.confidence,
+            earlyWarnings: [{
+                signal: 'adx_slope' as const,
+                severity: warning.confidence,
+                description: `Cross-island warning from ${warning.sourcePair} — ` +
+                    `ETA: ${Math.round(warning.expectedArrivalMs / 1000)}s`,
+            }],
+            estimatedCandlesRemaining: Math.max(1, Math.round(warning.expectedArrivalMs / 60_000)),
+            recommendation,
+            transitionProbabilities: {
+                [MarketRegime.TRENDING_UP]: 0,
+                [MarketRegime.TRENDING_DOWN]: 0,
+                [MarketRegime.RANGING]: 0,
+                [MarketRegime.HIGH_VOLATILITY]: 0,
+                [MarketRegime.LOW_VOLATILITY]: 0,
+                [warning.predictedRegime]: warning.confidence,
+            },
+            matrixReliable: true,
+        };
+
+        this.log(LogLevel.INFO,
+            `🌊 [${this.slot.id}] CROSS-ISLAND WARNING from ${warning.sourcePair}: ` +
+            `${warning.predictedRegime} predicted in ${Math.round(warning.expectedArrivalMs / 1000)}s ` +
+            `(confidence: ${(warning.confidence * 100).toFixed(0)}%, action: ${recommendation})`,
+        );
+
+        // Trigger the normal regime forecast handler
+        this.handleRegimeForecast(syntheticForecast);
     }
 
     /**

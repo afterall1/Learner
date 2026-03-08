@@ -503,6 +503,46 @@ export interface CortexSnapshot {
   totalCapital: number;
   /** Strategic Overmind snapshot (Phase 15) — null if Overmind disabled */
   overmindSnapshot?: import('./overmind').OvermindSnapshot;
+  /** Risk Manager GLOBAL snapshot — 8 safety rails state */
+  riskSnapshot?: RiskSnapshot;
+}
+
+export interface RiskSnapshot {
+  /** Emergency stop currently active */
+  emergencyStopActive: boolean;
+  /** Running daily PnL in USD */
+  dailyPnl: number;
+  /** Balance at the start of the current day */
+  dailyStartBalance: number;
+  /** Balance at the start of lifetime tracking */
+  totalStartBalance: number;
+  /** Current daily drawdown (0-1) */
+  dailyDrawdownPct: number;
+  /** Current total drawdown from peak (0-1) */
+  totalDrawdownPct: number;
+  /** Number of currently open positions (GLOBAL) */
+  openPositionCount: number;
+  /** Composite global risk score (0-100) */
+  globalRiskScore: number;
+  /** All 8 hardcoded rail thresholds */
+  rails: {
+    maxRiskPerTrade: number;
+    maxSimultaneousPositions: number;
+    dailyDrawdownLimit: number;
+    totalDrawdownLimit: number;
+    maxLeverage: number;
+    mandatoryStopLoss: boolean;
+    paperTradeMinimum: number;
+    emergencyStopEnabled: boolean;
+  };
+  /** Current utilization of position/drawdown rails (0-1) */
+  railUtilizations: {
+    positionUtil: number;
+    dailyDrawdownUtil: number;
+    totalDrawdownUtil: number;
+  };
+  /** Recent risk check logs (last 10) */
+  recentLogs: import('./index').BrainLog[];
 }
 
 export interface MigrationEvent {
@@ -2026,5 +2066,53 @@ export interface AdaptiveRateStatus {
   orderUtilization: number;       // 0-1 ratio
   currentConcurrency: number;     // Dynamically adjusted 1-10
   lastUpdated: number;
+}
+
+// ─── Cortex Live Engine (Phase 20) ───────────────────────────
+
+/**
+ * Status of the CortexLiveEngine orchestrator.
+ * Tracks current phase, seed progress, and uptime.
+ */
+export interface CortexLiveStatus {
+  phase: 'idle' | 'seeding' | 'connecting' | 'live' | 'error' | 'stopped';
+  seedProgress: {
+    completed: number;
+    total: number;
+    currentSlot: string;
+  };
+  activeSlots: string[];
+  connectionStatus: ConnectionStatus;
+  uptimeMs: number;
+  startedAt: number | null;
+  lastError: string | null;
+}
+
+/**
+ * Configuration for the EvolutionScheduler.
+ * Determines when to trigger backtesting + evolution for each island.
+ */
+export interface EvolutionSchedulerConfig {
+  /** Number of candle closes before triggering evolution for an island. Default: 10 */
+  candlesPerEvolution: number;
+  /** Max concurrent evolution cycles across all islands. Default: 1 (sequential) */
+  maxConcurrentEvolutions: number;
+  /** Minimum time between evolution cycles per island (ms). Default: 5000 */
+  cooldownMs: number;
+  /** Enable auto-evolution on candle close. Default: true */
+  autoEvolveEnabled: boolean;
+}
+
+/**
+ * Per-island evolution scheduling status.
+ */
+export interface EvolutionSlotStatus {
+  slotId: string;
+  candlesSinceLastEvolution: number;
+  lastEvolutionTimestamp: number;
+  isEvolving: boolean;
+  totalEvolutionCycles: number;
+  lastBacktestDurationMs: number;
+  lastGenerationFitness: number;
 }
 

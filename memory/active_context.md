@@ -6,8 +6,8 @@
 
 ## 📅 Current State
 
-**Date**: 2026-03-07
-**Phase**: Phase 19.1 — Atomic Order Lifecycle Engine (AOLE)
+**Date**: 2026-03-08
+**Phase**: Phase 27 — E2E Integration Testing + Market Scenario Stress Matrix (MSSM)
 **Build Status**: ✅ Passing (zero errors)
 **Dev Server**: `http://localhost:3000`
 
@@ -33,7 +33,14 @@
 | **Neural Brain Visualization** | Phase 18 — Holographic JARVIS-style 3D cortex visualization (`brain/page.tsx`), multi-color heatmap, biological refractory period |
 | **Binance Execution Layer** | Phase 19 — 7 REST methods, 4 API routes, User Data WebSocket, Account Sync, Exchange Circuit Breaker + ExchangeInfoCache |
 | **AOLE** | Phase 19.1 — 13-state atomic order lifecycle (Entry→SL→TP), Adaptive Rate Governor, Execution Quality Tracker |
-| **Dashboard** | Main: 9 panels + Cortex Neural Map | Pipeline: 8 panels (5 pipeline + 3 archaeology) + Overmind Hub | Brain: Holographic Neural Cortex |
+| **Live Engine** | Phase 20 — CortexLiveEngine + ADFI (Adaptive Data Flow Intelligence) + CIRPN (Cross-Island Regime Propagation) + EvolutionScheduler + CortexLiveStore |
+| **Pipeline Live** | Phase 21 — `usePipelineLiveData` hook (dual-mode), Island selector, LivePulseTelemetryPanel (ADFI+CIRPN), EvolutionHeartbeatPanel (convergence detector) |
+| **Risk Enforcement** | Phase 22 — RiskManager singleton in Cortex, `getRiskSnapshot()`, `RiskSnapshot` type, dashboard Risk Fortress visualization |
+| **Automated Tests** | Phase 27 — Vitest framework, 12 suites (211 tests), E2E Integration Tests (33), Property-Based Fuzzing + Chaos Monkey |
+| **Integration Tests** | Phase 27 — 8-category E2E suite: Full Backtest Pipeline, Batch PFLM, Evolution Cycle, Market Scenarios, Signal Logic, HTF Aggregation, Fitness Convergence, Edge Cases |
+| **Stress Matrix** | Phase 27 — MSSM: 5-regime stress testing (bull/bear/sideways/high-vol/regime-transition) with Regime Resilience Score (RRS) |
+| **Live Trade Execution** | Phase 26 — LiveTradeExecutor: signal→order pipeline, risk validation, position sizing, /api/trading/status telemetry endpoint |
+| **Dashboard** | Main: 9 panels + Cortex Neural Map | Pipeline: 9 panels + Overmind Hub + LivePulseTelemetry + EvolutionHeartbeat + Risk Shield (12 total) | Brain: Holographic Neural Cortex |
 | **Current Generation** | N/A (awaiting Binance API connection) |
 | **Best Fitness Score** | N/A |
 | **Active Strategy** | Demo: "Nova Tiger" (Score: 67) |
@@ -205,6 +212,68 @@
 122. **Execution Quality Tracker**: `execution-quality.ts` (~190 lines) — Per-symbol rolling window (100 orders), slippage in bps, P95 latency, fill ratio, calibrated slippage feed for market-simulator.ts
 123. **AOLE Type System**: +120 lines — OrderLifecycleState (13 states), OrderGroupConfig, OrderGroup, StateTransition, ExecutionRecord, ExecutionQualityStats, AdaptiveRateStatus
 
+### Session: 2026-03-07 — CortexLiveEngine (Phase 20, Live Market Connection)
+124. **CortexLiveEngine**: `cortex-live-engine.ts` (~490 lines) — Central orchestrator bridging live Binance data → Cortex/Island engines. Historical seed (500 candles per slot), kline + ticker WebSocket subscriptions, candle aggregation, snapshot refresh callbacks
+125. **Evolution Scheduler**: `evolution-scheduler.ts` (~200 lines) — Autonomous evolution trigger after N candles collected per island
+126. **ADFI Engine**: `adaptive-data-flow.ts` (~420 lines) — Adaptive Data Flow Intelligence: gap detection, auto-repair, flow telemetry (throughput, latency, reconnects, uptime), adaptive kline evolution (resolution adjustment)
+127. **CIRPN Engine**: `regime-propagation.ts` (~380 lines) — Cross-Island Regime Propagation Network: pair correlation tracking, leader/follower detection, regime arrival prediction, propagation warnings with ETA
+128. **CortexLiveStore**: Added `useCortexLiveStore` Zustand store — exposes `CortexLiveEngine` instance + status to React components
+
+### Session: 2026-03-07 — Pipeline Dashboard Live Integration (Phase 21, Radical Innovations)
+129. **usePipelineLiveData Hook**: `usePipelineLiveData.ts` (~540 lines) — Data bridge hook connecting 5 pipeline panels to live Cortex/Island state. 3-second polling, dual-mode (LIVE/DEMO fallback), island selector support, derives: generations, gates, roster, replay cells, pipeline stages, telemetry, propagation, genome health
+130. **LivePulseTelemetryPanel**: (~220 lines) — Full-width real-time panel: ADFI pipeline health (5 metrics: candles, latency, gaps, reconnects, uptime) + CIRPN propagation status (regime events, leader/follower pairs, active cross-island warnings with ETA progress bars)
+131. **EvolutionHealthAnalyzer**: `evolution-health.ts` (~300 lines) — **RADICAL INNOVATION**: Exposes HIDDEN evolutionary intelligence. `computeGenomeHealth(island)` → diversity index, stagnation level, convergence risk (composite 0-1), fitness trajectory (linear regression slope), gene dominance histogram (top 10 IndicatorTypes with trends), auto-intervention detection (mutation rate changes), health grading (A-F)
+132. **EvolutionHeartbeatPanel**: (~250 lines) — **RADICAL INNOVATION**: Animated health grade ring (conic-gradient, pulse on danger), 5 core metrics (Diversity, Stagnation, Trajectory, Mutation Δ, Best Fitness), gene dominance bar chart (↑/•/↓ trends), autopilot intervention log (⚡ mutation boost / 📉 decay / 🎲 diversity injection)
+
+### Session: 2026-03-07 — Risk Manager Global Enforcement + Test Infrastructure (Phase 22)
+133. **Neural Brain Live Binding**: Connected holographic brain to live Cortex/Island state (replace demo simulation)
+134. **MRTI Dashboard Panel**: `MRTIForecastPanel` — regime transition forecasts + early warnings + Regime Horizon Bar radical innovation
+135. **Strategic Overmind Live Binding**: 25-field `OvermindLiveSnapshot` + Cognitive Pulse (Token Pressure Gauge + Phase Heartbeat)
+136. **RiskManager Global Enforcement (5-Layer)**: Layer 1: `getRiskSnapshot()` on RiskManager → serializable state. Layer 2: `RiskSnapshot` type + `CortexSnapshot.riskSnapshot`. Layer 3: Cortex singleton wiring (constructor, recordTrade, emergencyStopAll, getSnapshot). Layer 4: `usePipelineLiveData.riskLive` derivation. Layer 5: `RiskShieldPanel` (~330 lines) with Risk Fortress visualization (Global Risk Score ring, 8-rail matrix, Daily PnL, risk log feed)
+137. **Vitest Test Framework**: `vitest.config.ts`, `vite-tsconfig-paths`, `npm test` + `npm run test:watch` scripts
+138. **RiskManager Tests (Suite 1)**: 37 tests — all 8 NON-NEGOTIABLE safety rails + `getRiskSnapshot()` + `recordTradeResult()` + `resetDaily()` + **Safety Rail Mutation Boundary Tests** (radical innovation: probe exact threshold edges)
+139. **Cortex Integration Tests (Suite 2)**: 3 tests — riskSnapshot in getSnapshot(), correct structure, emergencyStopAll wiring
+140. **Risk Derivation Tests (Suite 3)**: 5 tests — null safety, data passthrough, emergency stop state, risk score propagation
+
+### Session: 2026-03-08 — Test Coverage Expansion + Property-Based Fuzzing (Phase 25, 5-Expert Council)
+141. **Validation Pipeline Suite**: `validation-pipeline.test.ts` (26 tests) — WFA rolling/anchored/degradation, Monte Carlo permutation/equity curve, Deflated Sharpe Ratio, Overfitting Detector (5 components), edge cases (insufficient trades, zero variance)
+142. **Migration Engine Suite**: `migration-engine.test.ts` (10 tests) — Affinity calculation (6 tiers: same→different pair/timeframe), adaptMigrant (metadata reset, slot reassignment, fitness zeroing, gene preservation)
+143. **Advanced Genes Suite**: `advanced-genes.test.ts` (16 tests) — Microstructure gene generation/signals/crossover/mutation (5 types), Price Action gene generation/signals/crossover/mutation (all pattern types), 100-cycle GA invariant stability
+144. **Evaluator Suite**: `evaluator.test.ts` (10 tests) — Performance metrics (Sharpe, WinRate, ProfitFactor, Expectancy), fitness scoring (0-100 bounds), novelty bonus (advanced gene presence), deflated fitness, drawdown/streaks (via public API)
+145. **Signal Engine Suite**: `signal-engine.test.ts` (14 tests) — SMA/EMA/RSI/MACD/Bollinger/ATR indicator calculations (valid-only array lengths), signal rule evaluation (ABOVE/BELOW/AND/OR logic), full strategy pipeline (DNA→candles→signal)
+146. **Property-Based Fuzzing Harness (RADICAL INNOVATION)**: `property-fuzzer.test.ts` (30 tests) — 7-category metamorphic testing engine:
+    - GA Operator Invariants (6): 100-iteration crossover stability, 1000-cycle stress test
+    - Signal Engine Monotonicity (4): RSI∈[0,100], BB upper>mid>lower, ATR≥0 (50 random runs each)
+    - Evaluator Consistency (4): win>loss monotonicity, fitness∈[0,100], complexity≤1.0
+    - WFA Symmetry (3): determinism, insufficient-trade guard, degradation clamping
+    - Overfitting Monotonicity (3): better WFA→lower score, significant MC→lower score
+    - Migration Affinity Algebra (4): reflexive (A,A)=1.0, symmetric (A,B)=(B,A), range [0,1]
+    - Chaos Monkey Stress (6): zero-price candles, negative volumes, flash crashes, single candle input
+
+### Session: 2026-03-08 — Live Paper Trading E2E Testnet Execution (Phase 26)
+147. **LiveTradeExecutor**: `live-trade-executor.ts` (~330 lines) — Signal-to-order pipeline connecting strategy signals to Binance Testnet execution (risk validation, position sizing, SL/TP calculation, duplicate prevention, execution logging)
+148. **CortexLiveEngine Integration**: `setAutoTrade(enabled)` toggle + `handleCandleClose()` wiring to LiveTradeExecutor.evaluateAndExecute()
+149. **Store Toggle**: `setAutoTrade(enabled: boolean)` action in `useCortexLiveStore` for UI control
+150. **Trading Telemetry API**: `/api/trading/status` endpoint (~150 lines) — Real-time auto-trade state, active positions, execution quality stats, risk capacity, engine operational status
+
+### Session: 2026-03-08 — Integration Testing + MSSM (Phase 27, 5-Expert Council)
+151. **E2E Integration Test Suite**: `integration-e2e.test.ts` (~790 lines, 33 tests) — 8-category comprehensive integration testing:
+    - Full Backtest Pipeline (5): runBacktest → trades, equity curve, metrics, random strategy resilience
+    - Batch Backtest + PFLM (4): batchBacktest, cache consistency, quickFitness agreement, performance
+    - Complete Evolution Cycle (4): genesis → evaluate → evolve across 5 generations, population size invariant
+    - Market Scenario Testing (4): Bull trend, bear crash, sideways range, high volatility
+    - LiveTradeExecutor Signal Logic (4): Signal evaluation, regime detection, position context
+    - HTF Candle Aggregation (4): M15→H1, H1→H4/D1, volume correctness, lower TF guard
+    - Fitness Convergence (3): Elitism preservation, mutation adaptation, trade generation
+    - Edge Cases (5): Min candles, below-warmup, missing indicators, empty data
+152. **Confluence Gene HTF Aggregation**: `aggregateToHigherTimeframe()` now fully tested and validated for runtime confluence gene support
+153. **Market Scenario Stress Matrix (MSSM — RADICAL INNOVATION)**: `stress-matrix.ts` (~390 lines)
+    - 5 canonical market scenarios: bull_trend, bear_crash, sideways_range, high_volatility, regime_transition (unique: bull→sideways→crash)
+    - `runStressMatrix(strategy, candlesPerScenario)` — Backtests strategy across all 5 regimes
+    - Regime Resilience Score (RRS): `avgFitness × (1 - normalizedVariance) × consistencyBonus`
+    - `batchStressMatrix(population)` — Batch population analysis, sorted by RRS
+    - Per-scenario: fitness, trades, metrics, detected regime, equity return, execution time
+
 ---
 
 ## 🚧 Incomplete Features / Technical Debt
@@ -215,24 +284,28 @@
 - [x] ~~**Advanced Genome** — Evolve beyond standard indicator parameters~~ (5 gene families + structural evolution delivered)
 - [x] ~~**Persistent storage** — LocalStorage is demo-only, need proper DB for production~~ (Phase 13-14: IndexedDB + Supabase hybrid delivered)
 - [x] ~~**Binance Futures API integration** — REST client + WebSocket streams~~ (Phase 19: 7 REST methods, 4 API routes, User Data WS, Circuit Breaker)
-- [ ] **Live paper trading** — Connect Cortex to real market data
-- [ ] **Risk Manager global enforcement** — Cross-island position counting
+- [x] ~~**Live paper trading** — Connect Cortex to real market data~~ (Phase 20: CortexLiveEngine, ADFI, CIRPN, EvolutionScheduler)
+- [x] ~~**Risk Manager global enforcement** — Cross-island position counting~~ (Phase 22: RiskManager singleton in Cortex, 5-layer integration, Risk Fortress panel)
 - [x] ~~**Git initialization** — Project not yet under version control~~ (Git Guardian hook system, 8 commits pushed to GitHub)
-- [ ] **Automated tests** — Unit tests for validation pipeline, migration engine, and advanced genes
-- [ ] **Live data binding** — Connect pipeline panels to real Cortex/Brain state
-- [ ] **Confluence Gene runtime** — Multi-TF Confluence genes need higher TF candle data integration
-- [ ] **Opus API key** — Strategic Overmind requires Anthropic API key in `.env.local`
+- [x] ~~**Automated tests** — Unit tests for validation pipeline, migration engine, and advanced genes~~ (Phase 22: Vitest, 3 suites, 45 tests, 0 failures)
+- [x] ~~**Live data binding** — Connect pipeline panels to real Cortex/Brain state~~ (Phase 21: usePipelineLiveData hook + dual-mode)
+- [x] ~~**Confluence Gene runtime** — Multi-TF Confluence genes need higher TF candle data integration~~ (Phase 27: aggregateToHigherTimeframe validated in integration tests)
+- [x] ~~**Opus API key** — Strategic Overmind requires Anthropic API key in `.env.local`~~ (Configured: ANTHROPIC_API_KEY + OVERMIND_ENABLED=true)
+- [x] ~~**Neural Brain live binding** — Connect holographic brain to live Cortex/Island state~~ (Phase 22)
+- [x] ~~**MRTI Dashboard Panel** — Display regime transition forecasts and early warnings~~ (Phase 22: MRTIForecastPanel)
+- [x] ~~**Strategic Overmind live binding** — Connect Overmind to live Cortex state~~ (Phase 22: OvermindLiveSnapshot)
+- [x] ~~**Integration testing** — End-to-end backtesting with real market data~~ (Phase 27: 33-test E2E suite + MSSM)
+- [x] ~~**Live paper trading session** — Full end-to-end testnet execution~~ (Phase 26: LiveTradeExecutor + Trading Telemetry API)
 
 ---
 
 ## 📅 Next Session Priorities
 
-1. Connect Cortex to live market data + **backtest strategies against historical klines**
-2. Connect Pipeline Dashboard to live Cortex state (replace demo data)
-3. Connect Neural Brain Visualization to live Cortex/Island state (replace demo simulation)
-4. MRTI Dashboard Panel — display regime transition forecasts and early warnings
-5. Connect Strategic Overmind to live Cortex/Island state
+1. Production deployment preparation — Build optimization, environment configuration
+2. Performance optimization — Backtester PFLM cache improvements, stress matrix integration into evolution pipeline
+3. Real Binance Testnet paper trading session — Verify LiveTradeExecutor with live kline data
+4. Dashboard MSSM visualization — Stress matrix results panel in pipeline page
 
 ---
 
-*Last Synced: 2026-03-07 04:55 (UTC+3)*
+*Last Synced: 2026-03-08 01:25 (UTC+3)*

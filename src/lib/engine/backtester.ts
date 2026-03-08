@@ -28,10 +28,12 @@ import {
     IndicatorType,
     PerformanceMetrics,
     MarketRegime,
+    Timeframe,
 } from '@/types';
 import {
     evaluateStrategy,
     getRequiredCandleCount,
+    calculateAdvancedSignals,
     calculateSMA,
     calculateEMA,
     calculateRSI,
@@ -267,6 +269,136 @@ interface SimulatedPosition {
     entryFees: number;
 }
 
+// ─── HTF Candle Aggregation (Phase 26) ───────────────────────
+
+/**
+ * Timeframe multiplier map — how many primary candles fit into one HTF candle.
+ * Used for candle aggregation during backtesting.
+ */
+const TF_MINUTES: Record<Timeframe, number> = {
+    [Timeframe.M1]: 1,
+    [Timeframe.M5]: 5,
+    [Timeframe.M15]: 15,
+    [Timeframe.H1]: 60,
+    [Timeframe.H4]: 240,
+    [Timeframe.D1]: 1440,
+};
+
+/**
+ * Aggregate lower-timeframe candles into a higher-timeframe candle array.
+ * Uses timestamp-based bucketing: each HTF candle spans a time window
+ * of `targetTfMinutes` minutes, aggregating OHLCV data from all primary
+ * candles that fall within that window.
+ *
+ * This enables backtesting confluence genes without separate HTF data feeds.
+ *
+ * @param candles - Primary timeframe OHLCV data (oldest first)
+ * @param sourceTF - The timeframe of the input candles
+ * @param targetTF - The desired higher timeframe
+ * @returns Aggregated HTF candle array
+ */
+export function aggregateToHigherTimeframe(
+    candles: OHLCV[],
+    sourceTF: Timeframe,
+    targetTF: Timeframe,
+): OHLCV[] {
+    const sourceMinutes = TF_MINUTES[sourceTF];
+    const targetMinutes = TF_MINUTES[targetTF];
+
+    if (!sourceMinutes || !targetMinutes || targetMinutes <= sourceMinutes) {
+        return []; // Invalid aggregation: target must be higher
+    }
+
+    if (candles.length === 0) return [];
+
+    const targetMs = targetMinutes * 60_000;
+    const result: OHLCV[] = [];
+
+    let bucketStart = Math.floor(candles[0].timestamp / targetMs) * targetMs;
+    let bucketOpen = candles[0].open;
+    let bucketHigh = candles[0].high;
+    let bucketLow = candles[0].low;
+    let bucketClose = candles[0].close;
+    let bucketVolume = candles[0].volume;
+
+    for (let i = 1; i < candles.length; i++) {
+        const c = candles[i];
+        const candleBucket = Math.floor(c.timestamp / targetMs) * targetMs;
+
+        if (candleBucket !== bucketStart) {
+            // Emit completed bucket
+            result.push({
+                timestamp: bucketStart,
+                open: bucketOpen,
+                high: bucketHigh,
+                low: bucketLow,
+                close: bucketClose,
+                volume: bucketVolume,
+            });
+
+            // Start new bucket
+            bucketStart = candleBucket;
+            bucketOpen = c.open;
+            bucketHigh = c.high;
+            bucketLow = c.low;
+            bucketClose = c.close;
+            bucketVolume = c.volume;
+        } else {
+            // Aggregate into current bucket
+            bucketHigh = Math.max(bucketHigh, c.high);
+            bucketLow = Math.min(bucketLow, c.low);
+            bucketClose = c.close;
+            bucketVolume += c.volume;
+        }
+    }
+
+    // Emit final bucket
+    result.push({
+        timestamp: bucketStart,
+        open: bucketOpen,
+        high: bucketHigh,
+        low: bucketLow,
+        close: bucketClose,
+        volume: bucketVolume,
+    });
+
+    return result;
+}
+
+/**
+ * Build a Map<Timeframe, OHLCV[]> of higher-timeframe candles by aggregating
+ * primary candle data. Used to provide HTF data to confluence genes during
+ * backtesting without requiring separate data feeds.
+ *
+ * @param candles - Primary timeframe candle data
+ * @param primaryTF - The timeframe of the input candles
+ * @returns Map of aggregated HTF candle arrays
+ */
+function buildHTFCandleMap(
+    candles: OHLCV[],
+    primaryTF: Timeframe,
+): Map<Timeframe, OHLCV[]> {
+    const htfMap = new Map<Timeframe, OHLCV[]>();
+    const allTFs: Timeframe[] = [
+        Timeframe.M1, Timeframe.M5, Timeframe.M15,
+        Timeframe.H1, Timeframe.H4, Timeframe.D1,
+    ];
+
+    const primaryIdx = allTFs.indexOf(primaryTF);
+    if (primaryIdx < 0) return htfMap;
+
+    // Aggregate to each higher TF
+    for (let i = primaryIdx + 1; i < allTFs.length; i++) {
+        const htf = allTFs[i];
+        const aggregated = aggregateToHigherTimeframe(candles, primaryTF, htf);
+        if (aggregated.length >= 30) { // Only include if sufficient for evaluation
+            htfMap.set(htf, aggregated);
+        }
+    }
+
+    return htfMap;
+}
+
 // ─── Core Backtesting Functions ──────────────────────────────
 
 /**
@@ -319,6 +451,13 @@ export function runBacktest(
     for (const gene of dna.indicators) {
         cache.getOrCompute(gene);
     }
+
+    // Phase 26: Pre-aggregate HTF candles for confluence gene evaluation
+    const primaryTF = dna.preferredTimeframe;
+    const hasConfluenceGenes = dna.confluenceGenes && dna.confluenceGenes.length > 0;
+    const htfCandleMap = hasConfluenceGenes
+        ? buildHTFCandleMap(candles, primaryTF)
+        : new Map<Timeframe, OHLCV[]>();
 
     // Extract symbol from slotId (e.g., "BTCUSDT:1h" → "BTCUSDT")
     const symbol = dna.slotId.split(':')[0] || 'UNKNOWN';
@@ -401,58 +540,82 @@ export function runBacktest(
             if (signal.action === TradeSignalAction.LONG || signal.action === TradeSignalAction.SHORT) {
                 signalsGenerated++;
 
-                const direction = signal.action === TradeSignalAction.LONG
-                    ? TradeDirection.LONG
-                    : TradeDirection.SHORT;
-
-                // Calculate position size
-                const quantity = calculatePositionQuantity(
-                    balance,
-                    dna.riskGenes.positionSizePercent / 100,
-                    currentCandle.close,
-                    dna.riskGenes.maxLeverage,
-                );
-
-                if (quantity > 0 && balance > 0) {
-                    // Simulate entry execution
-                    const entryExecution = simulateExecution(
-                        currentCandle.close,
-                        quantity,
-                        dna.riskGenes.maxLeverage,
-                        direction,
-                        true,  // isEntry = true
-                        config.execution,
-                        atrValues.slice(0, i + 1),
-                    );
-
-                    // Calculate SL/TP levels
-                    const { stopLoss, takeProfit } = calculateSLTPLevels(
-                        entryExecution.fillPrice,
-                        direction,
-                        dna.riskGenes.stopLossPercent,
-                        dna.riskGenes.takeProfitPercent,
-                    );
-
-                    totalFees += entryExecution.totalCost;
-
-                    openPosition = {
-                        id: uuidv4(),
-                        strategyId: dna.id,
-                        strategyName: dna.name,
-                        slotId: dna.slotId,
-                        symbol,
-                        direction,
-                        entryPrice: entryExecution.fillPrice,
-                        quantity,
-                        leverage: dna.riskGenes.maxLeverage,
-                        stopLoss,
-                        takeProfit,
-                        entryTime: currentCandle.timestamp,
-                        entryReason: signal.reason,
-                        entryIndicators: signal.indicators,
-                        entryFees: entryExecution.totalCost,
-                    };
+                // Phase 26: Modulate confidence with confluence gene signals
+                let adjustedConfidence = signal.confidence;
+                if (hasConfluenceGenes && htfCandleMap.size > 0) {
+                    const advSignals = calculateAdvancedSignals(dna, candleSlice, htfCandleMap);
+                    if (advSignals.confluence.size > 0) {
+                        // Count how many confluence genes agree vs disagree
+                        let confluent = 0;
+                        let total = 0;
+                        for (const cr of advSignals.confluence.values()) {
+                            total++;
+                            if (cr.confluent) confluent++;
+                        }
+                        // Apply confluence multiplier: 0.5-1.5x
+                        const confluenceRatio = total > 0 ? confluent / total : 0.5;
+                        const confluenceMultiplier = 0.5 + confluenceRatio;
+                        adjustedConfidence = Math.min(1, signal.confidence * confluenceMultiplier);
+                    }
                 }
+
+                // Skip low-confidence entries when confluence disagrees
+                if (adjustedConfidence < 0.1) {
+                    // Confluence vetoed — skip this entry silently
+                } else {
+                    const direction = signal.action === TradeSignalAction.LONG
+                        ? TradeDirection.LONG
+                        : TradeDirection.SHORT;
+
+                    // Calculate position size
+                    const quantity = calculatePositionQuantity(
+                        balance,
+                        dna.riskGenes.positionSizePercent / 100,
+                        currentCandle.close,
+                        dna.riskGenes.maxLeverage,
+                    );
+
+                    if (quantity > 0 && balance > 0) {
+                        // Simulate entry execution
+                        const entryExecution = simulateExecution(
+                            currentCandle.close,
+                            quantity,
+                            dna.riskGenes.maxLeverage,
+                            direction,
+                            true,  // isEntry = true
+                            config.execution,
+                            atrValues.slice(0, i + 1),
+                        );
+
+                        // Calculate SL/TP levels
+                        const { stopLoss, takeProfit } = calculateSLTPLevels(
+                            entryExecution.fillPrice,
+                            direction,
+                            dna.riskGenes.stopLossPercent,
+                            dna.riskGenes.takeProfitPercent,
+                        );
+
+                        totalFees += entryExecution.totalCost;
+
+                        openPosition = {
+                            id: uuidv4(),
+                            strategyId: dna.id,
+                            strategyName: dna.name,
+                            slotId: dna.slotId,
+                            symbol,
+                            direction,
+                            entryPrice: entryExecution.fillPrice,
+                            quantity,
+                            leverage: dna.riskGenes.maxLeverage,
+                            stopLoss,
+                            takeProfit,
+                            entryTime: currentCandle.timestamp,
+                            entryReason: signal.reason,
+                            entryIndicators: signal.indicators,
+                            entryFees: entryExecution.totalCost,
+                        };
+                    }
+                } // Phase 26: close confluence veto else-block
             }
         } else {
             // Check for exit signals on open position

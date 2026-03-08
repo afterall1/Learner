@@ -4,7 +4,7 @@
 **Name**: Learner
 **Type**: Self-evolving AI-powered algorithmic trading system
 **Target**: Binance Futures (USDT-M perpetual contracts)
-**Status**: Active Development — Phase 19.1 (Atomic Order Lifecycle Engine)
+**Status**: Active Development — Phase 27 (E2E Integration Testing + Market Scenario Stress Matrix)
 **Created**: 2026-03-05
 
 ---
@@ -55,6 +55,20 @@ The system is built on a **Genetic Algorithm** paradigm (not Reinforcement Learn
 - **Neural Brain Visualization (Phase 18)**: Holographic JARVIS-style 3D cortex — 10 SVG wireframe neurons, 15 animated synapses, CSS 3D perspective, HUD system (Stats bar + Target Lock + Consciousness Arc), multi-color Memory Trace Heatmap (10 HSLA hues), biological refractory period (800ms cooldown)
 - **Binance Trading Execution Layer (Phase 19)**: 7 REST methods (placeOrder, cancelOrder, getPositionRisk, etc.), 4 API routes, User Data WebSocket (ACCOUNT_UPDATE, ORDER_TRADE_UPDATE, MARGIN_CALL), Account Sync Service (30s polling), 3-state Exchange Circuit Breaker + ExchangeInfoCache
 - **Atomic Order Lifecycle Engine (Phase 19.1, Radical Innovation)**: 13-state machine (Entry→SL→TP atomic, EMERGENCY_CLOSE if SL fails), Adaptive Rate Governor (dynamic concurrency 1-10 from X-MBX-USED-WEIGHT headers), Execution Quality Tracker (per-symbol rolling slippage/latency stats)
+- **CortexLiveEngine (Phase 20)**: Central live market orchestrator — historical seed (500 candles), kline+ticker WebSocket, candle aggregation, EvolutionScheduler (autonomous gen triggers)
+- **ADFI (Phase 20)**: Adaptive Data Flow Intelligence — gap detection, auto-repair, flow telemetry (throughput, latency, reconnects, uptime)
+- **CIRPN (Phase 20)**: Cross-Island Regime Propagation Network — pair correlation tracking, leader/follower detection, regime arrival prediction
+- **Pipeline Live Integration (Phase 21)**: `usePipelineLiveData` hook (dual-mode LIVE/DEMO, island selector, 3s polling), data bridge for 5 pipeline panels
+- **LivePulseTelemetryPanel (Phase 21, Radical Innovation)**: Real-time ADFI health + CIRPN propagation status visualization
+- **EvolutionHealthAnalyzer (Phase 21, Radical Innovation)**: Exposes HIDDEN evolutionary intelligence — diversity, stagnation, convergence risk, fitness trajectory, gene dominance, auto-intervention detection, A-F health grading
+- **EvolutionHeartbeatPanel (Phase 21, Radical Innovation)**: Animated convergence detector with gene dominance chart + autopilot intervention log
+- **Risk Manager Global Enforcement (Phase 22)**: RiskManager singleton wired into Cortex, `getRiskSnapshot()` accessor, `RiskSnapshot` type, 5-layer integration (Engine → Type → Cortex → Hook → Panel)
+- **Risk Fortress Visualization (Phase 22, Radical Innovation)**: Global Risk Score ring (SVG 0-100), 8-rail animated status matrix, Daily PnL, risk event log, pulse-glow on high utilization
+- **Vitest Test Infrastructure (Phase 22)**: 3 test suites (45 tests), Safety Rail Mutation Boundary Tests (probe exact threshold edges of all 8 rails)
+- **Test Coverage Expansion (Phase 25)**: 6 new test suites (106 tests), total 178/178 passing. Property-Based Fuzzing Harness (7-category metamorphic testing: GA Operator Invariants, Signal Engine Monotonicity, Evaluator Consistency, WFA Symmetry, Overfitting Monotonicity, Migration Affinity Algebra) + Chaos Monkey Stress Tester (zero-price/negative-volume/flash-crash resilience)
+- **Live Paper Trading Execution (Phase 26)**: LiveTradeExecutor signal→order pipeline, risk validation, position sizing, SL/TP, /api/trading/status telemetry endpoint, auto-trade toggle
+- **E2E Integration Testing (Phase 27)**: 33-test integration suite covering full backtest pipeline, batch PFLM, evolution cycle, market scenarios, HTF aggregation, fitness convergence, edge cases. Total: 211/211 tests, 12 files.
+- **Market Scenario Stress Matrix (Phase 27, MSSM Radical Innovation)**: 5-regime cross-scenario backtesting with Regime Resilience Score (RRS). Unique `regime_transition` scenario (bull→sideways→crash). `runStressMatrix()` + `batchStressMatrix()` for population-level analysis.
 
 ### Module Map
 
@@ -100,7 +114,14 @@ src/
 │   ├── composite-functions.ts → [Phase 9] Mathematical indicator evolution (9 ops × 4 norms)
 │   ├── directional-change.ts  → [Phase 9] Event-based DC analysis (Kampouridis)
 │   ├── backtester.ts         → [Phase 10] Core backtest engine + IndicatorCache (PFLM)
-│   └── market-simulator.ts   → [Phase 10] Realistic execution (slippage, commission, impact)
+│   ├── market-simulator.ts   → [Phase 10] Realistic execution (slippage, commission, impact)
+│   ├── cortex-live-engine.ts → [Phase 20] Live market ↔ Cortex orchestrator (490 lines)
+│   ├── evolution-scheduler.ts → [Phase 20] Autonomous evolution trigger (200 lines)
+│   ├── adaptive-data-flow.ts → [Phase 20] ADFI gap detection + telemetry (420 lines)
+│   ├── regime-propagation.ts → [Phase 20] CIRPN cross-island regime propagation (380 lines)
+│   ├── evolution-health.ts   → [Phase 21] Evolution Health Analyzer — convergence detector (300 lines)
+│   ├── live-trade-executor.ts → [Phase 26] Signal→order pipeline (330 lines, risk validation, SL/TP)
+│   └── stress-matrix.ts     → [Phase 27] MSSM: 5-regime stress testing + RRS scoring (390 lines)
 ├── lib/api/
 │   ├── binance-rest.ts       → [Phase 6→19] Binance Futures REST client (839 lines, AdaptiveRateGovernor)
 │   ├── binance-ws.ts         → [Phase 6] Binance WebSocket market data streams
@@ -124,7 +145,20 @@ src/
     ├── brain/
     │   └── page.tsx           → [Phase 18] Holographic Neural Cortex visualization (675 lines)
     └── pipeline/
-        └── page.tsx           → Pipeline + Archaeology + Overmind Hub (~2050 lines)
+        └── page.tsx           → Pipeline + Archaeology + Overmind + LivePulse + Heartbeat + RiskShield (~3730 lines)
+├── lib/hooks/
+│   └── usePipelineLiveData.ts → [Phase 21] Data bridge hook (~580 lines, dual-mode, risk derivation)
+├── __tests__/              → [Phase 22+25] Vitest test files (178 tests, 10 files)
+│   ├── risk/__tests__/manager.test.ts       → RiskManager 8 rails + mutation boundary (37 tests)
+│   ├── engine/__tests__/cortex-risk.test.ts → Cortex risk integration (3 tests)
+│   ├── hooks/__tests__/risk-derivation.test.ts → Risk derivation (5 tests)
+│   ├── engine/__tests__/validation-pipeline.test.ts → [Phase 25] WFA + Monte Carlo + Overfitting (26 tests)
+│   ├── engine/__tests__/migration-engine.test.ts → [Phase 25] Migration affinity + adaptMigrant (10 tests)
+│   ├── engine/__tests__/advanced-genes.test.ts → [Phase 25] Microstructure + Price Action (16 tests)
+│   ├── engine/__tests__/evaluator.test.ts → [Phase 25] Performance metrics + fitness (10 tests)
+│   ├── engine/__tests__/signal-engine.test.ts → [Phase 25] Indicators + rules + pipeline (14 tests)
+│   ├── engine/__tests__/confluence-genes.test.ts → [Phase 25] Confluence genes (24 tests)
+│   └── engine/__tests__/property-fuzzer.test.ts → [Phase 25] Property-Based Fuzzing + Chaos Monkey (30 tests)
 ```
 
 ### Scripts
@@ -136,6 +170,22 @@ scripts/
 ├── commit-msg-validator.js    → Convention enforcement for commit messages
 ├── install-hooks.js           → Cross-platform Git hook auto-installer
 └── memory-health.js           → Memory Health Dashboard (freshness, coverage, ADR gaps)
+```
+
+### Test Infrastructure
+```
+vitest.config.ts               → Vitest configuration (vite-tsconfig-paths, @/ alias)
+src/lib/risk/__tests__/manager.test.ts             → 37 tests (8 rails + mutation boundaries)
+src/lib/engine/__tests__/cortex-risk.test.ts       → 3 tests (Cortex integration)
+src/lib/hooks/__tests__/risk-derivation.test.ts    → 5 tests (derivation)
+src/lib/engine/__tests__/validation-pipeline.test.ts → 26 tests (WFA + Monte Carlo + Overfitting Detector)
+src/lib/engine/__tests__/migration-engine.test.ts  → 10 tests (migration affinity + adaptMigrant)
+src/lib/engine/__tests__/advanced-genes.test.ts    → 16 tests (microstructure + price action genes)
+src/lib/engine/__tests__/evaluator.test.ts         → 10 tests (performance metrics + fitness scoring)
+src/lib/engine/__tests__/signal-engine.test.ts     → 14 tests (indicators + rules + pipeline)
+src/lib/engine/__tests__/confluence-genes.test.ts  → 24 tests (confluence gene operations)
+src/lib/engine/__tests__/property-fuzzer.test.ts   → 30 tests (7-category metamorphic fuzzing + Chaos Monkey)
+─────────────────────────────────────────────────────  TOTAL: 178 tests (10 files)
 ```
 
 ### API Routes
@@ -185,7 +235,7 @@ src/app/api/binance/
 8. Trade History — Expandable table with AI reasoning
 9. Market Overview — Binance Futures pair prices
 
-### Pipeline Dashboard (`/pipeline`) — 8 Panels
+### Pipeline Dashboard (`/pipeline`) — 12 Panels
 1. **Pipeline Flow** — 7-stage animated horizontal flow with live stats per stage
 2. **Generation Fitness** — Dual-axis area chart (best/avg fitness) with validation markers
 3. **4-Gate Validation** — Animated sequential gate reveal with PASS/FAIL verdicts
@@ -194,8 +244,14 @@ src/app/api/binance/
 6. **Gene Lineage Tree** ★ — 6-generation family tree with origin tracking (Explainable AI)
 7. **Gene Survival Heatmap** ★ — Gene persistence across generations, persistent genes glow
 8. **Decision Explainer** ★ — Why AI chose each strategy during regime changes
+9. **Overmind Intelligence Hub** — AI reasoning phases and directive status
+10. **Live Pulse Telemetry** ☆ — ADFI pipeline health + CIRPN cross-island propagation (LIVE mode only)
+11. **Evolution Heartbeat** ☆ — Convergence detector with gene dominance chart + autopilot log (LIVE mode only)
+12. **Risk Shield** ● — Risk Fortress: Global Risk Score ring, 8-rail matrix, Daily PnL, risk log
 
-> ★ = Strategy Archaeology panels (Radical Innovation — Explainable AI)
+> ★ = Strategy Archaeology panels (Explainable AI)
+> ☆ = Radical Innovation panels (Phase 21)
+> ● = Risk Fortress panel (Phase 22)
 
 ---
 
@@ -205,6 +261,8 @@ src/app/api/binance/
 |---------|---------||
 | `npm run dev` | Start development server (port 3000) |
 | `npx next build` | Production build (TypeScript strict) |
+| `npm test` | Run all tests (Vitest) |
+| `npm run test:watch` | Interactive test runner |
 | `npm install` | Install dependencies |
 
 ---
@@ -221,5 +279,6 @@ src/app/api/binance/
 
 ---
 
-*Last Updated: 2026-03-07 04:55 (UTC+3)*
+*Last Updated: 2026-03-07 22:54 (UTC+3)*
 *Build Status: ✅ Passing (zero errors)*
+*Test Status: ✅ 45/45 passing (824ms)*

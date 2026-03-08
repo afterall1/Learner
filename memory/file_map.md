@@ -110,11 +110,44 @@
 
 ---
 
+## 🔴 Live Engine Layer (`src/lib/engine/`) [Phase 20]
+
+| File | Purpose | Importance |
+|------|---------|------------|
+| `cortex-live-engine.ts` | **Phase 20 — CortexLiveEngine** (~490 lines). Central orchestrator bridging live Binance data ↔ Cortex/Island engines. Boot sequence: `initialize()` → `seedHistoricalData()` (500 candles per slot) → `subscribeStreams()` (kline + ticker WS) → `wireCallbacks()`. Candle aggregation, island routing, snapshot refresh callbacks. Exposes ADFI + CIRPN getter methods. | 🔴 |
+| `evolution-scheduler.ts` | **Phase 20 — Evolution Scheduler** (~200 lines). Autonomous evolution trigger after N candles collected per island. Configurable intervals and thresholds. | 🟡 |
+| `adaptive-data-flow.ts` | **Phase 20 — ADFI (Adaptive Data Flow Intelligence)** (~420 lines). Gap detection + auto-repair, flow telemetry (throughput, latency, reconnects, uptime), adaptive kline evolution (resolution adjustment). `DataFlowTelemetry` interface: candlesProcessedPerMinute, avgCandleLatencyMs, gapsDetected/Repaired/Pending, reconnectCount, uptimeMs. | 🔴 |
+| `regime-propagation.ts` | **Phase 20 — CIRPN (Cross-Island Regime Propagation Network)** (~380 lines). Pair correlation tracking, leader/follower detection, regime arrival prediction, propagation warnings with ETA. `PropagationNetworkStatus` interface: totalRegimeEvents, leaderPairs, followerPairs, activeWarnings, knownRelationships. | 🔴 |
+| `live-trade-executor.ts` | **Phase 26 — LiveTradeExecutor** (~330 lines). Signal-to-order execution pipeline: `evaluateAndExecute()` evaluates strategy signals, validates risk (RiskManager.validateTrade), calculates position sizing + SL/TP levels, places orders via AOLE, prevents duplicates per symbol, logs execution with timestamps. Integrated into CortexLiveEngine `handleCandleClose()`. | 🔴 |
+| `stress-matrix.ts` | **Phase 27 — Market Scenario Stress Matrix (MSSM)** (~390 lines). **RADICAL INNOVATION**: 5 canonical market scenario generators (bull_trend, bear_crash, sideways_range, high_volatility, regime_transition). `runStressMatrix(strategy)` backtests across ALL 5 regimes simultaneously. Regime Resilience Score (RRS): `avgFitness × (1 - normalizedVariance) × consistencyBonus`. `batchStressMatrix(population)` for population-level regime-agnostic winner detection. Unique `regime_transition` scenario: bull→sideways→crash. | 🔴 |
+
+---
+
+## 🤖 Pipeline Live Integration Layer (`src/lib/`) [Phase 21]
+
+| File | Purpose | Importance |
+|------|---------|------------|
+| `hooks/usePipelineLiveData.ts` | **Phase 21 — Pipeline Live Data Bridge** (~540 lines). Custom React hook connecting pipeline panels to live Cortex/Island state. Dual-mode: LIVE (CortexLiveEngine active) / DEMO (fallback generators). 3-second polling via `useCallback` + `useRef` interval. Island selector support. Derives: GenerationData[], ValidationGate[], RosterEntry[], ReplayCellData[], PipelineStage[], LiveTelemetrySnapshot, LivePropagationSnapshot, GenomeHealthSnapshot. | 🔴 |
+| `engine/evolution-health.ts` | **Phase 21 — Evolution Health Analyzer** (~300 lines). **RADICAL INNOVATION**: Exposes HIDDEN EvolutionEngine intelligence. `computeGenomeHealth(island)` → `GenomeHealthSnapshot`: diversity index, stagnation level, convergence risk (composite 0-1), fitness trajectory (linear regression slope), gene dominance histogram (top 10 IndicatorTypes with trends), auto-intervention detection (mutation rate changes), A-F health grading. Stateless — pure computation, no side effects. | 🔴 |
+
+---
+
 ## 🛡️ Risk Layer (`src/lib/risk/`)
 
 | File | Purpose | Importance |
 |------|---------|------------|
-| `manager.ts` | Risk management engine with 8 hardcoded safety rails. Validates every trade against position size, leverage, drawdown limits, and mandatory stop-loss rules. These rules are **non-overridable** and operate **GLOBALLY across all islands**. | 🔴 |
+| `manager.ts` | Risk management engine with 8 hardcoded safety rails. Validates every trade against position size, leverage, drawdown limits, and mandatory stop-loss. **Phase 22**: `getRiskSnapshot()` returns serializable state (8 rail configs, utilizations, emergency stop, PnL, global risk score). RiskManager singleton wired into Cortex (constructor, recordTrade, emergencyStopAll, getSnapshot). Rules are **non-overridable** and operate **GLOBALLY across all islands**. | 🔴 |
+
+---
+
+## 🧪 Test Infrastructure Layer [Phase 22]
+
+| File | Purpose | Importance |
+|------|---------|------------|
+| `vitest.config.ts` | Vitest configuration with `vite-tsconfig-paths` for `@/` alias resolution, node environment, coverage reporter for risk/engine modules. | 🟡 |
+| `src/lib/risk/__tests__/manager.test.ts` | **RiskManager 8-Rail Test Suite** (37 tests). All 8 NON-NEGOTIABLE safety rails, `getRiskSnapshot()`, `recordTradeResult()`, `resetDaily()`, + **Safety Rail Mutation Boundary Tests** (radical innovation: probes exact threshold edges — 1.99% vs 2.01% risk, 10x vs 10.1x leverage, 4.9% vs 5.1% daily DD). Factory fixtures for StrategyDNA, Position, Trade. | 🔴 |
+| `src/lib/engine/__tests__/cortex-risk.test.ts` | **Cortex Risk Integration Tests** (3 tests). Validates riskSnapshot presence in getSnapshot(), correct structure, emergencyStopAll() wiring. | 🔴 |
+| `src/lib/hooks/__tests__/risk-derivation.test.ts` | **Risk Snapshot Derivation Tests** (5 tests). Null safety, data passthrough, emergency stop state, high risk score propagation. | 🟡 |
 
 ---
 
@@ -134,7 +167,7 @@
 |------|---------|------------|
 | `page.tsx` | Main dashboard page. Contains 9 panel components (including **CortexNeuralMapPanel** for live island visualization) + `useAnimatedValue` hook + demo data generators. ~1300 lines. Gradient card accents, stagger fade-in, animated counters. | 🟡 |
 | `brain/page.tsx` | **Phase 18 — Neural Brain Visualization** (~675 lines). Holographic JARVIS-style 3D cortex: 10 neuron nodes (hex wireframe inner + circle wireframe outer), 15 synapses with animated signal propagation, CSS 3D perspective, scanline overlay, hex grid background, HUD system (Stats bar + Target Lock + Consciousness Arc), floating data particles, Multi-Color Memory Trace Heatmap (10 HSLA hues per row), biological refractory period (800ms cooldown). | 🟡 |
-| `pipeline/page.tsx` | **Pipeline Dashboard**. 8 panels: Pipeline Flow (7-stage animated), Generation Fitness (area chart), 4-Gate Validation (animated gates), Strategy Roster (radar), Experience Replay (heatmap), **Gene Lineage Tree** (family tree), **Gene Survival Heatmap** (persistence grid), **Decision Explainer** (regime change reasoning). Live state machine + demo data. ~1400 lines. | 🟡 |
+| `pipeline/page.tsx` | **Pipeline Dashboard**. 12 panels: Pipeline Flow (7-stage animated), Generation Fitness (area chart), 4-Gate Validation (animated gates), Strategy Roster (radar), Experience Replay (heatmap), **Gene Lineage Tree** (family tree), **Gene Survival Heatmap** (persistence grid), **Decision Explainer** (regime reasoning), **Overmind Intelligence Hub**, **Live Pulse Telemetry** (ADFI+CIRPN, LIVE mode), **Evolution Heartbeat** (convergence detector, LIVE mode), **Risk Shield** (Risk Fortress: Global Risk Score ring, 8-rail matrix, Daily PnL). Live state machine + dual-mode (LIVE/DEMO) + island selector. ~3730 lines. | 🟡 |
 | `globals.css` | Premium design system. CSS custom properties for dark glassmorphism theme + gradient accents, stagger animations, neural map styles, pipeline stages, archaeology panels, **holographic brain theme** (3D canvas, scanlines, hex grid, neuron wireframes, synapse animations, HUD, consciousness arc, heatmap multi-color). ~2580 lines. | 🟡 |
 | `layout.tsx` | Root layout. Google Fonts (Inter, JetBrains Mono), SEO metadata. | 🟢 |
 
@@ -228,4 +261,36 @@
 
 ---
 
-*Last Updated: 2026-03-07 04:55 (UTC+3)*
+## 🧪 Test & Verification Layer (`src/lib/*/__tests__/`)
+
+| File | Purpose | Tests | Importance |
+|------|---------|------:|------------|
+| `risk/__tests__/manager.test.ts` | RiskManager: all 8 NON-NEGOTIABLE safety rails + `getRiskSnapshot()` + `recordTradeResult()` + `resetDaily()` + Safety Rail Mutation Boundary Tests (radical innovation: probe exact threshold edges) | 37 | 🔴 |
+| `engine/__tests__/cortex-risk.test.ts` | Cortex-RiskManager integration: riskSnapshot in getSnapshot(), correct structure, emergencyStopAll wiring | 3 | 🔴 |
+| `hooks/__tests__/risk-derivation.test.ts` | Risk derivation from live data: null safety, data passthrough, emergency stop state, risk score propagation | 5 | 🟡 |
+| `engine/__tests__/validation-pipeline.test.ts` | [Phase 25] Walk-Forward Analysis (rolling, anchored, degradation), Monte Carlo (permutation, equity curve), DSR, Overfitting Detector (5 components: WFA efficiency, MC significance, complexity, regime diversity, consistency) | 26 | 🔴 |
+| `engine/__tests__/migration-engine.test.ts` | [Phase 25] Migration affinity calculation (6 tiers: same pair+TF combo to fully different), adaptMigrant (metadata reset, slot reassignment, fitness zeroing, gene structure preservation) | 10 | 🟡 |
+| `engine/__tests__/advanced-genes.test.ts` | [Phase 25] Microstructure genes (generation, VOLUME_PROFILE signals, crossover, mutation per 5 types), Price Action genes (generation, candlestick signals, all pattern types, crossover, mutation, 100-cycle GA invariant stability) | 16 | 🔴 |
+| `engine/__tests__/evaluator.test.ts` | [Phase 25] Performance evaluation: Sharpe ratio, WinRate, ProfitFactor, fitness scoring (0-100 bounds), novelty bonus (advanced gene presence), deflated fitness, max drawdown/streaks (tested via public evaluatePerformance API) | 10 | 🔴 |
+| `engine/__tests__/signal-engine.test.ts` | [Phase 25] Signal engine: SMA/EMA/RSI/MACD/Bollinger/ATR indicator calculations (valid-only array lengths), signal rule evaluation (ABOVE/BELOW/AND/OR logic), full strategy pipeline (StrategyDNA→candles→TradeSignal) | 14 | 🔴 |
+| `engine/__tests__/confluence-genes.test.ts` | [Phase 25] Confluence gene operations: generation, crossover, mutation, multi-timeframe alignment | 24 | 🟡 |
+| `engine/__tests__/property-fuzzer.test.ts` | [Phase 25] **RADICAL INNOVATION**: 7-category Property-Based Fuzzing Harness — GA Operator Invariants (100/1000-iteration stress), Signal Engine Monotonicity (RSI/BB/ATR bounds), Evaluator Consistency (win>loss, fitness bounds), WFA Symmetry (determinism, clamping), Overfitting Monotonicity, Migration Affinity Algebra (reflexive, symmetric), **Chaos Monkey** (zero-price/negative-volume/flash-crash/flat-price/single-candle resilience) | 30 | 🔴 |
+| `engine/__tests__/integration-e2e.test.ts` | [Phase 27] **E2E Integration Test Suite** (~790 lines, 33 tests). 8-category comprehensive integration testing: Full Backtest Pipeline (5: runBacktest → trades, equity, metrics, random strategy resilience), Batch PFLM (4: cache consistency, quickFitness), Evolution Cycle (4: genesis→evaluate→evolve across 5 gens), Market Scenarios (4: bull/bear/sideways/high-vol), Signal Logic (4: regime detection, position context), HTF Aggregation (4: M15→H1, volume, lower TF guard), Fitness Convergence (3: elitism, mutation), Edge Cases (5: min candles, empty data, missing indicators). Deterministic strategy factory + 4 realistic market data generators. | 33 | 🔴 |
+
+**Total: 211 tests across 12 files (1.77s, 0 failures)**
+
+---
+
+## 🌐 API Routes Layer (`src/app/api/`)
+
+| File | Purpose | Importance |
+|------|---------|------------|
+| `binance/order/route.ts` | Binance order placement + cancellation API route. POST (place), DELETE (cancel). | 🔴 |
+| `binance/position/route.ts` | Binance position risk query API route. GET. | 🟡 |
+| `binance/account/route.ts` | Binance account balance query API route. GET. | 🟡 |
+| `binance/depth/route.ts` | Binance order book depth API route. GET. | 🟢 |
+| `trading/status/route.ts` | **Phase 26 — Trading Telemetry Endpoint** (~150 lines). Returns real-time auto-trade state, active positions array, execution quality stats (slippage, latency, fill ratio), risk capacity metrics, engine operational status. Used by dashboard for live trade monitoring. | 🔴 |
+
+---
+
+*Last Updated: 2026-03-08 01:25 (UTC+3)*

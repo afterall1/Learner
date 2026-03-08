@@ -15,6 +15,20 @@ import {
     LineChart, Line,
 } from 'recharts';
 import { MarketRegime } from '@/types';
+import {
+    usePipelineLiveData,
+    type LiveTelemetrySnapshot,
+    type LivePropagationSnapshot,
+    type MRTISnapshot,
+    type OvermindLiveSnapshot,
+} from '@/lib/hooks/usePipelineLiveData';
+import type { RiskSnapshot } from '@/types';
+import type {
+    GenomeHealthSnapshot,
+    GeneDominanceEntry,
+    AutoIntervention,
+    HealthGrade,
+} from '@/lib/engine/evolution-health';
 
 // ═══════════════════════════════════════════════════════════════
 // TYPES & CONSTANTS
@@ -1396,22 +1410,31 @@ function OvermindIntelligenceHub({
     episodes,
     insights,
     counterfactualData,
+    overmindLive,
 }: {
     hypotheses: OvermindDemoHypothesis[];
     episodes: OvermindDemoEpisode[];
     insights: OvermindDemoInsight[];
     counterfactualData: CounterfactualPoint[];
+    overmindLive?: OvermindLiveSnapshot | null;
 }) {
     const phases = ['OBSERVE', 'ANALYZE', 'HYPOTHESIZE', 'DIRECT', 'VERIFY', 'LEARN'];
-    const [activePhaseIdx, setActivePhaseIdx] = useState(0);
+    const [demoPhaseIdx, setDemoPhaseIdx] = useState(0);
 
-    // Animate through phases
+    // In live mode use real phase; in demo animate through phases
+    const isLiveOvermind = !!overmindLive?.isActive;
+    const livePhaseIdx = isLiveOvermind
+        ? phases.indexOf(overmindLive!.currentPhase)
+        : -1;
+    const activePhaseIdx = isLiveOvermind && livePhaseIdx >= 0 ? livePhaseIdx : demoPhaseIdx;
+
     useEffect(() => {
+        if (isLiveOvermind) return; // Don't animate in live mode
         const timer = setInterval(() => {
-            setActivePhaseIdx(prev => (prev + 1) % phases.length);
+            setDemoPhaseIdx(prev => (prev + 1) % phases.length);
         }, 3000);
         return () => clearInterval(timer);
-    }, [phases.length]);
+    }, [phases.length, isLiveOvermind]);
 
     const phaseColors: Record<string, string> = {
         OBSERVE: '#60a5fa',
@@ -1454,6 +1477,36 @@ function OvermindIntelligenceHub({
         return `${hours}h`;
     };
 
+    // ─── Live/Demo metric resolution ─────────────────────────
+    const cycleCount = overmindLive?.cycleCount ?? 0;
+    const totalHypotheses = overmindLive?.totalHypotheses ?? hypotheses.length;
+    const activeHypothesesCount = overmindLive?.activeHypotheses ?? hypotheses.filter(h => h.status === 'ACTIVE').length;
+    const hypothesisSuccessRate = overmindLive?.hypothesisSuccessRate ?? 0.65;
+    const totalDirectives = overmindLive?.totalDirectives ?? episodes.filter(e => e.type === 'directive').length;
+    const avgDirectiveImpact = overmindLive?.avgDirectiveImpact ?? 4.2;
+    const tokensUsedThisHour = overmindLive?.tokensUsedThisHour ?? 0;
+    const tokenBudgetRemaining = overmindLive?.tokenBudgetRemaining ?? 100000;
+    const tokensUsedLifetime = overmindLive?.tokensUsedLifetime ?? 0;
+    const adversarialTestsRun = overmindLive?.adversarialTestsRun ?? episodes.filter(e => e.type === 'adversarial').length;
+    const avgResilienceScore = overmindLive?.avgResilienceScore ?? 72;
+    const emergentIndicators = overmindLive?.emergentIndicatorsDiscovered ?? 0;
+    const rsrdSyntheses = overmindLive?.rsrdSynthesesTotalPerformed ?? 0;
+    const episodicMemorySize = overmindLive?.episodicMemorySize ?? episodes.length;
+    const metaInsightsActive = overmindLive?.metaInsightsActive ?? insights.filter(i => i.isActive).length;
+    const selfImprovementRate = overmindLive?.selfImprovementRate ?? (learningRate > 0 ? learningRate / 100 : 0.12);
+    const counterfactualsGenerated = overmindLive?.counterfactualsGenerated ?? counterfactualData.length;
+    const activePrePositions = overmindLive?.activePrePositions ?? 0;
+    const predictionAccuracyRate = overmindLive?.predictionAccuracyRate ?? 0;
+    const imminentTransitions = overmindLive?.imminentTransitions ?? 0;
+
+    // Token pressure (0-100)
+    const maxTokensPerHour = tokensUsedThisHour + tokenBudgetRemaining;
+    const tokenPressurePct = maxTokensPerHour > 0
+        ? Math.round((tokensUsedThisHour / maxTokensPerHour) * 100)
+        : 0;
+    const tokenPressureColor = tokenPressurePct >= 80 ? '#f43f5e'
+        : tokenPressurePct >= 50 ? '#fbbf24' : '#22d3ee';
+
     return (
         <section id="overmind-hub" className="glass-card glass-card-accent accent-purple col-12 stagger-in stagger-9">
             <div className="card-header">
@@ -1462,51 +1515,112 @@ function OvermindIntelligenceHub({
                     <span>Strategic Overmind Intelligence Hub</span>
                 </div>
                 <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-                    <span className="card-badge badge-primary">{episodes.length} EPISODES</span>
-                    <span className="card-badge badge-success">{insights.filter(i => i.isActive).length} INSIGHTS</span>
+                    {isLiveOvermind && (
+                        <span className="card-badge" style={{
+                            background: 'rgba(52,211,153,0.12)',
+                            color: '#34d399',
+                            border: '1px solid rgba(52,211,153,0.3)',
+                        }}>● OPUS LIVE</span>
+                    )}
+                    <span className="card-badge badge-primary">{cycleCount > 0 ? `CYCLE #${cycleCount}` : `${episodes.length} EPISODES`}</span>
+                    <span className="card-badge badge-success">{metaInsightsActive} INSIGHTS</span>
                 </div>
             </div>
             <div className="card-body">
-                {/* Row 1: Phase Indicator + CCR Metrics */}
-                <div style={{ display: 'flex', gap: 16, marginBottom: 16, flexWrap: 'wrap' }}>
-                    {/* Phase Wheel */}
+                {/* Row 0: Cognitive Pulse — Token Pressure + Phase Heartbeat (Radical Innovation) */}
+                <div style={{
+                    display: 'flex', gap: 16, marginBottom: 16, flexWrap: 'wrap',
+                    padding: '10px 14px',
+                    background: 'rgba(14, 17, 30, 0.5)',
+                    borderRadius: 'var(--radius-sm)',
+                    border: '1px solid rgba(99, 102, 241, 0.08)',
+                }}>
+                    {/* Token Pressure Gauge */}
+                    <div style={{ flex: '0 0 auto', display: 'flex', alignItems: 'center', gap: 12 }}>
+                        <div style={{
+                            position: 'relative' as const,
+                            width: 48, height: 48,
+                        }}>
+                            {/* Background ring */}
+                            <svg width="48" height="48" viewBox="0 0 48 48" style={{ transform: 'rotate(-90deg)' }}>
+                                <circle cx="24" cy="24" r="20" fill="none"
+                                    stroke="rgba(99, 115, 171, 0.1)" strokeWidth="4" />
+                                <circle cx="24" cy="24" r="20" fill="none"
+                                    stroke={tokenPressureColor}
+                                    strokeWidth="4"
+                                    strokeDasharray={`${(tokenPressurePct / 100) * 125.66} 125.66`}
+                                    strokeLinecap="round"
+                                    style={{ transition: 'stroke-dasharray 0.8s ease, stroke 0.5s ease' }}
+                                />
+                            </svg>
+                            {/* Center label */}
+                            <div style={{
+                                position: 'absolute' as const,
+                                inset: 0,
+                                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                fontSize: '0.55rem', fontWeight: 800,
+                                color: tokenPressureColor,
+                                fontFamily: "'JetBrains Mono', monospace",
+                            }}>
+                                {tokenPressurePct}%
+                            </div>
+                        </div>
+                        <div>
+                            <div style={{ fontSize: '0.55rem', color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase' as const, letterSpacing: '0.06em' }}>
+                                Token Budget
+                            </div>
+                            <div style={{ fontSize: '0.6rem', fontFamily: "'JetBrains Mono', monospace" }}>
+                                <span style={{ color: tokenPressureColor }}>{(tokensUsedThisHour / 1000).toFixed(1)}k</span>
+                                <span style={{ color: 'var(--text-muted)' }}> / {(maxTokensPerHour / 1000).toFixed(0)}k</span>
+                            </div>
+                            {tokenPressurePct >= 80 && (
+                                <div style={{
+                                    fontSize: '0.5rem', color: '#f43f5e', fontWeight: 700,
+                                    animation: 'pulse-glow 1s ease-in-out infinite',
+                                }}>⚠ BUDGET CRITICAL</div>
+                            )}
+                        </div>
+                    </div>
+
+                    {/* Separator */}
+                    <div style={{ width: 1, background: 'rgba(99, 115, 171, 0.12)', margin: '4px 0' }} />
+
+                    {/* Phase Heartbeat Timeline */}
                     <div style={{
-                        flex: '1 1 280px',
+                        flex: 1,
                         display: 'flex',
                         gap: 4,
                         alignItems: 'center',
-                        padding: '8px 12px',
-                        background: 'rgba(14, 17, 30, 0.5)',
-                        borderRadius: 8,
-                        border: '1px solid rgba(99, 102, 241, 0.08)',
                     }}>
                         {phases.map((phase, idx) => {
                             const isActive = idx === activePhaseIdx;
-                            const isDone = idx < activePhaseIdx;
+                            const isDone = isLiveOvermind
+                                ? livePhaseIdx >= 0 && idx < livePhaseIdx
+                                : idx < demoPhaseIdx;
                             return (
                                 <div
                                     key={phase}
                                     style={{
                                         flex: 1,
-                                        textAlign: 'center',
+                                        textAlign: 'center' as const,
                                         padding: '6px 2px',
                                         borderRadius: 6,
                                         fontSize: '0.55rem',
                                         fontWeight: 700,
                                         letterSpacing: '0.04em',
-                                        textTransform: 'uppercase',
+                                        textTransform: 'uppercase' as const,
                                         background: isActive ? `${phaseColors[phase]}20` : 'transparent',
                                         color: isActive ? phaseColors[phase] : isDone ? 'var(--text-muted)' : 'rgba(148, 163, 184, 0.4)',
                                         border: isActive ? `1px solid ${phaseColors[phase]}40` : '1px solid transparent',
                                         transition: 'all 0.5s ease',
-                                        position: 'relative',
+                                        position: 'relative' as const,
                                     }}
                                 >
                                     {isDone && <span style={{ marginRight: 2 }}>✓</span>}
                                     {phase}
                                     {isActive && (
                                         <div style={{
-                                            position: 'absolute',
+                                            position: 'absolute' as const,
                                             bottom: -2,
                                             left: '20%',
                                             right: '20%',
@@ -1521,15 +1635,48 @@ function OvermindIntelligenceHub({
                         })}
                     </div>
 
-                    {/* CCR Metrics */}
-                    <div style={{ display: 'flex', gap: 8, flex: '0 0 auto' }}>
+                    {/* Separator */}
+                    <div style={{ width: 1, background: 'rgba(99, 115, 171, 0.12)', margin: '4px 0' }} />
+
+                    {/* Live Stats Compact */}
+                    <div style={{ flex: '0 0 auto', display: 'flex', gap: 10, alignItems: 'center' }}>
                         {[
-                            { label: 'Episodes', value: episodes.length, color: '#6366f1' },
-                            { label: 'Counterfactuals', value: counterfactualData.length, color: '#f97316' },
-                            { label: 'Meta-Insights', value: insights.filter(i => i.isActive).length, color: '#34d399' },
-                            { label: 'Learning Rate', value: `${learningRate > 0 ? '+' : ''}${learningRate}%`, color: learningRate > 0 ? '#34d399' : '#f87171' },
+                            { label: 'Hypotheses', value: `${activeHypothesesCount}/${totalHypotheses}`, color: '#a78bfa' },
+                            { label: 'Directives', value: totalDirectives, color: '#34d399' },
+                            { label: 'Adversarial', value: adversarialTestsRun, color: '#fbbf24' },
+                        ].map(m => (
+                            <div key={m.label} style={{
+                                textAlign: 'center' as const,
+                                minWidth: 50,
+                            }}>
+                                <div style={{
+                                    fontSize: '0.85rem', fontWeight: 700,
+                                    color: m.color,
+                                    fontFamily: "'JetBrains Mono', monospace",
+                                }}>{m.value}</div>
+                                <div style={{ fontSize: '0.45rem', color: 'var(--text-muted)', textTransform: 'uppercase' as const }}>
+                                    {m.label}
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+
+                {/* Row 1: CCR + PSPP Metrics */}
+                <div style={{ display: 'flex', gap: 16, marginBottom: 16, flexWrap: 'wrap' }}>
+                    {/* CCR Metrics */}
+                    <div style={{ display: 'flex', gap: 8, flex: '1 1 auto', flexWrap: 'wrap' }}>
+                        {[
+                            { label: 'Episodes', value: episodicMemorySize, color: '#6366f1' },
+                            { label: 'Counterfactuals', value: counterfactualsGenerated, color: '#f97316' },
+                            { label: 'Meta-Insights', value: metaInsightsActive, color: '#34d399' },
+                            { label: 'Self-Improve', value: `${selfImprovementRate > 0 ? '+' : ''}${(selfImprovementRate * 100).toFixed(0)}%`, color: selfImprovementRate > 0 ? '#34d399' : '#f87171' },
+                            { label: 'PSPP Active', value: activePrePositions, color: '#a78bfa' },
+                            { label: 'Prediction Acc', value: `${(predictionAccuracyRate * 100).toFixed(0)}%`, color: predictionAccuracyRate >= 0.5 ? '#34d399' : '#fbbf24' },
+                            { label: 'Imminent', value: imminentTransitions, color: imminentTransitions > 0 ? '#f43f5e' : '#22d3ee' },
+                            { label: 'Resilience', value: `${typeof avgResilienceScore === 'number' ? avgResilienceScore.toFixed(0) : '0'}`, color: '#6366f1' },
                         ].map(metric => (
-                            <div key={metric.label} className="metric-card" style={{ minWidth: 70, padding: '6px 10px', textAlign: 'center' }}>
+                            <div key={metric.label} className="metric-card" style={{ minWidth: 70, padding: '6px 10px', textAlign: 'center' as const }}>
                                 <div className="metric-value" style={{ fontSize: '1rem', color: metric.color }}>
                                     {metric.value}
                                 </div>
@@ -1932,14 +2079,1492 @@ function OvermindIntelligenceHub({
     );
 }
 
+// ─────────────────────────────────────────────────────────────────
+// Risk Shield Panel — GLOBAL Safety Rail Monitor (Risk Fortress)
+// ─────────────────────────────────────────────────────────────────
+
+function RiskShieldPanel({ riskLive }: { riskLive?: RiskSnapshot | null }) {
+    // Demo defaults when no live data
+    const risk = riskLive ?? {
+        emergencyStopActive: false,
+        dailyPnl: 0,
+        dailyStartBalance: 10000,
+        totalStartBalance: 10000,
+        dailyDrawdownPct: 0,
+        totalDrawdownPct: 0,
+        openPositionCount: 0,
+        globalRiskScore: 0,
+        rails: {
+            maxRiskPerTrade: 0.02,
+            maxSimultaneousPositions: 3,
+            dailyDrawdownLimit: 0.05,
+            totalDrawdownLimit: 0.15,
+            maxLeverage: 10,
+            mandatoryStopLoss: true,
+            paperTradeMinimum: 50,
+            emergencyStopEnabled: true,
+        },
+        railUtilizations: {
+            positionUtil: 0,
+            dailyDrawdownUtil: 0,
+            totalDrawdownUtil: 0,
+        },
+        recentLogs: [],
+    };
+
+    const isLiveRisk = !!riskLive;
+    const score = risk.globalRiskScore;
+    const scoreColor = score >= 80 ? '#f43f5e'
+        : score >= 50 ? '#fbbf24'
+            : score >= 20 ? '#22d3ee' : '#34d399';
+
+    // 8 safety rails for display
+    const railDefs = [
+        {
+            icon: '🎯', name: 'Max Risk/Trade',
+            value: `${(risk.rails.maxRiskPerTrade * 100).toFixed(0)}%`,
+            threshold: `${(risk.rails.maxRiskPerTrade * 100).toFixed(0)}%`,
+            util: 0, // Can't be computed without per-trade data
+            status: 'ENFORCED' as const,
+        },
+        {
+            icon: '📊', name: 'Open Positions',
+            value: `${risk.openPositionCount}`,
+            threshold: `${risk.rails.maxSimultaneousPositions}`,
+            util: risk.railUtilizations.positionUtil,
+            status: risk.railUtilizations.positionUtil >= 1 ? 'AT_LIMIT' as const : 'OK' as const,
+        },
+        {
+            icon: '📉', name: 'Daily Drawdown',
+            value: `${(risk.dailyDrawdownPct * 100).toFixed(1)}%`,
+            threshold: `${(risk.rails.dailyDrawdownLimit * 100).toFixed(0)}%`,
+            util: risk.railUtilizations.dailyDrawdownUtil,
+            status: risk.railUtilizations.dailyDrawdownUtil >= 0.8 ? 'WARNING' as const : 'OK' as const,
+        },
+        {
+            icon: '🔻', name: 'Total Drawdown',
+            value: `${(risk.totalDrawdownPct * 100).toFixed(1)}%`,
+            threshold: `${(risk.rails.totalDrawdownLimit * 100).toFixed(0)}%`,
+            util: risk.railUtilizations.totalDrawdownUtil,
+            status: risk.railUtilizations.totalDrawdownUtil >= 0.8 ? 'CRITICAL' as const : 'OK' as const,
+        },
+        {
+            icon: '🛡️', name: 'Mandatory SL',
+            value: risk.rails.mandatoryStopLoss ? 'ACTIVE' : 'OFF',
+            threshold: 'ALWAYS',
+            util: risk.rails.mandatoryStopLoss ? 0 : 1,
+            status: 'ENFORCED' as const,
+        },
+        {
+            icon: '⚡', name: 'Max Leverage',
+            value: `${risk.rails.maxLeverage}x`,
+            threshold: `${risk.rails.maxLeverage}x`,
+            util: 0,
+            status: 'ENFORCED' as const,
+        },
+        {
+            icon: '📝', name: 'Paper Minimum',
+            value: `${risk.rails.paperTradeMinimum}`,
+            threshold: `${risk.rails.paperTradeMinimum}`,
+            util: 0,
+            status: 'ENFORCED' as const,
+        },
+        {
+            icon: '🚨', name: 'Emergency Stop',
+            value: risk.emergencyStopActive ? 'ACTIVE' : 'READY',
+            threshold: risk.rails.emergencyStopEnabled ? 'ENABLED' : 'DISABLED',
+            util: risk.emergencyStopActive ? 1 : 0,
+            status: risk.emergencyStopActive ? 'TRIGGERED' as const : 'STANDBY' as const,
+        },
+    ];
+
+    const utilColor = (u: number) =>
+        u >= 0.8 ? '#f43f5e' : u >= 0.5 ? '#fbbf24' : '#34d399';
+
+    const statusBadge = (status: string) => {
+        const map: Record<string, { bg: string; color: string }> = {
+            OK: { bg: 'rgba(52,211,153,0.1)', color: '#34d399' },
+            ENFORCED: { bg: 'rgba(99,102,241,0.1)', color: '#6366f1' },
+            WARNING: { bg: 'rgba(251,191,36,0.12)', color: '#fbbf24' },
+            CRITICAL: { bg: 'rgba(244,63,94,0.12)', color: '#f43f5e' },
+            AT_LIMIT: { bg: 'rgba(244,63,94,0.12)', color: '#f43f5e' },
+            TRIGGERED: { bg: 'rgba(244,63,94,0.2)', color: '#f43f5e' },
+            STANDBY: { bg: 'rgba(52,211,153,0.08)', color: '#34d399' },
+        };
+        const s = map[status] ?? map.OK;
+        return s;
+    };
+
+    return (
+        <section id="risk-shield" className="glass-card glass-card-accent accent-danger col-12 stagger-in stagger-10">
+            <div className="card-header">
+                <div className="card-title">
+                    <Shield size={18} style={{ color: risk.emergencyStopActive ? '#f43f5e' : '#34d399' }} />
+                    <span>Risk Shield — GLOBAL Safety Rail Monitor</span>
+                </div>
+                <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                    {risk.emergencyStopActive && (
+                        <span className="card-badge" style={{
+                            background: 'rgba(244,63,94,0.2)',
+                            color: '#f43f5e',
+                            border: '1px solid rgba(244,63,94,0.4)',
+                            animation: 'pulse-glow 1s ease-in-out infinite',
+                        }}>🚨 EMERGENCY STOP</span>
+                    )}
+                    {isLiveRisk && (
+                        <span className="card-badge" style={{
+                            background: 'rgba(52,211,153,0.12)',
+                            color: '#34d399',
+                            border: '1px solid rgba(52,211,153,0.3)',
+                        }}>● LIVE</span>
+                    )}
+                    <span className="card-badge" style={{
+                        background: `${scoreColor}15`,
+                        color: scoreColor,
+                        border: `1px solid ${scoreColor}30`,
+                    }}>RISK: {score}</span>
+                </div>
+            </div>
+            <div className="card-body">
+                <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap' }}>
+                    {/* Left: Global Risk Score Ring + Daily PnL */}
+                    <div style={{
+                        flex: '0 0 auto',
+                        display: 'flex', flexDirection: 'column' as const,
+                        alignItems: 'center', justifyContent: 'center',
+                        gap: 8,
+                        padding: '12px 20px',
+                        background: 'rgba(14, 17, 30, 0.5)',
+                        borderRadius: 'var(--radius-sm)',
+                        border: `1px solid ${scoreColor}15`,
+                        minWidth: 100,
+                    }}>
+                        {/* Score Ring */}
+                        <div style={{ position: 'relative' as const, width: 64, height: 64 }}>
+                            <svg width="64" height="64" viewBox="0 0 64 64" style={{ transform: 'rotate(-90deg)' }}>
+                                <circle cx="32" cy="32" r="26" fill="none"
+                                    stroke="rgba(99, 115, 171, 0.08)" strokeWidth="5" />
+                                <circle cx="32" cy="32" r="26" fill="none"
+                                    stroke={scoreColor}
+                                    strokeWidth="5"
+                                    strokeDasharray={`${(score / 100) * 163.36} 163.36`}
+                                    strokeLinecap="round"
+                                    style={{ transition: 'stroke-dasharray 0.8s ease, stroke 0.5s ease' }}
+                                />
+                            </svg>
+                            <div style={{
+                                position: 'absolute' as const, inset: 0,
+                                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                flexDirection: 'column' as const,
+                            }}>
+                                <div style={{
+                                    fontSize: '1.1rem', fontWeight: 800,
+                                    color: scoreColor,
+                                    fontFamily: "'JetBrains Mono', monospace",
+                                }}>{score}</div>
+                            </div>
+                        </div>
+                        <div style={{
+                            fontSize: '0.5rem', color: 'var(--text-muted)',
+                            textTransform: 'uppercase' as const, fontWeight: 700,
+                            letterSpacing: '0.08em',
+                        }}>Global Risk</div>
+
+                        {/* Daily PnL */}
+                        <div style={{
+                            marginTop: 4,
+                            padding: '4px 10px',
+                            borderRadius: 4,
+                            background: risk.dailyPnl >= 0
+                                ? 'rgba(52,211,153,0.08)' : 'rgba(244,63,94,0.08)',
+                            border: `1px solid ${risk.dailyPnl >= 0 ? 'rgba(52,211,153,0.15)' : 'rgba(244,63,94,0.15)'}`,
+                        }}>
+                            <div style={{
+                                fontSize: '0.5rem', color: 'var(--text-muted)',
+                                textTransform: 'uppercase' as const, fontWeight: 600,
+                            }}>Daily PnL</div>
+                            <div style={{
+                                fontSize: '0.8rem', fontWeight: 800,
+                                color: risk.dailyPnl >= 0 ? '#34d399' : '#f43f5e',
+                                fontFamily: "'JetBrains Mono', monospace",
+                            }}>
+                                {risk.dailyPnl >= 0 ? '+' : ''}{risk.dailyPnl.toFixed(2)}$
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Right: 8-Rail Status Matrix */}
+                    <div style={{ flex: 1, minWidth: 300 }}>
+                        <div style={{
+                            display: 'grid',
+                            gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
+                            gap: 6,
+                        }}>
+                            {railDefs.map(rail => {
+                                const badge = statusBadge(rail.status);
+                                const barColor = utilColor(rail.util);
+                                const isFlashing = rail.util >= 0.8;
+                                return (
+                                    <div key={rail.name} style={{
+                                        display: 'flex', alignItems: 'center', gap: 8,
+                                        padding: '6px 10px',
+                                        background: 'rgba(14, 17, 30, 0.4)',
+                                        borderRadius: 6,
+                                        border: `1px solid ${isFlashing ? `${barColor}30` : 'rgba(99, 115, 171, 0.06)'}`,
+                                        animation: isFlashing ? 'pulse-glow 1.5s ease-in-out infinite' : 'none',
+                                    }}>
+                                        {/* Icon */}
+                                        <span style={{ fontSize: '0.8rem', width: 22, textAlign: 'center' as const }}>{rail.icon}</span>
+                                        {/* Name + Value */}
+                                        <div style={{ flex: 1, minWidth: 0 }}>
+                                            <div style={{
+                                                display: 'flex', justifyContent: 'space-between',
+                                                alignItems: 'center', marginBottom: 2,
+                                            }}>
+                                                <span style={{
+                                                    fontSize: '0.58rem', fontWeight: 700,
+                                                    color: 'var(--text-primary)',
+                                                    letterSpacing: '0.02em',
+                                                }}>{rail.name}</span>
+                                                <span style={{
+                                                    fontSize: '0.55rem',
+                                                    fontFamily: "'JetBrains Mono', monospace",
+                                                    color: barColor,
+                                                    fontWeight: 700,
+                                                }}>
+                                                    {rail.value} / {rail.threshold}
+                                                </span>
+                                            </div>
+                                            {/* Utilization bar */}
+                                            <div style={{
+                                                height: 3, borderRadius: 2,
+                                                background: 'rgba(99, 115, 171, 0.08)',
+                                                overflow: 'hidden',
+                                            }}>
+                                                <div style={{
+                                                    height: '100%',
+                                                    width: `${Math.min(100, rail.util * 100)}%`,
+                                                    borderRadius: 2,
+                                                    background: barColor,
+                                                    transition: 'width 0.6s ease, background 0.4s ease',
+                                                }} />
+                                            </div>
+                                        </div>
+                                        {/* Status badge */}
+                                        <span style={{
+                                            fontSize: '0.45rem', fontWeight: 800,
+                                            padding: '2px 5px', borderRadius: 3,
+                                            background: badge.bg,
+                                            color: badge.color,
+                                            textTransform: 'uppercase' as const,
+                                            letterSpacing: '0.04em',
+                                            whiteSpace: 'nowrap' as const,
+                                        }}>{rail.status}</span>
+                                    </div>
+                                );
+                            })}
+                        </div>
+
+                        {/* Recent Risk Logs */}
+                        {risk.recentLogs.length > 0 && (
+                            <div style={{ marginTop: 10 }}>
+                                <div style={{
+                                    fontSize: '0.55rem', fontWeight: 700,
+                                    color: 'var(--text-muted)', marginBottom: 4,
+                                    textTransform: 'uppercase' as const, letterSpacing: '0.06em',
+                                }}>Recent Risk Events</div>
+                                <div style={{
+                                    maxHeight: 80, overflowY: 'auto' as const,
+                                    display: 'flex', flexDirection: 'column' as const, gap: 2,
+                                }}>
+                                    {risk.recentLogs.slice(-5).reverse().map(log => (
+                                        <div key={log.id} style={{
+                                            fontSize: '0.5rem',
+                                            padding: '2px 6px',
+                                            borderRadius: 3,
+                                            background: log.level === 'ERROR' || log.level === 'RISK'
+                                                ? 'rgba(244,63,94,0.06)'
+                                                : log.level === 'WARNING'
+                                                    ? 'rgba(251,191,36,0.06)'
+                                                    : 'rgba(99,115,171,0.04)',
+                                            color: log.level === 'ERROR' || log.level === 'RISK'
+                                                ? '#f87171'
+                                                : log.level === 'WARNING' ? '#fbbf24' : 'var(--text-muted)',
+                                            fontFamily: "'JetBrains Mono', monospace",
+                                        }}>
+                                            {new Date(log.timestamp).toLocaleTimeString()} · {log.message}
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                </div>
+            </div>
+        </section>
+    );
+}
+
+// ═══════════════════════════════════════════════════════════════
+// PANEL 10: Live Pulse Telemetry — RADICAL INNOVATION
+// Real-time ADFI health + CIRPN cross-island propagation
+// ═══════════════════════════════════════════════════════════════
+
+function LivePulseTelemetryPanel({
+    telemetry,
+    propagation,
+}: {
+    telemetry: LiveTelemetrySnapshot | null;
+    propagation: LivePropagationSnapshot | null;
+}) {
+    if (!telemetry && !propagation) return null;
+
+    const formatUptime = (ms: number): string => {
+        const hours = Math.floor(ms / 3_600_000);
+        const mins = Math.floor((ms % 3_600_000) / 60_000);
+        return hours > 0 ? `${hours}h ${mins}m` : `${mins}m`;
+    };
+
+    const latencyColor = (ms: number): string => {
+        if (ms < 500) return 'var(--success)';
+        if (ms < 2000) return 'var(--warning)';
+        return 'var(--danger)';
+    };
+
+    return (
+        <section id="live-pulse" className="glass-card glass-card-accent accent-neural col-12 stagger-in stagger-1">
+            <div className="card-header">
+                <div className="card-title">
+                    <Zap size={18} style={{ color: '#34d399' }} />
+                    <span>Live Pulse Telemetry</span>
+                </div>
+                <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                    {telemetry && (
+                        <span className="card-badge badge-success" style={{ fontSize: '0.55rem' }}>
+                            ⚡ {telemetry.candlesPerMinute} candles/min
+                        </span>
+                    )}
+                    {propagation && propagation.activeWarnings.length > 0 && (
+                        <span className="card-badge badge-danger" style={{ fontSize: '0.55rem', animation: 'pulse-glow 2s ease-in-out infinite' }}>
+                            🌊 {propagation.activeWarnings.length} CROSS-ISLAND WARNING{propagation.activeWarnings.length !== 1 ? 'S' : ''}
+                        </span>
+                    )}
+                </div>
+            </div>
+            <div className="card-body">
+                <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap' }}>
+                    {/* ─── ADFI Data Pipeline Health ─── */}
+                    {telemetry && (
+                        <div style={{ flex: 1, minWidth: 320 }}>
+                            <div style={{ fontSize: '0.6rem', color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 10 }}>
+                                📡 ADFI — Data Pipeline Health
+                            </div>
+                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 8 }}>
+                                {/* Throughput */}
+                                <div className="metric-card" style={{ padding: '8px 10px', textAlign: 'center' }}>
+                                    <div className="metric-value" style={{ fontSize: '1rem', color: 'var(--success)' }}>
+                                        {telemetry.totalCandles}
+                                    </div>
+                                    <div className="metric-label">Total Candles</div>
+                                </div>
+                                {/* Latency */}
+                                <div className="metric-card" style={{ padding: '8px 10px', textAlign: 'center' }}>
+                                    <div className="metric-value" style={{ fontSize: '1rem', color: latencyColor(telemetry.avgLatencyMs) }}>
+                                        {telemetry.avgLatencyMs}ms
+                                    </div>
+                                    <div className="metric-label">Avg Latency</div>
+                                </div>
+                                {/* Gap Detection */}
+                                <div className="metric-card" style={{ padding: '8px 10px', textAlign: 'center' }}>
+                                    <div className="metric-value" style={{
+                                        fontSize: '1rem',
+                                        color: telemetry.gapsPending > 0 ? 'var(--danger)' : 'var(--success)',
+                                    }}>
+                                        {telemetry.gapsRepaired}/{telemetry.gapsDetected}
+                                    </div>
+                                    <div className="metric-label">Gaps Fixed</div>
+                                </div>
+                                {/* Reconnects */}
+                                <div className="metric-card" style={{ padding: '8px 10px', textAlign: 'center' }}>
+                                    <div className="metric-value" style={{
+                                        fontSize: '1rem',
+                                        color: telemetry.reconnects > 3 ? 'var(--warning)' : 'var(--text-primary)',
+                                    }}>
+                                        {telemetry.reconnects}
+                                    </div>
+                                    <div className="metric-label">Reconnects</div>
+                                </div>
+                                {/* Uptime */}
+                                <div className="metric-card" style={{ padding: '8px 10px', textAlign: 'center' }}>
+                                    <div className="metric-value" style={{ fontSize: '1rem', color: 'var(--accent-primary)' }}>
+                                        {formatUptime(telemetry.uptimeMs)}
+                                    </div>
+                                    <div className="metric-label">Uptime</div>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* ─── CIRPN Cross-Island Propagation ─── */}
+                    {propagation && (
+                        <div style={{ flex: 1, minWidth: 320 }}>
+                            <div style={{ fontSize: '0.6rem', color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 10 }}>
+                                🌊 CIRPN — Cross-Island Regime Propagation
+                            </div>
+                            <div style={{ display: 'flex', gap: 12, marginBottom: 10 }}>
+                                {/* Stats */}
+                                <div className="metric-card" style={{ padding: '6px 10px', flex: 1, textAlign: 'center' }}>
+                                    <div className="metric-value" style={{ fontSize: '0.9rem' }}>{propagation.totalRegimeEvents}</div>
+                                    <div className="metric-label">Regime Events</div>
+                                </div>
+                                <div className="metric-card" style={{ padding: '6px 10px', flex: 1, textAlign: 'center' }}>
+                                    <div className="metric-value" style={{ fontSize: '0.9rem', color: '#34d399' }}>
+                                        {propagation.leaderPairs.length}
+                                    </div>
+                                    <div className="metric-label">Leaders</div>
+                                </div>
+                                <div className="metric-card" style={{ padding: '6px 10px', flex: 1, textAlign: 'center' }}>
+                                    <div className="metric-value" style={{ fontSize: '0.9rem', color: '#818cf8' }}>
+                                        {propagation.relationships.length}
+                                    </div>
+                                    <div className="metric-label">Correlations</div>
+                                </div>
+                            </div>
+
+                            {/* Active Warnings */}
+                            {propagation.activeWarnings.length > 0 ? (
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                                    {propagation.activeWarnings.slice(0, 4).map((w, i) => {
+                                        const etaSeconds = Math.round(w.expectedArrivalMs / 1000);
+                                        const confidencePct = Math.round(w.confidence * 100);
+                                        const isImminent = etaSeconds < 60;
+                                        return (
+                                            <div key={i} style={{
+                                                padding: '6px 10px',
+                                                borderRadius: 6,
+                                                background: isImminent
+                                                    ? 'rgba(239, 68, 68, 0.06)'
+                                                    : 'rgba(99, 102, 241, 0.04)',
+                                                border: `1px solid ${isImminent ? 'rgba(239, 68, 68, 0.15)' : 'rgba(99, 102, 241, 0.1)'}`,
+                                            }}>
+                                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+                                                    <span style={{ fontSize: '0.6rem', fontWeight: 700, color: isImminent ? '#f87171' : '#818cf8' }}>
+                                                        {w.sourcePair} → {w.targetPair}
+                                                    </span>
+                                                    <span style={{
+                                                        fontSize: '0.5rem',
+                                                        padding: '1px 6px',
+                                                        borderRadius: 3,
+                                                        background: isImminent ? 'rgba(239, 68, 68, 0.15)' : 'rgba(99, 102, 241, 0.1)',
+                                                        color: isImminent ? '#f87171' : '#a5b4fc',
+                                                        fontWeight: 700,
+                                                    }}>
+                                                        ETA: {etaSeconds}s · {confidencePct}%
+                                                    </span>
+                                                </div>
+                                                {/* ETA progress bar */}
+                                                <div style={{ height: 3, borderRadius: 2, background: 'rgba(99, 115, 171, 0.08)', overflow: 'hidden' }}>
+                                                    <div style={{
+                                                        height: '100%',
+                                                        borderRadius: 2,
+                                                        width: `${Math.max(5, 100 - (etaSeconds / 600) * 100)}%`,
+                                                        background: isImminent
+                                                            ? 'linear-gradient(90deg, #ef4444, #f97316)'
+                                                            : 'linear-gradient(90deg, #6366f1, #818cf8)',
+                                                        transition: 'width 0.5s ease',
+                                                    }} />
+                                                </div>
+                                                <div style={{ fontSize: '0.5rem', color: 'var(--text-muted)', marginTop: 3 }}>
+                                                    Predicted: <span style={{ color: '#fbbf24', fontWeight: 600 }}>{w.predictedRegime.replace('_', ' ')}</span>
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            ) : (
+                                <div style={{
+                                    textAlign: 'center',
+                                    padding: '12px 0',
+                                    fontSize: '0.65rem',
+                                    color: 'var(--text-muted)',
+                                    opacity: 0.6,
+                                }}>
+                                    No active cross-island warnings · Correlation network learning
+                                </div>
+                            )}
+
+                            {/* Leader/Follower Pairs */}
+                            {(propagation.leaderPairs.length > 0 || propagation.followerPairs.length > 0) && (
+                                <div style={{ display: 'flex', gap: 12, marginTop: 8 }}>
+                                    {propagation.leaderPairs.length > 0 && (
+                                        <div style={{ fontSize: '0.55rem' }}>
+                                            <span style={{ color: '#34d399', fontWeight: 700 }}>Leaders: </span>
+                                            <span style={{ color: 'var(--text-secondary)' }}>
+                                                {propagation.leaderPairs.join(', ')}
+                                            </span>
+                                        </div>
+                                    )}
+                                    {propagation.followerPairs.length > 0 && (
+                                        <div style={{ fontSize: '0.55rem' }}>
+                                            <span style={{ color: '#818cf8', fontWeight: 700 }}>Followers: </span>
+                                            <span style={{ color: 'var(--text-secondary)' }}>
+                                                {propagation.followerPairs.join(', ')}
+                                            </span>
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+                        </div>
+                    )}
+                </div>
+            </div>
+        </section>
+    );
+}
+
+// ═══════════════════════════════════════════════════════════════
+// PANEL 11: Evolution Heartbeat Monitor — RADICAL INNOVATION
+// Convergence / Stagnation / Gene Dominance Intelligence
+// ═══════════════════════════════════════════════════════════════
+
+const GRADE_COLORS: Record<HealthGrade, string> = {
+    A: '#34d399',
+    B: '#60a5fa',
+    C: '#fbbf24',
+    D: '#f97316',
+    F: '#ef4444',
+};
+
+const TREND_ICON: Record<string, string> = {
+    rising: '↑',
+    stable: '•',
+    declining: '↓',
+};
+
+const TREND_COLOR: Record<string, string> = {
+    rising: '#34d399',
+    stable: 'var(--text-muted)',
+    declining: '#f87171',
+};
+
+function EvolutionHeartbeatPanel({ health }: { health: GenomeHealthSnapshot }) {
+    const gradeColor = GRADE_COLORS[health.healthGrade];
+    const riskPct = Math.round(health.convergenceRisk * 100);
+    const diversityPct = Math.round(health.diversityIndex * 100);
+
+    return (
+        <section id="evo-heartbeat" className="glass-card glass-card-accent accent-evolution col-12 stagger-in stagger-2">
+            <div className="card-header">
+                <div className="card-title">
+                    <Activity size={18} style={{ color: gradeColor }} />
+                    <span>Evolution Heartbeat</span>
+                </div>
+                <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                    <span className="card-badge" style={{
+                        fontSize: '0.55rem',
+                        background: `${gradeColor}15`,
+                        color: gradeColor,
+                        border: `1px solid ${gradeColor}30`,
+                    }}>
+                        Grade {health.healthGrade} · {health.healthLabel}
+                    </span>
+                    <span className="card-badge badge-info" style={{ fontSize: '0.55rem' }}>
+                        Gen {health.currentGeneration}
+                    </span>
+                </div>
+            </div>
+            <div className="card-body">
+                <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap' }}>
+                    {/* ─── Left: Health Grade Ring + Core Metrics ─── */}
+                    <div style={{ flex: '0 0 280px', display: 'flex', flexDirection: 'column', gap: 12 }}>
+                        {/* Pulse Ring */}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+                            <div style={{
+                                width: 72,
+                                height: 72,
+                                borderRadius: '50%',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                background: `conic-gradient(${gradeColor} ${100 - riskPct}%, rgba(99,115,171,0.08) 0%)`,
+                                position: 'relative',
+                                animation: health.convergenceRisk > 0.6 ? 'pulse-glow 1.5s ease-in-out infinite' : undefined,
+                            }}>
+                                <div style={{
+                                    width: 58,
+                                    height: 58,
+                                    borderRadius: '50%',
+                                    background: 'var(--bg-primary)',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    flexDirection: 'column',
+                                }}>
+                                    <span style={{ fontSize: '1.4rem', fontWeight: 800, color: gradeColor, lineHeight: 1 }}>
+                                        {health.healthGrade}
+                                    </span>
+                                    <span style={{ fontSize: '0.45rem', color: 'var(--text-muted)', fontWeight: 600 }}>
+                                        {100 - riskPct}% safe
+                                    </span>
+                                </div>
+                            </div>
+                            <div style={{ flex: 1 }}>
+                                <div style={{ fontSize: '0.6rem', color: 'var(--text-muted)', marginBottom: 4, fontWeight: 600 }}>
+                                    {health.healthRecommendation}
+                                </div>
+                                <div style={{ fontSize: '0.5rem', color: 'var(--text-muted)', opacity: 0.6 }}>
+                                    {health.totalStrategiesTested} strategies tested across {health.currentGeneration + 1} generations
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Core Metrics Strip */}
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 6 }}>
+                            <div className="metric-card" style={{ padding: '6px 8px', textAlign: 'center' }}>
+                                <div className="metric-value" style={{
+                                    fontSize: '0.9rem',
+                                    color: diversityPct > 50 ? '#34d399' : diversityPct > 30 ? '#fbbf24' : '#ef4444',
+                                }}>
+                                    {diversityPct}%
+                                </div>
+                                <div className="metric-label">Diversity</div>
+                            </div>
+                            <div className="metric-card" style={{ padding: '6px 8px', textAlign: 'center' }}>
+                                <div className="metric-value" style={{
+                                    fontSize: '0.9rem',
+                                    color: health.stagnationLevel >= 3 ? '#ef4444' : health.stagnationLevel >= 1 ? '#fbbf24' : '#34d399',
+                                }}>
+                                    {health.stagnationLevel}
+                                </div>
+                                <div className="metric-label">Stagnation</div>
+                            </div>
+                            <div className="metric-card" style={{ padding: '6px 8px', textAlign: 'center' }}>
+                                <div className="metric-value" style={{
+                                    fontSize: '0.9rem',
+                                    color: health.fitnessTrajectory > 0 ? '#34d399' : health.fitnessTrajectory < 0 ? '#ef4444' : 'var(--text-primary)',
+                                }}>
+                                    {health.fitnessTrajectory > 0 ? '+' : ''}{health.fitnessTrajectory}
+                                </div>
+                                <div className="metric-label">Trajectory</div>
+                            </div>
+                        </div>
+
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 6 }}>
+                            <div className="metric-card" style={{ padding: '6px 8px', textAlign: 'center' }}>
+                                <div className="metric-value" style={{
+                                    fontSize: '0.9rem',
+                                    color: health.mutationPressure > 1.5 ? '#f97316' : health.mutationPressure < 0.8 ? '#60a5fa' : 'var(--text-primary)',
+                                }}>
+                                    {health.mutationPressure}x
+                                </div>
+                                <div className="metric-label">Mutation Δ</div>
+                            </div>
+                            <div className="metric-card" style={{ padding: '6px 8px', textAlign: 'center' }}>
+                                <div className="metric-value" style={{
+                                    fontSize: '0.9rem',
+                                    color: '#818cf8',
+                                }}>
+                                    {health.currentBestFitness}
+                                </div>
+                                <div className="metric-label">Best Fit</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* ─── Center: Gene Dominance Heatmap ─── */}
+                    <div style={{ flex: 1, minWidth: 260 }}>
+                        <div style={{ fontSize: '0.6rem', color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 8 }}>
+                            🧠 Gene Dominance Distribution
+                        </div>
+                        {health.geneDominance.length > 0 ? (
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                                {health.geneDominance.slice(0, 8).map((gene, i) => {
+                                    const barPct = Math.round(gene.frequency * 100);
+                                    return (
+                                        <div key={gene.indicatorType} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                                            <div style={{
+                                                width: 80,
+                                                fontSize: '0.5rem',
+                                                fontWeight: 600,
+                                                color: 'var(--text-secondary)',
+                                                textAlign: 'right',
+                                                overflow: 'hidden',
+                                                textOverflow: 'ellipsis',
+                                                whiteSpace: 'nowrap',
+                                            }}>
+                                                {gene.indicatorType.replace(/_/g, ' ')}
+                                            </div>
+                                            <div style={{ flex: 1, height: 8, borderRadius: 4, background: 'rgba(99, 115, 171, 0.06)', overflow: 'hidden' }}>
+                                                <div style={{
+                                                    height: '100%',
+                                                    borderRadius: 4,
+                                                    width: `${barPct}%`,
+                                                    background: `hsl(${220 + i * 20}, 70%, 60%)`,
+                                                    transition: 'width 0.5s ease',
+                                                }} />
+                                            </div>
+                                            <span style={{ fontSize: '0.5rem', color: 'var(--text-muted)', width: 28, textAlign: 'right' }}>
+                                                {barPct}%
+                                            </span>
+                                            <span style={{
+                                                fontSize: '0.5rem',
+                                                color: TREND_COLOR[gene.trending],
+                                                fontWeight: 700,
+                                                width: 10,
+                                                textAlign: 'center',
+                                            }}>
+                                                {TREND_ICON[gene.trending]}
+                                            </span>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        ) : (
+                            <div style={{ textAlign: 'center', padding: '16px 0', fontSize: '0.6rem', color: 'var(--text-muted)', opacity: 0.6 }}>
+                                Waiting for first generation…
+                            </div>
+                        )}
+                    </div>
+
+                    {/* ─── Right: Autopilot Log ─── */}
+                    <div style={{ flex: '0 0 220px' }}>
+                        <div style={{ fontSize: '0.6rem', color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 8 }}>
+                            🤖 Autopilot Interventions
+                        </div>
+                        {health.recentInterventions.length > 0 ? (
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                                {health.recentInterventions.map((intervention, i) => {
+                                    const iconMap: Record<string, string> = {
+                                        MUTATION_BOOST: '⚡',
+                                        MUTATION_DECAY: '📉',
+                                        DIVERSITY_INJECTION: '🎲',
+                                        REPLAY_SEED: '🧬',
+                                    };
+                                    const icon = iconMap[intervention.type] ?? '⚙️';
+                                    return (
+                                        <div key={i} style={{
+                                            padding: '4px 8px',
+                                            borderRadius: 4,
+                                            background: 'rgba(99, 102, 241, 0.03)',
+                                            border: '1px solid rgba(99, 102, 241, 0.06)',
+                                            fontSize: '0.5rem',
+                                        }}>
+                                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                                <span style={{ fontWeight: 700, color: 'var(--text-secondary)' }}>
+                                                    {icon} Gen {intervention.generation}
+                                                </span>
+                                                <span style={{ color: 'var(--text-muted)', fontSize: '0.45rem' }}>
+                                                    {intervention.type.replace(/_/g, ' ')}
+                                                </span>
+                                            </div>
+                                            <div style={{ color: 'var(--text-muted)', marginTop: 2 }}>
+                                                {intervention.description}
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        ) : (
+                            <div style={{ textAlign: 'center', padding: '16px 0', fontSize: '0.6rem', color: 'var(--text-muted)', opacity: 0.6 }}>
+                                No auto-interventions yet
+                            </div>
+                        )}
+                    </div>
+                </div>
+            </div>
+        </section>
+    );
+}
+
+// ═══════════════════════════════════════════════════════════════
+// PANEL 12: MRTI Forecast — Markov Regime Transition Intelligence
+// Regime transition predictions, early-warning signals, 5×5 matrix
+// ═══════════════════════════════════════════════════════════════
+
+// ─── MRTI Demo Data Generator ───────────────────────────────
+
+const ALL_REGIMES_ORDERED = [
+    MarketRegime.TRENDING_UP,
+    MarketRegime.TRENDING_DOWN,
+    MarketRegime.RANGING,
+    MarketRegime.HIGH_VOLATILITY,
+    MarketRegime.LOW_VOLATILITY,
+];
+
+const MRTI_REGIME_SHORT: Record<string, string> = {
+    [MarketRegime.TRENDING_UP]: 'T▲',
+    [MarketRegime.TRENDING_DOWN]: 'T▼',
+    [MarketRegime.RANGING]: 'RNG',
+    [MarketRegime.HIGH_VOLATILITY]: 'HV',
+    [MarketRegime.LOW_VOLATILITY]: 'LV',
+};
+
+const MRTI_REGIME_FULL: Record<string, string> = {
+    [MarketRegime.TRENDING_UP]: 'Trend ▲',
+    [MarketRegime.TRENDING_DOWN]: 'Trend ▼',
+    [MarketRegime.RANGING]: 'Ranging',
+    [MarketRegime.HIGH_VOLATILITY]: 'High Vol',
+    [MarketRegime.LOW_VOLATILITY]: 'Low Vol',
+};
+
+const MRTI_REGIME_CLR: Record<string, string> = {
+    [MarketRegime.TRENDING_UP]: '#34d399',
+    [MarketRegime.TRENDING_DOWN]: '#f43f5e',
+    [MarketRegime.RANGING]: '#6366f1',
+    [MarketRegime.HIGH_VOLATILITY]: '#fbbf24',
+    [MarketRegime.LOW_VOLATILITY]: '#22d3ee',
+};
+
+type EarlyWarningSignalKey = 'adx_slope' | 'atr_acceleration' | 'duration_exhaustion' | 'confidence_decay';
+
+interface DemoMRTI {
+    currentRegime: MarketRegime;
+    currentConfidence: number;
+    transitionRisk: number;
+    predictedNextRegime: MarketRegime;
+    predictedNextProbability: number;
+    earlyWarnings: Array<{ signal: EarlyWarningSignalKey; severity: number; description: string }>;
+    estimatedCandlesRemaining: number;
+    recommendation: 'HOLD' | 'PREPARE' | 'SWITCH';
+    transitionProbabilities: Record<MarketRegime, number>;
+    matrixReliable: boolean;
+    matrix: Record<MarketRegime, Record<MarketRegime, number>>;
+    averageDurations: Record<MarketRegime, number>;
+    totalTransitions: number;
+}
+
+function generateDemoMRTI(): DemoMRTI {
+    const currentIdx = Math.floor(Math.random() * ALL_REGIMES_ORDERED.length);
+    const currentRegime = ALL_REGIMES_ORDERED[currentIdx];
+    const nextIdx = (currentIdx + 1 + Math.floor(Math.random() * (ALL_REGIMES_ORDERED.length - 1))) % ALL_REGIMES_ORDERED.length;
+    const predictedNext = ALL_REGIMES_ORDERED[nextIdx];
+
+    const transitionRisk = Math.round(rng(0.05, 0.85) * 1000) / 1000;
+
+    let recommendation: 'HOLD' | 'PREPARE' | 'SWITCH';
+    if (transitionRisk >= 0.7) recommendation = 'SWITCH';
+    else if (transitionRisk >= 0.3) recommendation = 'PREPARE';
+    else recommendation = 'HOLD';
+
+    // Build demo 5×5 matrix with realistic-looking probabilities
+    const matrix = {} as Record<MarketRegime, Record<MarketRegime, number>>;
+    const averageDurations = {} as Record<MarketRegime, number>;
+    for (const from of ALL_REGIMES_ORDERED) {
+        const row = {} as Record<MarketRegime, number>;
+        let remaining = 1.0;
+        // Self-transition gets the lion's share
+        const selfProb = rng(0.5, 0.85);
+        row[from] = Math.round(selfProb * 1000) / 1000;
+        remaining -= selfProb;
+        const others = ALL_REGIMES_ORDERED.filter(r => r !== from);
+        for (let j = 0; j < others.length; j++) {
+            const isLast = j === others.length - 1;
+            const p = isLast ? remaining : Math.round(rng(0, remaining * 0.6) * 1000) / 1000;
+            row[others[j]] = Math.max(0, p);
+            remaining -= p;
+        }
+        matrix[from] = row;
+        averageDurations[from] = Math.round(rng(20, 80) * 10) / 10;
+    }
+
+    // Transition probabilities row for current regime
+    const transitionProbabilities = { ...matrix[currentRegime] };
+
+    // Early warning signals
+    const earlyWarnings: DemoMRTI['earlyWarnings'] = [];
+    const signals: Array<{ key: EarlyWarningSignalKey; label: string }> = [
+        { key: 'adx_slope', label: 'ADX' },
+        { key: 'atr_acceleration', label: 'ATR' },
+        { key: 'duration_exhaustion', label: 'Duration' },
+        { key: 'confidence_decay', label: 'Confidence' },
+    ];
+    for (const s of signals) {
+        const sev = Math.round(rng(0, 0.95) * 100) / 100;
+        if (sev > 0.15) {
+            earlyWarnings.push({
+                signal: s.key,
+                severity: sev,
+                description: `${s.label}: severity ${sev.toFixed(2)}`,
+            });
+        }
+    }
+
+    return {
+        currentRegime,
+        currentConfidence: Math.round(rng(0.3, 0.95) * 100) / 100,
+        transitionRisk,
+        predictedNextRegime: predictedNext,
+        predictedNextProbability: Math.round(rng(0.15, 0.55) * 1000) / 1000,
+        earlyWarnings: earlyWarnings.sort((a, b) => b.severity - a.severity),
+        estimatedCandlesRemaining: Math.floor(rng(5, 120)),
+        recommendation,
+        transitionProbabilities,
+        matrixReliable: Math.random() > 0.2,
+        matrix,
+        averageDurations,
+        totalTransitions: Math.floor(rng(25, 180)),
+    };
+}
+
+// ─── MRTI Forecast Panel ────────────────────────────────────
+
+function MRTIForecastPanel({
+    mrtiSnapshot,
+    propagation,
+}: {
+    mrtiSnapshot: MRTISnapshot | null;
+    propagation: LivePropagationSnapshot | null;
+}) {
+    // Use live data or demo fallback
+    const [demoMrti, setDemoMrti] = useState<DemoMRTI | null>(null);
+
+    useEffect(() => {
+        if (!mrtiSnapshot) {
+            setDemoMrti(generateDemoMRTI());
+            const iv = setInterval(() => setDemoMrti(generateDemoMRTI()), 8000);
+            return () => clearInterval(iv);
+        }
+    }, [mrtiSnapshot]);
+
+    // Resolve data source
+    const forecast = mrtiSnapshot?.forecast ?? null;
+    const matrixSnap = mrtiSnapshot?.matrixSnapshot ?? null;
+
+    const currentRegime = forecast?.currentRegime ?? demoMrti?.currentRegime ?? MarketRegime.RANGING;
+    const currentConfidence = forecast?.currentConfidence ?? demoMrti?.currentConfidence ?? 0.5;
+    const transitionRisk = forecast?.transitionRisk ?? demoMrti?.transitionRisk ?? 0;
+    const predictedNext = forecast?.predictedNextRegime ?? demoMrti?.predictedNextRegime ?? MarketRegime.TRENDING_UP;
+    const predictedNextProb = forecast?.predictedNextProbability ?? demoMrti?.predictedNextProbability ?? 0;
+    const earlyWarnings = forecast?.earlyWarnings ?? demoMrti?.earlyWarnings ?? [];
+    const candlesRemaining = forecast?.estimatedCandlesRemaining ?? demoMrti?.estimatedCandlesRemaining ?? 0;
+    const recommendation = forecast?.recommendation ?? demoMrti?.recommendation ?? 'HOLD';
+    const matrixReliable = forecast?.matrixReliable ?? demoMrti?.matrixReliable ?? false;
+    const totalTransitions = matrixSnap?.totalTransitions ?? demoMrti?.totalTransitions ?? 0;
+    const matrixData = matrixSnap?.matrix ?? demoMrti?.matrix ?? null;
+    const avgDurations = matrixSnap?.averageDurations ?? demoMrti?.averageDurations ?? null;
+
+    // Recommendation styling
+    const recColor = recommendation === 'HOLD' ? '#34d399'
+        : recommendation === 'PREPARE' ? '#fbbf24' : '#f43f5e';
+    const recBg = recommendation === 'HOLD' ? 'rgba(52,211,153,0.1)'
+        : recommendation === 'PREPARE' ? 'rgba(251,191,36,0.1)' : 'rgba(244,63,94,0.1)';
+
+    // Risk gauge gradient position (0-100%)
+    const riskPct = Math.round(transitionRisk * 100);
+
+    // Warning signal labels
+    const signalLabel: Record<string, string> = {
+        adx_slope: 'ADX Slope',
+        atr_acceleration: 'ATR Accel',
+        duration_exhaustion: 'Duration',
+        confidence_decay: 'Confidence',
+    };
+
+    // All 4 signals with default 0 severity
+    const allSignals: Array<{ key: string; severity: number }> = [
+        'adx_slope', 'atr_acceleration', 'duration_exhaustion', 'confidence_decay'
+    ].map(key => {
+        const found = earlyWarnings.find(w => w.signal === key);
+        return { key, severity: found?.severity ?? 0 };
+    });
+
+    // Severity bar color
+    const sevColor = (s: number) => {
+        if (s >= 0.7) return '#f43f5e';
+        if (s >= 0.4) return '#fbbf24';
+        if (s > 0.15) return '#22d3ee';
+        return 'rgba(99, 115, 171, 0.15)';
+    };
+
+    // Matrix cell color intensity
+    const matrixCellColor = (prob: number, isSelf: boolean) => {
+        if (isSelf) {
+            const alpha = Math.min(0.5, prob * 0.55);
+            return `rgba(99, 115, 171, ${alpha})`;
+        }
+        const alpha = Math.min(0.7, prob * 1.4);
+        return `rgba(34, 211, 238, ${alpha})`;
+    };
+
+    // Find the highest non-self probability in a row
+    const highestNonSelf = (row: Record<MarketRegime, number>, self: MarketRegime): MarketRegime | null => {
+        let best: MarketRegime | null = null;
+        let bestP = -1;
+        for (const r of ALL_REGIMES_ORDERED) {
+            if (r === self) continue;
+            if (row[r] > bestP) { bestP = row[r]; best = r; }
+        }
+        return best;
+    };
+
+    return (
+        <section id="mrti-forecast" className="glass-card glass-card-accent accent-cyan col-12 stagger-in stagger-2">
+            <div className="card-header">
+                <div className="card-title">
+                    <Radar size={18} style={{ color: '#22d3ee' }} />
+                    <span>MRTI — Regime Transition Intelligence</span>
+                </div>
+                <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                    <span className="card-badge" style={{
+                        background: matrixReliable ? 'rgba(52,211,153,0.12)' : 'rgba(251,191,36,0.12)',
+                        color: matrixReliable ? '#34d399' : '#fbbf24',
+                        border: `1px solid ${matrixReliable ? 'rgba(52,211,153,0.3)' : 'rgba(251,191,36,0.3)'}`,
+                    }}>
+                        {matrixReliable ? '● CALIBRATED' : '◌ LEARNING'}
+                    </span>
+                    <span className="card-badge badge-primary"
+                        style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '0.6rem' }}>
+                        {totalTransitions} transitions
+                    </span>
+                </div>
+            </div>
+            <div className="card-body" style={{ display: 'flex', gap: 20, flexWrap: 'wrap' }}>
+
+                {/* ── Sub-Zone 1: Forecast HUD ──────────────── */}
+                <div style={{ flex: '1 1 280px', minWidth: 260 }}>
+                    <div style={{ fontSize: '0.6rem', color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 10 }}>
+                        Forecast Overview
+                    </div>
+
+                    {/* Current Regime */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
+                        <div style={{
+                            padding: '6px 14px',
+                            borderRadius: 'var(--radius-sm)',
+                            background: `${MRTI_REGIME_CLR[currentRegime]}18`,
+                            border: `1px solid ${MRTI_REGIME_CLR[currentRegime]}40`,
+                            color: MRTI_REGIME_CLR[currentRegime],
+                            fontWeight: 700,
+                            fontSize: '0.85rem',
+                            fontFamily: "'JetBrains Mono', monospace",
+                        }}>
+                            {MRTI_REGIME_FULL[currentRegime] ?? currentRegime}
+                        </div>
+                        <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>
+                            conf: <span style={{ color: currentConfidence >= 0.6 ? '#34d399' : '#fbbf24', fontWeight: 600 }}>
+                                {(currentConfidence * 100).toFixed(0)}%
+                            </span>
+                        </div>
+                    </div>
+
+                    {/* Transition Risk Gauge */}
+                    <div style={{ marginBottom: 14 }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.6rem', color: 'var(--text-muted)', marginBottom: 4 }}>
+                            <span>Transition Risk</span>
+                            <span style={{
+                                color: riskPct >= 70 ? '#f43f5e' : riskPct >= 30 ? '#fbbf24' : '#34d399',
+                                fontWeight: 700,
+                                fontFamily: "'JetBrains Mono', monospace",
+                            }}>{riskPct}%</span>
+                        </div>
+                        <div style={{
+                            height: 8,
+                            borderRadius: 4,
+                            background: 'rgba(99, 115, 171, 0.08)',
+                            overflow: 'hidden',
+                            position: 'relative' as const,
+                        }}>
+                            <div style={{
+                                height: '100%',
+                                width: `${riskPct}%`,
+                                borderRadius: 4,
+                                background: riskPct >= 70
+                                    ? 'linear-gradient(90deg, #fbbf24, #f43f5e)'
+                                    : riskPct >= 30
+                                        ? 'linear-gradient(90deg, #34d399, #fbbf24)'
+                                        : 'linear-gradient(90deg, #22d3ee, #34d399)',
+                                transition: 'width 0.6s ease',
+                            }} />
+                        </div>
+                    </div>
+
+                    {/* Predicted Next */}
+                    <div style={{
+                        display: 'flex', alignItems: 'center', gap: 8,
+                        padding: '8px 12px', borderRadius: 'var(--radius-sm)',
+                        background: 'rgba(14, 17, 30, 0.4)',
+                        border: '1px solid rgba(99, 115, 171, 0.1)',
+                        marginBottom: 12,
+                    }}>
+                        <ArrowRight size={14} style={{ color: 'var(--text-muted)' }} />
+                        <div style={{ flex: 1, fontSize: '0.7rem' }}>
+                            <span style={{ color: 'var(--text-muted)' }}>Next: </span>
+                            <span style={{ color: MRTI_REGIME_CLR[predictedNext], fontWeight: 700 }}>
+                                {MRTI_REGIME_FULL[predictedNext]}
+                            </span>
+                            <span style={{ color: 'var(--text-muted)', marginLeft: 6 }}>
+                                ({(predictedNextProb * 100).toFixed(1)}%)
+                            </span>
+                        </div>
+                    </div>
+
+                    {/* Candles Remaining + Recommendation */}
+                    <div style={{ display: 'flex', gap: 10 }}>
+                        <div className="metric-card" style={{ flex: 1, padding: '8px 10px' }}>
+                            <div className="metric-value" style={{
+                                fontSize: '1.1rem',
+                                fontFamily: "'JetBrains Mono', monospace",
+                            }}>{candlesRemaining}</div>
+                            <div className="metric-label">Candles Left</div>
+                        </div>
+                        <div className="metric-card" style={{
+                            flex: 1, padding: '8px 10px',
+                            background: recBg,
+                            border: `1px solid ${recColor}30`,
+                        }}>
+                            <div className="metric-value" style={{
+                                fontSize: '0.85rem',
+                                color: recColor,
+                                fontWeight: 800,
+                                letterSpacing: '0.08em',
+                            }}>{recommendation}</div>
+                            <div className="metric-label">Action</div>
+                        </div>
+                    </div>
+                </div>
+
+                {/* ── Sub-Zone 2: Early Warning Signals ─────── */}
+                <div style={{ flex: '1 1 200px', minWidth: 180 }}>
+                    <div style={{ fontSize: '0.6rem', color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 10 }}>
+                        Early Warning Signals
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column' as const, gap: 10 }}>
+                        {allSignals.map(sig => {
+                            const pct = Math.round(sig.severity * 100);
+                            const active = sig.severity > 0.15;
+                            return (
+                                <div key={sig.key}>
+                                    <div style={{
+                                        display: 'flex', justifyContent: 'space-between',
+                                        fontSize: '0.6rem', marginBottom: 3,
+                                    }}>
+                                        <span style={{
+                                            color: active ? 'var(--text-primary)' : 'var(--text-muted)',
+                                            fontWeight: active ? 600 : 400,
+                                        }}>
+                                            {signalLabel[sig.key]}
+                                        </span>
+                                        <span style={{
+                                            color: sevColor(sig.severity),
+                                            fontFamily: "'JetBrains Mono', monospace",
+                                            fontWeight: 600,
+                                        }}>
+                                            {pct}%
+                                        </span>
+                                    </div>
+                                    <div style={{
+                                        height: 6,
+                                        borderRadius: 3,
+                                        background: 'rgba(99, 115, 171, 0.06)',
+                                        overflow: 'hidden',
+                                    }}>
+                                        <div style={{
+                                            height: '100%',
+                                            width: `${pct}%`,
+                                            borderRadius: 3,
+                                            background: sevColor(sig.severity),
+                                            transition: 'width 0.5s ease, background 0.5s ease',
+                                            boxShadow: active ? `0 0 8px ${sevColor(sig.severity)}40` : 'none',
+                                        }} />
+                                    </div>
+                                </div>
+                            );
+                        })}
+                    </div>
+
+                    {/* Composite indicator */}
+                    <div style={{
+                        marginTop: 14, padding: '6px 10px',
+                        borderRadius: 'var(--radius-sm)',
+                        background: 'rgba(14, 17, 30, 0.4)',
+                        border: '1px solid rgba(99, 115, 171, 0.08)',
+                        fontSize: '0.6rem', color: 'var(--text-muted)',
+                        display: 'flex', justifyContent: 'space-between',
+                    }}>
+                        <span>Active Warnings</span>
+                        <span style={{
+                            color: earlyWarnings.length >= 3 ? '#f43f5e'
+                                : earlyWarnings.length >= 2 ? '#fbbf24' : '#34d399',
+                            fontWeight: 700,
+                        }}>{earlyWarnings.length}/4</span>
+                    </div>
+                </div>
+
+                {/* ── Sub-Zone 3: Transition Matrix Heatmap ─── */}
+                <div style={{ flex: '1 1 300px', minWidth: 280 }}>
+                    <div style={{ fontSize: '0.6rem', color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 10 }}>
+                        Markov Transition Matrix
+                    </div>
+
+                    {matrixData ? (
+                        <div style={{ overflowX: 'auto' }}>
+                            <div style={{
+                                display: 'grid',
+                                gridTemplateColumns: `60px repeat(${ALL_REGIMES_ORDERED.length}, 1fr)`,
+                                gap: 2,
+                                fontSize: '0.55rem',
+                            }}>
+                                {/* Header row */}
+                                <div />
+                                {ALL_REGIMES_ORDERED.map(r => (
+                                    <div key={`hdr-${r}`} style={{
+                                        textAlign: 'center',
+                                        color: MRTI_REGIME_CLR[r],
+                                        fontWeight: 700,
+                                        padding: '3px 2px',
+                                        fontFamily: "'JetBrains Mono', monospace",
+                                    }}>
+                                        {MRTI_REGIME_SHORT[r]}
+                                    </div>
+                                ))}
+
+                                {/* Data rows */}
+                                {ALL_REGIMES_ORDERED.map(from => {
+                                    const row = matrixData[from];
+                                    const best = highestNonSelf(row, from);
+                                    return (
+                                        <React.Fragment key={`row-${from}`}>
+                                            <div style={{
+                                                color: MRTI_REGIME_CLR[from],
+                                                fontWeight: 700,
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                padding: '0 4px',
+                                                fontFamily: "'JetBrains Mono', monospace",
+                                                whiteSpace: 'nowrap' as const,
+                                            }}>
+                                                {MRTI_REGIME_SHORT[from]}
+                                            </div>
+                                            {ALL_REGIMES_ORDERED.map(to => {
+                                                const prob = row[to] ?? 0;
+                                                const isSelf = from === to;
+                                                const isBest = to === best;
+                                                return (
+                                                    <div
+                                                        key={`${from}-${to}`}
+                                                        style={{
+                                                            background: matrixCellColor(prob, isSelf),
+                                                            borderRadius: 3,
+                                                            padding: '5px 2px',
+                                                            textAlign: 'center' as const,
+                                                            fontFamily: "'JetBrains Mono', monospace",
+                                                            fontWeight: isBest ? 800 : 400,
+                                                            color: isSelf
+                                                                ? 'rgba(148, 163, 184, 0.5)'
+                                                                : prob >= 0.15 ? '#e2e8f0' : 'var(--text-muted)',
+                                                            border: isBest
+                                                                ? '1px solid rgba(34, 211, 238, 0.4)'
+                                                                : isSelf
+                                                                    ? '1px solid rgba(99, 115, 171, 0.15)'
+                                                                    : '1px solid transparent',
+                                                            position: 'relative' as const,
+                                                        }}
+                                                        title={`P(${MRTI_REGIME_FULL[to]} | ${MRTI_REGIME_FULL[from]}) = ${(prob * 100).toFixed(1)}%`}
+                                                    >
+                                                        {(prob * 100).toFixed(0)}%
+                                                        {isBest && (
+                                                            <span style={{
+                                                                position: 'absolute' as const,
+                                                                top: -2, right: -2,
+                                                                fontSize: '0.45rem',
+                                                                color: '#22d3ee',
+                                                            }}>★</span>
+                                                        )}
+                                                    </div>
+                                                );
+                                            })}
+                                        </React.Fragment>
+                                    );
+                                })}
+                            </div>
+
+                            {/* Average durations bar */}
+                            {avgDurations && (
+                                <div style={{
+                                    display: 'flex', gap: 6, marginTop: 8,
+                                    flexWrap: 'wrap' as const,
+                                }}>
+                                    {ALL_REGIMES_ORDERED.map(r => (
+                                        <div key={`dur-${r}`} style={{
+                                            fontSize: '0.5rem',
+                                            color: 'var(--text-muted)',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            gap: 3,
+                                        }}>
+                                            <span style={{ color: MRTI_REGIME_CLR[r], fontWeight: 600 }}>
+                                                {MRTI_REGIME_SHORT[r]}
+                                            </span>
+                                            <span style={{ fontFamily: "'JetBrains Mono', monospace" }}>
+                                                ~{avgDurations[r]?.toFixed(0) ?? '?'}
+                                            </span>
+                                        </div>
+                                    ))}
+                                    <span style={{ fontSize: '0.45rem', color: 'var(--text-muted)', opacity: 0.6 }}>
+                                        avg candles
+                                    </span>
+                                </div>
+                            )}
+                        </div>
+                    ) : (
+                        <div style={{
+                            padding: '24px 12px', textAlign: 'center' as const,
+                            fontSize: '0.7rem', color: 'var(--text-muted)',
+                            background: 'rgba(14, 17, 30, 0.3)',
+                            borderRadius: 'var(--radius-sm)',
+                        }}>
+                            Matrix building… Need ≥200 candles
+                        </div>
+                    )}
+                </div>
+            </div>
+
+            {/* ── Radical Innovation: Regime Horizon Bar ──────── */}
+            <div style={{
+                marginTop: 16,
+                padding: '12px 16px',
+                borderRadius: 'var(--radius-sm)',
+                background: 'rgba(14, 17, 30, 0.5)',
+                border: '1px solid rgba(99, 115, 171, 0.08)',
+            }}>
+                <div style={{
+                    display: 'flex', justifyContent: 'space-between',
+                    fontSize: '0.55rem', color: 'var(--text-muted)',
+                    fontWeight: 600, textTransform: 'uppercase' as const,
+                    letterSpacing: '0.08em', marginBottom: 8,
+                }}>
+                    <span>⏱ Predictive Horizon</span>
+                    <span style={{ fontFamily: "'JetBrains Mono', monospace", textTransform: 'none' as const }}>
+                        {candlesRemaining} candles → {MRTI_REGIME_FULL[predictedNext]}
+                    </span>
+                </div>
+
+                {/* Timeline bar with gradient */}
+                <div style={{ position: 'relative' as const, height: 28 }}>
+                    {/* Background gradient: green → amber → red */}
+                    <div style={{
+                        position: 'absolute' as const,
+                        inset: 0,
+                        borderRadius: 6,
+                        background: `linear-gradient(90deg, 
+                            rgba(52,211,153,0.15) 0%, 
+                            rgba(251,191,36,0.15) ${Math.max(30, 100 - riskPct)}%, 
+                            rgba(244,63,94,0.2) 100%)`,
+                        overflow: 'hidden',
+                    }}>
+                        {/* Progress fill showing time elapsed */}
+                        <div style={{
+                            height: '100%',
+                            width: `${Math.min(95, Math.max(5, 100 - (candlesRemaining / (candlesRemaining + 50) * 100)))}%`,
+                            background: `linear-gradient(90deg, 
+                                ${MRTI_REGIME_CLR[currentRegime]}30  0%, 
+                                ${MRTI_REGIME_CLR[currentRegime]}10 100%)`,
+                            borderRight: `2px solid ${MRTI_REGIME_CLR[currentRegime]}80`,
+                            transition: 'width 1s ease',
+                        }} />
+                    </div>
+
+                    {/* NOW marker */}
+                    <div style={{
+                        position: 'absolute' as const,
+                        left: 4, top: '50%', transform: 'translateY(-50%)',
+                        fontSize: '0.55rem', fontWeight: 700,
+                        color: MRTI_REGIME_CLR[currentRegime],
+                        fontFamily: "'JetBrains Mono', monospace",
+                        background: 'rgba(14, 17, 30, 0.8)',
+                        padding: '2px 6px', borderRadius: 3,
+                    }}>
+                        NOW · {MRTI_REGIME_SHORT[currentRegime]}
+                    </div>
+
+                    {/* Predicted arrival marker */}
+                    <div style={{
+                        position: 'absolute' as const,
+                        right: 4, top: '50%', transform: 'translateY(-50%)',
+                        fontSize: '0.55rem', fontWeight: 700,
+                        color: MRTI_REGIME_CLR[predictedNext],
+                        fontFamily: "'JetBrains Mono', monospace",
+                        background: 'rgba(14, 17, 30, 0.8)',
+                        padding: '2px 6px', borderRadius: 3,
+                    }}>
+                        → {MRTI_REGIME_SHORT[predictedNext]} ({(predictedNextProb * 100).toFixed(0)}%)
+                    </div>
+
+                    {/* Early warning pulse points on timeline */}
+                    {allSignals.filter(s => s.severity > 0.15).map((sig, i) => {
+                        // Position proportional to severity (higher = closer to transition)
+                        const leftPct = 15 + sig.severity * 70;
+                        return (
+                            <div
+                                key={sig.key}
+                                style={{
+                                    position: 'absolute' as const,
+                                    left: `${leftPct}%`,
+                                    top: '50%',
+                                    transform: 'translate(-50%, -50%)',
+                                    width: 8,
+                                    height: 8,
+                                    borderRadius: '50%',
+                                    background: sevColor(sig.severity),
+                                    boxShadow: `0 0 6px ${sevColor(sig.severity)}60`,
+                                    animation: sig.severity >= 0.5 ? 'pulse-glow 1.5s ease-in-out infinite' : 'none',
+                                }}
+                                title={`${signalLabel[sig.key]}: ${(sig.severity * 100).toFixed(0)}%`}
+                            />
+                        );
+                    })}
+                </div>
+
+                {/* CIRPN Cross-Island Propagation Arrows */}
+                {propagation && propagation.activeWarnings.length > 0 && (
+                    <div style={{
+                        marginTop: 8,
+                        display: 'flex', flexWrap: 'wrap' as const, gap: 6,
+                    }}>
+                        {propagation.activeWarnings.slice(0, 3).map((w, i) => (
+                            <div key={i} style={{
+                                fontSize: '0.5rem',
+                                padding: '3px 8px',
+                                borderRadius: 'var(--radius-sm)',
+                                background: 'rgba(99, 102, 241, 0.08)',
+                                border: '1px solid rgba(99, 102, 241, 0.2)',
+                                color: '#a78bfa',
+                                fontFamily: "'JetBrains Mono', monospace",
+                                display: 'flex', alignItems: 'center', gap: 4,
+                            }}>
+                                <span style={{ color: '#6366f1' }}>⚡</span>
+                                {w.sourcePair} → {w.targetPair}
+                                <span style={{ opacity: 0.6 }}>~{Math.round(w.expectedArrivalMs / 60000)}m</span>
+                            </div>
+                        ))}
+                    </div>
+                )}
+            </div>
+        </section>
+    );
+}
+
 // ═══════════════════════════════════════════════════════════════
 // MAIN PIPELINE PAGE
 // ═══════════════════════════════════════════════════════════════
 
 export default function PipelinePage() {
-    const { stages, gates, gateIdx, tradeProgress, currentStrategyName } = usePipelineStateMachine();
+    // Live data hook — returns null when Cortex is not initialized
+    const [selectedSlotId, setSelectedSlotId] = useState<string | null>(null);
+    const liveData = usePipelineLiveData(selectedSlotId);
+    const isLive = liveData?.isLive ?? false;
 
-    // Generate demo data once
+    // Demo mode fallback (auto-cycling state machine)
+    const demoStateMachine = usePipelineStateMachine();
+
+    // Determine active data source
+    const activeStages = isLive ? liveData!.stages : demoStateMachine.stages;
+    const activeGates = isLive ? liveData!.gates : demoStateMachine.gates;
+    const activeGateIdx = isLive ? liveData!.gateIdx : demoStateMachine.gateIdx;
+    const activeTradeProgress = isLive ? liveData!.tradeProgress : demoStateMachine.tradeProgress;
+    const activeStrategyName = isLive ? liveData!.currentStrategyName : demoStateMachine.currentStrategyName;
+
+    // Generate demo data once (for panels without live equivalents yet)
     const [demoData, setDemoData] = useState<{
         generations: GenerationData[];
         roster: RosterEntry[];
@@ -1962,7 +3587,14 @@ export default function PipelinePage() {
         });
     }, []);
 
-    if (!demoData) {
+    // Derive panel data: live when available, demo fallback
+    const generations = isLive ? liveData!.generations : (demoData?.generations ?? []);
+    const roster = isLive
+        ? liveData!.roster as RosterEntry[]
+        : (demoData?.roster ?? []);
+    const replayCells = isLive ? liveData!.replayCells : (demoData?.replayCells ?? []);
+
+    if (!demoData && !isLive) {
         return (
             <div style={{
                 display: 'flex',
@@ -1991,6 +3623,36 @@ export default function PipelinePage() {
                     </div>
                 </div>
                 <div className="header-actions">
+                    {/* Island Selector + Live/Demo Badge */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginRight: 12 }}>
+                        <span className={`card-badge ${isLive ? 'badge-success' : 'badge-info'}`}
+                            style={{ fontSize: '0.6rem', padding: '2px 8px' }}>
+                            {isLive ? '● LIVE' : '◯ DEMO'}
+                        </span>
+                        {liveData && liveData.availableIslands.length > 0 && (
+                            <select
+                                value={selectedSlotId ?? liveData.availableIslands[0]?.slotId ?? ''}
+                                onChange={(e) => setSelectedSlotId(e.target.value)}
+                                style={{
+                                    background: 'rgba(14, 17, 30, 0.8)',
+                                    border: '1px solid rgba(99, 115, 171, 0.2)',
+                                    borderRadius: 6,
+                                    color: 'var(--text-primary)',
+                                    fontSize: '0.7rem',
+                                    padding: '4px 10px',
+                                    fontFamily: "'JetBrains Mono', monospace",
+                                    cursor: 'pointer',
+                                    outline: 'none',
+                                }}
+                            >
+                                {liveData.availableIslands.map(island => (
+                                    <option key={island.slotId} value={island.slotId}>
+                                        {island.pair} · {island.timeframe}
+                                    </option>
+                                ))}
+                            </select>
+                        )}
+                    </div>
                     <nav className="nav-tabs">
                         <Link href="/" className="nav-tab">
                             <Activity size={14} /> Dashboard
@@ -2006,36 +3668,61 @@ export default function PipelinePage() {
             <main className="dashboard-grid">
                 {/* Row 1: Pipeline Flow */}
                 <PipelineFlowPanel
-                    stages={stages}
-                    tradeProgress={tradeProgress}
-                    currentStrategyName={currentStrategyName}
+                    stages={activeStages}
+                    tradeProgress={activeTradeProgress}
+                    currentStrategyName={activeStrategyName}
+                />
+
+                {/* Row 1.5: Live Pulse Telemetry (only in LIVE mode — radical innovation) */}
+                {isLive && liveData && (
+                    <LivePulseTelemetryPanel
+                        telemetry={liveData.telemetry}
+                        propagation={liveData.propagation}
+                    />
+                )}
+
+                {/* Row 1.75: Evolution Heartbeat Monitor (radical innovation) */}
+                {isLive && liveData && liveData.genomeHealth && (
+                    <EvolutionHeartbeatPanel health={liveData.genomeHealth} />
+                )}
+
+                {/* Row 1.85: MRTI Regime Transition Intelligence (Phase 21) */}
+                <MRTIForecastPanel
+                    mrtiSnapshot={isLive && liveData ? liveData.mrtiSnapshot : null}
+                    propagation={isLive && liveData ? liveData.propagation : null}
                 />
 
                 {/* Row 2: Fitness + Validation */}
-                <GenerationFitnessPanel generations={demoData.generations} />
+                <GenerationFitnessPanel generations={generations} />
                 <ValidationGatePanel
-                    gates={gates}
-                    gateIdx={gateIdx}
-                    currentStrategyName={currentStrategyName}
+                    gates={activeGates}
+                    gateIdx={activeGateIdx}
+                    currentStrategyName={activeStrategyName}
                 />
 
                 {/* Row 3: Roster + Replay */}
-                <StrategyRosterPanel roster={demoData.roster} />
-                <ExperienceReplayPanel cells={demoData.replayCells} />
+                <StrategyRosterPanel roster={roster} />
+                <ExperienceReplayPanel cells={replayCells} />
 
                 {/* Row 4: Strategy Archaeology — Gene Lineage (Full Width) */}
-                <GeneLineagePanel nodes={demoData.lineageNodes} />
+                <GeneLineagePanel nodes={demoData?.lineageNodes ?? []} />
 
                 {/* Row 5: Gene Survival Heatmap + Decision Explainer */}
-                <GeneSurvivalPanel rows={demoData.survivalRows} />
-                <DecisionExplainerPanel decisions={demoData.decisions} />
+                <GeneSurvivalPanel rows={demoData?.survivalRows ?? []} />
+                <DecisionExplainerPanel decisions={demoData?.decisions ?? []} />
 
                 {/* Row 6: Strategic Overmind Intelligence Hub (Phase 15 + CCR) */}
                 <OvermindIntelligenceHub
-                    hypotheses={demoData.overmind.hypotheses}
-                    episodes={demoData.overmind.episodes}
-                    insights={demoData.overmind.insights}
-                    counterfactualData={demoData.overmind.counterfactualData}
+                    hypotheses={demoData?.overmind.hypotheses ?? []}
+                    episodes={demoData?.overmind.episodes ?? []}
+                    insights={demoData?.overmind.insights ?? []}
+                    counterfactualData={demoData?.overmind.counterfactualData ?? []}
+                    overmindLive={isLive && liveData ? liveData.overmindLive : null}
+                />
+
+                {/* Row 7: Risk Shield — GLOBAL Safety Rail Monitor */}
+                <RiskShieldPanel
+                    riskLive={isLive && liveData ? liveData.riskLive : null}
                 />
             </main>
         </>

@@ -16,6 +16,8 @@
 // ============================================================
 
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import { useBrainLiveData } from '@/lib/hooks/useBrainLiveData';
+import type { NeuronId } from '@/lib/engine/neural-impulse-bus';
 
 // ─── Types ───────────────────────────────────────────────────
 
@@ -493,11 +495,16 @@ export default function NeuralBrainPage() {
         totalSignals: 0, avgActivity: 0, dominantModule: 'EVO',
         learningRate: 0.05, experienceLevel: 0, activeConnections: 0,
     });
+    const [selectedSlotId, setSelectedSlotId] = useState<string | null>(null);
     const animRef = useRef<number>(0);
     const lastFireRef = useRef<number>(Date.now());
     const lastSnapRef = useRef<number>(Date.now());
     const signalRef = useRef<number>(0);
     const cooldownRef = useRef<Map<string, number>>(new Map());
+
+    // ── Live Data Bridge (Phase 22) ──────────────────────────
+    const brainLiveData = useBrainLiveData(selectedSlotId);
+    const isLiveMode = brainLiveData?.isLive ?? false;
 
     const fireNeuron = useCallback((nodeId: string) => {
         const now = Date.now();
@@ -515,6 +522,50 @@ export default function NeuralBrainPage() {
         ));
     }, []);
 
+    // ── LIVE MODE: Inject engine-derived neuron activities ────
+    useEffect(() => {
+        if (isPaused || !brainLiveData) return;
+
+        const { neuronActivities, synapseActivations, hudStats, consciousnessLevel } = brainLiveData;
+
+        // Inject real activity levels into neurons
+        setNodes(prev => prev.map(n => {
+            const liveActivity = neuronActivities[n.id as NeuronId];
+            if (!liveActivity) return n;
+
+            // Blend: live intensity drives the target, existing decay animation keeps visual smoothness
+            const targetIntensity = liveActivity.intensity;
+            // If live activity is higher than current, boost immediately
+            // If live activity is lower, let decay handle it naturally
+            const newActivity = Math.max(n.activity, targetIntensity * 0.8);
+
+            return {
+                ...n,
+                activity: Math.min(1, newActivity),
+                // Update description from live data for HUD enrichment
+                description: liveActivity.label || n.description,
+            };
+        }));
+
+        // Inject synapse activations from live data
+        for (const sa of synapseActivations) {
+            if (sa.shouldFire && sa.intensity > 0.15) {
+                fireNeuron(sa.fromId);
+            }
+        }
+
+        // Override HUD stats with live-derived values
+        setStats({
+            totalSignals: hudStats.totalSignals || signalRef.current,
+            avgActivity: hudStats.avgActivity,
+            dominantModule: hudStats.dominantModule,
+            learningRate: hudStats.learningRate,
+            experienceLevel: consciousnessLevel, // Drive consciousness arc from live data
+            activeConnections: hudStats.activeConnections,
+        });
+    }, [brainLiveData, isPaused, fireNeuron]);
+
+    // ── ANIMATION LOOP (both modes) ──────────────────────────
     useEffect(() => {
         if (isPaused) return;
         let prevTime = performance.now();
@@ -538,13 +589,17 @@ export default function NeuralBrainPage() {
             }));
 
             const now = Date.now();
-            // Sensory fire every 2-5s — staggered triggers
-            if (now - lastFireRef.current > 2000 + Math.random() * 3000) {
-                const sensory = ['market', 'regime', 'replay', 'forensics'];
-                fireNeuron(sensory[Math.floor(Math.random() * sensory.length)]);
-                lastFireRef.current = now;
+
+            // DEMO MODE: Random sensory fire every 2-5s (only when NOT live)
+            if (!isLiveMode) {
+                if (now - lastFireRef.current > 2000 + Math.random() * 3000) {
+                    const sensory: NeuronId[] = ['market', 'regime', 'replay', 'forensics'];
+                    fireNeuron(sensory[Math.floor(Math.random() * sensory.length)]);
+                    lastFireRef.current = now;
+                }
             }
 
+            // Timeline snapshot every 2s
             if (now - lastSnapRef.current > 2000) {
                 setNodes(cur => {
                     const snap: ActivitySnapshot = { timestamp: now, activities: {} };
@@ -558,27 +613,30 @@ export default function NeuralBrainPage() {
                 lastSnapRef.current = now;
             }
 
-            setNodes(prev => {
-                const avgAct = Math.min(1, prev.reduce((s, n) => s + Math.min(1, n.activity), 0) / prev.length);
-                const dominant = prev.reduce((mx, n) => n.totalFirings > mx.totalFirings ? n : mx, prev[0]);
-                const actConn = synapses.filter(s => s.active).length;
-                setStats({
-                    totalSignals: signalRef.current,
-                    avgActivity: avgAct,
-                    dominantModule: dominant.shortLabel,
-                    learningRate: 0.01 + Math.min(0.15, signalRef.current / 4000),
-                    experienceLevel: Math.min(100, signalRef.current / 1.8),
-                    activeConnections: actConn,
+            // DEMO MODE: Derive stats from animation state (live mode overrides above)
+            if (!isLiveMode) {
+                setNodes(prev => {
+                    const avgAct = Math.min(1, prev.reduce((s, n) => s + Math.min(1, n.activity), 0) / prev.length);
+                    const dominant = prev.reduce((mx, n) => n.totalFirings > mx.totalFirings ? n : mx, prev[0]);
+                    const actConn = synapses.filter(s => s.active).length;
+                    setStats({
+                        totalSignals: signalRef.current,
+                        avgActivity: avgAct,
+                        dominantModule: dominant.shortLabel,
+                        learningRate: 0.01 + Math.min(0.15, signalRef.current / 4000),
+                        experienceLevel: Math.min(100, signalRef.current / 1.8),
+                        activeConnections: actConn,
+                    });
+                    return prev;
                 });
-                return prev;
-            });
+            }
 
             animRef.current = requestAnimationFrame(loop);
         };
 
         animRef.current = requestAnimationFrame(loop);
         return () => { if (animRef.current) cancelAnimationFrame(animRef.current); };
-    }, [isPaused, fireNeuron, synapses]);
+    }, [isPaused, fireNeuron, synapses, isLiveMode]);
 
     const selectedNeuron = useMemo(() => nodes.find(n => n.id === selectedNode) ?? null, [nodes, selectedNode]);
     const nodeMap = useMemo(() => { const m = new Map<string, NeuronNode>(); for (const n of nodes) m.set(n.id, n); return m; }, [nodes]);
@@ -597,8 +655,56 @@ export default function NeuralBrainPage() {
                         <span className="holo-logo-bracket">]</span>
                     </div>
                     <span className="holo-header-sub">COGNITIVE MODULE INTERFACE v2.1</span>
+                    {/* LIVE/DEMO Mode Badge */}
+                    <span
+                        className="holo-mode-badge"
+                        style={{
+                            marginLeft: 12,
+                            padding: '2px 10px',
+                            borderRadius: 4,
+                            fontSize: 10,
+                            fontWeight: 700,
+                            fontFamily: "'JetBrains Mono', monospace",
+                            letterSpacing: '0.1em',
+                            background: isLiveMode
+                                ? 'rgba(0, 255, 136, 0.15)'
+                                : 'rgba(255, 170, 0, 0.15)',
+                            color: isLiveMode ? '#00ff88' : '#ffaa00',
+                            border: `1px solid ${isLiveMode ? 'rgba(0,255,136,0.3)' : 'rgba(255,170,0,0.3)'}`,
+                        }}
+                    >
+                        {isLiveMode ? '● LIVE' : '◌ DEMO'}
+                    </span>
                 </div>
                 <div className="holo-header-right">
+                    {/* Island Selector (visible when islands available) */}
+                    {brainLiveData && brainLiveData.availableIslands.length > 0 && (
+                        <select
+                            className="holo-island-select"
+                            value={selectedSlotId ?? ''}
+                            onChange={(e) => setSelectedSlotId(e.target.value || null)}
+                            style={{
+                                background: 'rgba(0, 234, 255, 0.08)',
+                                color: 'var(--holo-cyan)',
+                                border: '1px solid rgba(0, 234, 255, 0.2)',
+                                borderRadius: 4,
+                                padding: '4px 8px',
+                                fontSize: 10,
+                                fontFamily: "'JetBrains Mono', monospace",
+                                letterSpacing: '0.06em',
+                                marginRight: 8,
+                                cursor: 'pointer',
+                                outline: 'none',
+                            }}
+                        >
+                            <option value="">AUTO-SELECT</option>
+                            {brainLiveData.availableIslands.map(island => (
+                                <option key={island.slotId} value={island.slotId}>
+                                    {island.pair}:{island.timeframe}
+                                </option>
+                            ))}
+                        </select>
+                    )}
                     <button className={`holo-btn ${isPaused ? 'warn' : ''}`} onClick={() => setIsPaused(!isPaused)}>
                         {isPaused ? '▶ RESUME' : '⏸ PAUSE'}
                     </button>

@@ -4,7 +4,187 @@ All notable changes to this project are documented here.
 
 ---
 
-## [v0.19.1] — 2026-03-07
+## [v0.27.0] — 2026-03-08
+
+### Added
+- **E2E Integration Test Suite (Phase 27 — 5-Expert Council)**
+  - `src/lib/engine/__tests__/integration-e2e.test.ts` — **33 tests**: 8-category comprehensive E2E testing
+    - Full Backtest Pipeline (5): runBacktest → trades, equity curve, metrics, random strategy resilience (20 iterations)
+    - Batch Backtest + PFLM Cache (4): batchBacktest, shared vs individual cache consistency, quickFitness agreement, performance (<5s for 10 strategies)
+    - Complete Evolution Cycle (4): genesis → evaluate → evolve across 5 generations, population size invariant, diversity index
+    - Market Scenario Testing (4): Bull trend, bear crash, sideways range, high volatility via realistic market data generators
+    - LiveTradeExecutor Signal Logic (4): Signal evaluation across 4 scenarios, regime detection (.currentRegime), position context (LONG/SHORT)
+    - HTF Candle Aggregation (4): M15→H1, H1→H4/D1, lower TF guard (empty result), volume aggregation (hour-aligned)
+    - Fitness Convergence (3): Elitism preservation across generations, mutation adaptation, deterministic trade generation
+    - Edge Cases (5): Minimum candles (warmup+1), below-warmup (empty result), missing indicators, empty candles, empty strategy list
+  - Realistic market data generators: `generateBullTrend()`, `generateBearCrash()`, `generateSideways()`, `generateHighVolatility()`
+  - Deterministic strategy factory: `createDeterministicStrategy()` (RSI-14 + EMA-50 mean reversion)
+
+- **Market Scenario Stress Matrix (MSSM — RADICAL INNOVATION)**
+  - `src/lib/engine/stress-matrix.ts` (~390 lines)
+    - 5 canonical market scenario generators (bull_trend, bear_crash, sideways_range, high_volatility, regime_transition)
+    - `runStressMatrix(strategy, candlesPerScenario)` — backtests across all 5 regimes simultaneously
+    - Regime Resilience Score (RRS): `avgFitness × (1 - normalizedVariance) × consistencyBonus`
+    - `batchStressMatrix(population)` — batch population analysis sorted by RRS
+    - Per-scenario breakdown: fitness, trades, metrics, detected regime, equity return, execution time
+    - Unique `regime_transition` scenario: bull→sideways→bear crash (tests strategy adaptability)
+
+### Fixed
+- **Confluence Gene HTF Aggregation**: `aggregateToHigherTimeframe()` validated in integration tests — sparse candle arrays from HTF confluence genes now gracefully handled via try/catch
+- **RegimeAnalysis property**: Corrected `.regime` → `.currentRegime` in integration tests
+- **Timestamp alignment**: Hour-aligned M15 candle timestamps for volume aggregation accuracy
+
+### Test Status
+✅ 211/211 tests passing (1.77s), 12 test files (11 suites), 0 regressions
+
+### Build Status
+✅ Passing (zero errors)
+
+---
+
+## [v0.26.0] — 2026-03-08
+
+### Added
+- **Live Paper Trading E2E Testnet Execution (Phase 26)**
+  - `src/lib/engine/live-trade-executor.ts` (~330 lines) — Signal-to-order pipeline
+    - `evaluateAndExecute()`: strategy signal evaluation → risk validation → position sizing → SL/TP → order placement
+    - Risk validation: calls RiskManager.validateTrade() before every order
+    - Duplicate prevention: tracks active positions per symbol
+    - Execution logging with timestamps and error handling
+  - `src/app/api/trading/status/route.ts` (~150 lines) — Trading telemetry endpoint
+    - Returns: autoTrade state, active positions, execution quality, risk capacity, engine status
+  - `useCortexLiveStore` — `setAutoTrade(enabled: boolean)` action for UI toggle
+  - `CortexLiveEngine` — `handleCandleClose()` wiring to LiveTradeExecutor
+
+### Build Status
+✅ Passing (zero errors)
+
+---
+
+
+
+### Added
+- **Test Coverage Expansion (Phase 25 — 5-Expert Council)**
+  - `src/lib/engine/__tests__/validation-pipeline.test.ts` — **26 tests**: WFA (rolling, anchored, degradation, IS/OOS split), Monte Carlo (permutation, equity curve randomization), Deflated Sharpe Ratio, Overfitting Detector (5 components: WFA efficiency, MC significance, complexity, regime diversity, consistency)
+  - `src/lib/engine/__tests__/migration-engine.test.ts` — **10 tests**: Affinity calculation (6 tiers: same pair+TF, same pair, same TF, different everything), adaptMigrant (metadata reset, slot reassignment, fitness zeroing, gene preservation)
+  - `src/lib/engine/__tests__/advanced-genes.test.ts` — **16 tests**: Microstructure genes (generation, VOLUME_PROFILE signals, crossover, mutation, 5 types), Price Action genes (generation, CANDLESTICK_PATTERN signals, all pattern types, crossover, mutation, 100-cycle GA invariant)
+  - `src/lib/engine/__tests__/evaluator.test.ts` — **10 tests**: Performance metrics (Sharpe, WinRate, ProfitFactor), fitness scoring (0-100 bounds), novelty bonus (advanced gene presence), deflated fitness, drawdown/streaks
+  - `src/lib/engine/__tests__/signal-engine.test.ts` — **14 tests**: SMA/EMA/RSI/MACD/Bollinger/ATR (valid-only array lengths), signal rule evaluation (ABOVE/BELOW/AND/OR), strategy pipeline (DNA→candles→signal)
+  - `src/lib/engine/__tests__/property-fuzzer.test.ts` — **30 tests**: Property-Based Fuzzing Harness + Chaos Monkey
+    - GA Operator Invariants (6): 100-iteration crossover stability, 1000-cycle stress
+    - Signal Engine Monotonicity (4): RSI∈[0,100], BB upper>mid>lower, ATR≥0
+    - Evaluator Consistency (4): win>loss monotonicity, fitness∈[0,100], complexity≤1.0
+    - WFA Symmetry (3): determinism, insufficient-trade guard, degradation clamping
+    - Overfitting Monotonicity (3): better WFA→lower score, significant MC→lower score
+    - Migration Affinity Algebra (4): reflexive, symmetric, range [0,1]
+    - **Chaos Monkey Stress (6)**: zero-price candles, negative volumes, flash crashes, single candle, flat prices
+
+### Fixed
+- **Type corrections across tests**: RiskGenes `positionSizePercent`/`maxLeverage`, TradeSignalAction `LONG/SHORT/HOLD`, PriceActionPatternType `CANDLESTICK_PATTERN`, SignalCondition `CROSS_ABOVE`, MicrostructureGene `params` nesting
+
+### Test Status
+✅ 178/178 tests passing (840ms), 10 test files, 0 regressions
+
+### Build Status
+✅ Passing (zero errors)
+
+---
+
+## [v0.22.0] — 2026-03-07
+
+### Added
+- **Risk Manager Global Enforcement (Phase 22 — 5-Layer Integration)**
+  - `src/lib/risk/manager.ts` — Added `getRiskSnapshot()` method (~50 lines)
+    - Serializable snapshot: 8 rail configs, utilizations, emergency stop, daily PnL, global risk score
+  - `src/types/index.ts` — `RiskSnapshot` interface + `CortexSnapshot.riskSnapshot` field
+  - `src/lib/engine/cortex.ts` — RiskManager singleton wired into constructor, `recordTrade()`, `emergencyStopAll()`, `getSnapshot()`
+  - `src/lib/hooks/usePipelineLiveData.ts` — `riskLive` field + `deriveRiskSnapshot()` function
+  - `src/app/pipeline/page.tsx` — **RiskShieldPanel** (~330 lines)
+    - Global Risk Score ring (SVG 0-100, green→amber→red gradient)
+    - 8-rail status matrix with animated utilization bars + status badges (ENFORCED/OK/STANDBY)
+    - >80% utilization → pulse-glow animation
+    - Emergency Stop indicator, Daily PnL display, recent risk event log
+- **Neural Brain Live Binding**: Connected holographic brain to live Cortex/Island state
+- **MRTI Dashboard Panel**: `MRTIForecastPanel` + Regime Horizon Bar radical innovation
+- **Strategic Overmind Live Binding**: 25-field `OvermindLiveSnapshot` + Cognitive Pulse (Token Pressure + Phase Heartbeat)
+- **Vitest Test Framework**
+  - `vitest.config.ts` + `vite-tsconfig-paths` for `@/` alias resolution
+  - `npm test` (run) + `npm run test:watch` (interactive) scripts
+  - `src/lib/risk/__tests__/manager.test.ts` — **37 tests**: 8 safety rails, snapshot, trade recording, reset + **Safety Rail Mutation Boundary Tests** (radical innovation)
+  - `src/lib/engine/__tests__/cortex-risk.test.ts` — **3 tests**: Cortex integration
+  - `src/lib/hooks/__tests__/risk-derivation.test.ts` — **5 tests**: derivation null safety + passthrough
+
+### Changed
+- `src/app/pipeline/page.tsx` — +330 lines (RiskShieldPanel), now ~3730 lines total, 12 panels
+- `src/lib/hooks/usePipelineLiveData.ts` — +40 lines (riskLive derivation)
+- `package.json` — +`vitest`, `vite-tsconfig-paths` devDependencies, +`test`/`test:watch` scripts
+
+### Architecture
+- ADR-012: Risk Manager Global Enforcement + Automated Test Infrastructure
+
+### Build Status
+✅ Passing (zero errors)
+
+### Test Status
+✅ 45/45 tests passing (824ms)
+
+---
+
+## [v0.21.0] — 2026-03-07
+
+### Added
+- **Pipeline Dashboard Live Integration (Phase 21 — Radical Innovations)**
+  - `src/lib/hooks/usePipelineLiveData.ts` — Data bridge hook (~540 lines)
+    - Connects 5 pipeline panels to live Cortex/Island state
+    - 3-second polling with `useCallback` + `useRef` interval
+    - Dual-mode: LIVE (from CortexLiveEngine) or DEMO (fallback generators)
+    - Island selector support (`selectedSlotId` param)
+    - Derives: generations, gates, roster, replayCells, stages, telemetry, propagation, genomeHealth
+  - `src/lib/engine/evolution-health.ts` — **Evolution Health Analyzer** (~300 lines)
+    - `computeGenomeHealth(island)` → `GenomeHealthSnapshot`
+    - `computeFitnessTrajectory()` — linear regression slope over last 5 generations
+    - `computeGeneDominance()` — frequency histogram of IndicatorTypes with ↑/•/↓ trends
+    - `detectAutoInterventions()` — detects mutation boosts/decays from rate changes across generations
+    - `assessHealth()` — A/B/C/D/F grading based on convergence risk + diversity + trajectory
+  - **LivePulseTelemetryPanel** component (~220 lines in pipeline/page.tsx)
+    - ADFI Health: candles, latency, gaps, reconnects, uptime
+    - CIRPN Propagation: regime events, leaders, correlations, warnings with ETA bars
+  - **EvolutionHeartbeatPanel** component (~250 lines in pipeline/page.tsx)
+    - Animated health grade ring (conic-gradient, pulse animation on high-risk)
+    - 5 core metrics: Diversity, Stagnation, Trajectory, Mutation Δ, Best Fitness
+    - Gene dominance bar chart (top 8 IndicatorTypes with trend indicators)
+    - Autopilot intervention log (⚡ mutation boost / 📉 decay / 🎲 diversity injection)
+
+### Changed
+- `src/app/pipeline/page.tsx` — +520 lines total (LivePulseTelemetry + EvolutionHeartbeat + imports)
+  - Island selector dropdown in header (shows pair + timeframe per island)
+  - LIVE/DEMO mode badge indicator
+  - Row 1.5: LivePulseTelemetryPanel (LIVE mode only)
+  - Row 1.75: EvolutionHeartbeatPanel (LIVE mode only)
+
+### Architecture
+- ADR-011: Pipeline Live Integration — Data bridge hook pattern, dual-mode operation, hidden engine intelligence exposure
+
+### Build Status
+✅ Passing (zero errors)
+
+## [v0.20.0] — 2026-03-07
+
+### Added
+- **CortexLiveEngine (Phase 20 — Live Market Connection)**
+  - `src/lib/engine/cortex-live-engine.ts` — Central live orchestrator (~490 lines)
+    - Historical seed (500 candles per slot), kline + ticker WebSocket subscriptions
+    - Candle aggregation, island routing, snapshot refresh callbacks
+    - Boot sequence: initialize → seed → subscribe → wire callbacks
+  - `src/lib/engine/evolution-scheduler.ts` — Autonomous evolution trigger (~200 lines)
+  - `src/lib/engine/adaptive-data-flow.ts` — ADFI gap detection + telemetry (~420 lines)
+  - `src/lib/engine/regime-propagation.ts` — CIRPN cross-island regime propagation (~380 lines)
+  - `useCortexLiveStore` Zustand store addition — exposes CortexLiveEngine instance + status
+
+### Build Status
+✅ Passing (zero errors)
+
+
 
 ### Added
 - **Atomic Order Lifecycle Engine (Phase 19.1 — Radical Innovation)**

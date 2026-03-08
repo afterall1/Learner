@@ -38,12 +38,32 @@ export class OpusClient {
 
     private constructor(config: Partial<OvermindConfig> = {}) {
         this.config = { ...DEFAULT_OVERMIND_CONFIG, ...config };
+
+        // Wire environment variables → config (Next.js server-side)
+        if (typeof process !== 'undefined' && process.env) {
+            // OVERMIND_ENABLED: override config.enabled from env
+            const envEnabled = process.env.OVERMIND_ENABLED;
+            if (envEnabled !== undefined) {
+                this.config.enabled = envEnabled === 'true';
+            }
+
+            // OVERMIND_MAX_TOKENS_PER_HOUR: override token budget from env
+            const envTokenBudget = process.env.OVERMIND_MAX_TOKENS_PER_HOUR;
+            if (envTokenBudget !== undefined) {
+                const parsed = parseInt(envTokenBudget, 10);
+                if (!isNaN(parsed) && parsed > 0) {
+                    this.config.maxTokensPerHour = parsed;
+                }
+            }
+        }
+
         this.model = this.config.model;
 
-        // Read API key from environment (Next.js server-side)
-        this.apiKey = typeof process !== 'undefined'
+        // Read API key from environment — trim whitespace to prevent 401 errors
+        const rawKey = typeof process !== 'undefined'
             ? (process.env?.ANTHROPIC_API_KEY ?? null)
             : null;
+        this.apiKey = rawKey ? rawKey.trim() : null;
     }
 
     static getInstance(config?: Partial<OvermindConfig>): OpusClient {

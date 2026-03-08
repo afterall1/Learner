@@ -34,6 +34,11 @@ import {
     crossoverDCGene,
     mutateDCGene,
 } from './directional-change';
+import {
+    generateRandomConfluenceGene,
+    crossoverConfluenceGene,
+    mutateConfluenceGene,
+} from './confluence-genes';
 
 // ─── Random Utility Helpers ──────────────────────────────────
 
@@ -241,6 +246,11 @@ export function generateRandomStrategy(generation: number = 0): StrategyDNA {
             generateRandomDCGene(),
         ];
     }
+    if (Math.random() < 0.30) {
+        strategy.confluenceGenes = [
+            generateRandomConfluenceGene(strategy.preferredTimeframe),
+        ];
+    }
 
     // Calculate structural complexity
     strategy.metadata.structuralComplexity = calculateStructuralComplexity(strategy);
@@ -441,13 +451,14 @@ export function deserializeStrategy(json: string): StrategyDNA {
  */
 export function calculateStructuralComplexity(strategy: StrategyDNA): number {
     let familyCount = 0;
-    const maxFamilies = 5; // indicator, microstructure, priceAction, composite, dc
+    const maxFamilies = 6; // indicator, microstructure, priceAction, composite, dc, confluence
 
     if (strategy.indicators.length > 0) familyCount++;
     if (strategy.microstructureGenes && strategy.microstructureGenes.length > 0) familyCount++;
     if (strategy.priceActionGenes && strategy.priceActionGenes.length > 0) familyCount++;
     if (strategy.compositeGenes && strategy.compositeGenes.length > 0) familyCount++;
     if (strategy.dcGenes && strategy.dcGenes.length > 0) familyCount++;
+    if (strategy.confluenceGenes && strategy.confluenceGenes.length > 0) familyCount++;
 
     return Math.round((familyCount / maxFamilies) * 100) / 100;
 }
@@ -505,6 +516,18 @@ function crossoverAdvancedGenes(
         } else {
             const allDC = [...dcA, ...dcB];
             child.dcGenes = [JSON.parse(JSON.stringify(randomPick(allDC)))];
+        }
+    }
+
+    // Confluence genes (Phase 23)
+    const confA = parentA.confluenceGenes ?? [];
+    const confB = parentB.confluenceGenes ?? [];
+    if (confA.length > 0 || confB.length > 0) {
+        if (confA.length > 0 && confB.length > 0) {
+            child.confluenceGenes = [crossoverConfluenceGene(randomPick(confA), randomPick(confB))];
+        } else {
+            const allConf = [...confA, ...confB];
+            child.confluenceGenes = [JSON.parse(JSON.stringify(randomPick(allConf)))];
         }
     }
 }
@@ -591,9 +614,28 @@ function mutateAdvancedGenes(
         }
     }
 
+    // Mutate existing confluence genes (Phase 23)
+    if (strategy.confluenceGenes) {
+        strategy.confluenceGenes = strategy.confluenceGenes.map(g => {
+            if (Math.random() < rate) {
+                mutations.push('mutate:confluence');
+                return mutateConfluenceGene(g, rate);
+            }
+            return g;
+        });
+    }
+    if (Math.random() < rate * 0.12) {
+        if (!strategy.confluenceGenes) strategy.confluenceGenes = [];
+        if (strategy.confluenceGenes.length < 2) {
+            strategy.confluenceGenes.push(generateRandomConfluenceGene(strategy.preferredTimeframe));
+            mutations.push('+confluence');
+        }
+    }
+
     // Remove empty arrays
     if (strategy.microstructureGenes?.length === 0) delete strategy.microstructureGenes;
     if (strategy.priceActionGenes?.length === 0) delete strategy.priceActionGenes;
     if (strategy.compositeGenes?.length === 0) delete strategy.compositeGenes;
     if (strategy.dcGenes?.length === 0) delete strategy.dcGenes;
+    if (strategy.confluenceGenes?.length === 0) delete strategy.confluenceGenes;
 }

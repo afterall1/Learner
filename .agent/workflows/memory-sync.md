@@ -53,10 +53,14 @@ cat memory/_SYNC_CHECKLIST.md
 - **Core Engine Layer**: `strategy-dna.ts`, `evaluator.ts`, `evolution.ts`, `brain.ts`, `signal-engine.ts`, `experience-replay.ts`
 - **Advanced Gene Layer**: `microstructure-genes.ts`, `price-action-genes.ts`, `composite-functions.ts`, `directional-change.ts`
 - **Dashboard Layer**: `page.tsx` (panels, components), `brain/page.tsx` (holographic neural cortex), `pipeline/page.tsx` (pipeline panels, archaeology), `globals.css` (design system, animations, holographic theme)
+- **Live Engine Layer**: `cortex-live-engine.ts`, `evolution-scheduler.ts`, `adaptive-data-flow.ts` (ADFI), `regime-propagation.ts` (CIRPN)
+- **Pipeline Live Layer**: `hooks/usePipelineLiveData.ts` (data bridge hook), `evolution-health.ts` (health analyzer)
 - **Persistence Layer**: `persistence.ts` (IndexedDB), `supabase.ts` (cloud DB), `persistence-bridge.ts` (dual-write bridge)
 - **Overmind Layer**: `overmind/strategic-overmind.ts`, `overmind/opus-client.ts`, `overmind/hypothesis-engine.ts`, `overmind/evolution-director.ts`, `overmind/adversarial-tester.ts`, `overmind/predictive-orchestrator.ts`, `overmind/episodic-memory.ts`, `overmind/counterfactual-engine.ts`, `overmind/meta-cognition.ts`, and 6 supporting modules
 - **Binance Execution Layer**: `api/binance-rest.ts` (AdaptiveRateGovernor), `api/exchange-circuit-breaker.ts`, `api/user-data-stream.ts`, `api/account-sync.ts`, `api/order-lifecycle.ts` (AOLE), `api/execution-quality.ts`
 - **Skill Layer**: All `.agent/skills/*/SKILL.md` files, `.agent/skill-map.json`, `.agent/skill-graph.md`
+- **Test Layer**: `vitest.config.ts`, `risk/__tests__/manager.test.ts`, `engine/__tests__/cortex-risk.test.ts`, `hooks/__tests__/risk-derivation.test.ts`, `engine/__tests__/validation-pipeline.test.ts`, `engine/__tests__/migration-engine.test.ts`, `engine/__tests__/advanced-genes.test.ts`, `engine/__tests__/evaluator.test.ts`, `engine/__tests__/signal-engine.test.ts`, `engine/__tests__/confluence-genes.test.ts`, `engine/__tests__/property-fuzzer.test.ts`, `engine/__tests__/integration-e2e.test.ts`
+- **Live Trade Layer**: `engine/live-trade-executor.ts`, `engine/stress-matrix.ts`, `app/api/trading/status/route.ts`
 
 ---
 
@@ -158,6 +162,8 @@ If significant architectural changes were made:
 - ADR-008: Strategic Overmind Architecture (Opus 4.6 AI Supervisor, PSPP, CCR)
 - ADR-009: Neural Brain Visualization Architecture (Holographic 3D Cortex, Biological Refractory Period, Multi-Color HSLA Heatmap)
 - ADR-010: Atomic Order Lifecycle Engine (13-state machine, mandatory SL invariant, Adaptive Rate Governor, Execution Quality Tracker)
+- ADR-011: Pipeline Live Integration Architecture (data bridge hook, dual-mode, hidden engine intelligence exposure)
+- ADR-012: Risk Manager Global Enforcement + Automated Test Infrastructure (5-layer integration, Vitest, Safety Rail Mutation Tests)
 
 ---
 
@@ -220,19 +226,111 @@ Target: **95%+ coherence score**. If below, fix the broken references before com
 
 ---
 
-## Step 9: Build Verification
+## Step 8.7: Memory Drift Auto-Patcher (Radical Innovation)
 
-Run the build to ensure nothing is broken:
+Run the Memory Drift Auto-Patcher to detect undocumented source files and generate copy-paste-ready patches:
+
+```
+node scripts/memory-autopatcher.js
+```
+
+This goes BEYOND detection by performing 5-phase self-healing analysis:
+1. **File Discovery**: Scans all `src/` source files (.ts, .tsx, .js, .jsx)
+2. **Coverage Check**: Cross-references every file against `file_map.md` entries
+3. **Purpose Extraction**: Reads file headers to auto-extract description from comments/exports
+4. **Layer Detection**: Maps each file to the correct `file_map.md` section via 16 pattern rules
+5. **Patch Generation**: Outputs exact table rows to copy-paste into `file_map.md`
+
+Also cross-checks `changelog.md` and `active_context.md` for documentation gaps.
+
+Target: **0 undocumented files**. If any are found, copy-paste the generated patches into the appropriate memory docs.
+
+---
+
+## Step 8.9: Test↔Memory Cross-Validator (Radical Innovation — Phase 22)
+
+Run the Test↔Memory Cross-Validator to verify bidirectional integrity between test files and memory documentation:
+
+```
+node scripts/test-memory-validator.js
+```
+
+This performs 5-phase semantic cross-validation:
+1. **Test Documentation**: Every test file is documented in `file_map.md`
+2. **Critical File Coverage**: Every 🔴 Critical source file has corresponding test coverage
+3. **ADR Integrity**: Every ADR file is referenced in workflow commands
+4. **Version Sync**: Changelog version matches active_context phase
+5. **Test Count Accuracy**: Test counts in memory docs match actual `it()` count in source
+
+Target: **85%+ composite integrity score** (Grade A). If below, fix the gaps in memory docs or add missing tests.
+
+---
+
+## Step 9: Test Coverage Guardian (Radical Innovation — Phase 25)
+
+Run the Test Coverage Guardian to analyze function-level test coverage across all engine modules:
+
+```
+node scripts/test-coverage-guardian.js
+```
+
+This performs 5-phase automated analysis:
+1. **Function Discovery**: Scans all engine/risk/hooks modules for exported functions, classes, and enums
+2. **Test Mapping**: Cross-references each exported function with test file imports and call-site references
+3. **Coverage Scoring**: Per-module function coverage % with visual bars
+4. **Gap Detection**: Lists untested exported functions in 🔴 Critical modules
+5. **Staleness Check**: Detects test files older than their corresponding source files
+
+Produces a **Test Health Score** (0-100, Grade A-F) based on:
+- Overall function coverage (40%)
+- Critical module coverage (40%)
+- Chaos Monkey presence (20%)
+- Stale test penalty (-5 per stale file)
+
+Target: **Grade B+ (75+)**. If below, prioritize the recommended gaps.
+
+---
+
+## Step 9.5: Memory Integrity Auto-Auditor (Radical Innovation — Phase 27)
+
+Run the Memory Integrity Auto-Auditor for 7-phase deep cross-validation between memory docs and source code:
+
+```
+node scripts/memory-integrity-auditor.js
+```
+
+This performs 7-phase semantic cross-validation:
+1. **Orphaned References**: Verifies every file path in memory docs exists in the source tree
+2. **Phantom Files**: Detects source files not documented in `file_map.md`
+3. **Test Count Desync**: Compares documented test counts against actual `it()` calls in source
+4. **Version Chain Integrity**: Validates changelog versions are in descending order
+5. **Phase Timeline Consistency**: Cross-checks phase numbers across active_context, overview, and changelog
+6. **ADR Coverage**: Validates ADR count matches between workflow references and actual files
+7. **Workflow Command Validity**: Checks all `node` scripts in workflow commands exist
+
+Target: **Grade A+ (100%)**. If below, fix the identified documentation gaps before committing.
+
+---
+
+## Step 10: Build Verification
+
+Run the tests and build to ensure nothing is broken:
+
+```
+npm test 2>&1
+```
+
+Record test result (pass/fail count).
 
 ```
 npx next build 2>&1
 ```
 
-Record the result (pass/fail) in `active_context.md` build status.
+Record the build result (pass/fail) in `active_context.md` build status.
 
 ---
 
-## Step 10: Completion Report
+## Step 11: Completion Report
 
 After all updates are complete, provide the following confirmation:
 

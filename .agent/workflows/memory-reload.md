@@ -24,11 +24,18 @@ cat memory/overview.md
 - **Advanced Strategy Genome (Phase 9)**: 5 evolvable gene families (Microstructure, Price Action, Composite Functions, Multi-TF Confluence, Directional Changes)
 - Risk rails are hardcoded and non-overridable (GLOBAL across all islands)
 - Paper trading + 4-Gate Validation is mandatory before live trading
-- **Dashboard**: 3 pages — Main (9 panels + Cortex Neural Map) + Pipeline (8 panels + Strategy Archaeology + Overmind Hub) + Brain (Holographic Neural Cortex)
+- **Dashboard**: 3 pages — Main (9 panels + Cortex Neural Map) + Pipeline (12 panels: 5 pipeline + 3 archaeology + Overmind Hub + LivePulseTelemetry + EvolutionHeartbeat + Risk Shield) + Brain (Holographic Neural Cortex)
 - **Strategic Overmind**: Opus 4.6 AI supervisor with 6-phase reasoning cycle (OBSERVE→ANALYZE→HYPOTHESIZE→DIRECT→VERIFY→LEARN), 15 modules, PSPP + CCR systems
 - **Neural Brain Visualization**: Phase 18 — Holographic JARVIS-style 3D cortex, multi-color heatmap, biological refractory period
 - **Binance Execution Layer**: Phase 19 — 7 REST methods, 4 API routes, User Data WebSocket, Account Sync, Exchange Circuit Breaker + ExchangeInfoCache
 - **AOLE**: Phase 19.1 — 13-state atomic order lifecycle (Entry→SL→TP), Adaptive Rate Governor, Execution Quality Tracker
+- **CortexLiveEngine**: Phase 20 — Live Binance↔Cortex orchestrator, ADFI (gap detection + telemetry), CIRPN (cross-island regime propagation), EvolutionScheduler
+- **Pipeline Live Integration**: Phase 21 — `usePipelineLiveData` hook (dual-mode LIVE/DEMO), island selector, LivePulseTelemetryPanel, EvolutionHeartbeatPanel (convergence/stagnation intelligence exposure)
+- **Risk Manager Global Enforcement**: Phase 22 — RiskManager singleton in Cortex, `getRiskSnapshot()`, `RiskSnapshot` type, 5-layer integration, Risk Fortress visualization
+- **Automated Tests**: Phase 27 — Vitest, 12 suites (211 tests), E2E Integration Tests (33), Property-Based Fuzzing Harness + Chaos Monkey, Safety Rail Mutation Boundary Tests
+- **Live Trade Execution**: Phase 26 — LiveTradeExecutor signal→order pipeline, /api/trading/status telemetry, auto-trade toggle
+- **E2E Integration Testing**: Phase 27 — 33-test suite (8 categories: backtest pipeline, batch PFLM, evolution cycle, market scenarios, signal logic, HTF aggregation, fitness convergence, edge cases)
+- **Market Scenario Stress Matrix**: Phase 27 — MSSM: 5-regime cross-scenario backtesting, Regime Resilience Score (RRS)
 
 ---
 
@@ -98,7 +105,9 @@ cat memory/file_map.md
 - **Dashboard**: `page.tsx` (9 panels + CortexNeuralMap), `brain/page.tsx` (Holographic Neural Cortex), `pipeline/page.tsx` (8 panels + Strategy Archaeology), `globals.css` (2580+ lines), `layout.tsx`
 - **Binance API**: `api/binance-rest.ts` (AdaptiveRateGovernor), `api/exchange-circuit-breaker.ts`, `api/user-data-stream.ts`, `api/account-sync.ts`, `api/order-lifecycle.ts` (AOLE), `api/execution-quality.ts`
 - **API Routes**: `api/binance/order/route.ts`, `position/route.ts`, `account/route.ts`, `depth/route.ts`
-- **Memory**: Overview, Active Context, System Design, File Map, ADRs (10), Changelog
+- **Memory**: Overview, Active Context, System Design, File Map, ADRs (12), Changelog
+- **Live Trade Execution**: `engine/live-trade-executor.ts`, `engine/stress-matrix.ts`
+- **API Routes**: `api/binance/order/route.ts`, `position/route.ts`, `account/route.ts`, `depth/route.ts`, `api/trading/status/route.ts`
 
 ---
 
@@ -121,6 +130,8 @@ Get-ChildItem memory/adr/*.md | ForEach-Object { Write-Host "=== $($_.Name) ==="
 - **ADR-008**: Strategic Overmind Architecture — Opus 4.6 AI supervisor, 6-phase reasoning cycle, PSPP, CCR, graceful degradation
 - **ADR-009**: Neural Brain Visualization Architecture — Holographic 3D cortex, biological refractory period, multi-color HSLA heatmap
 - **ADR-010**: Atomic Order Lifecycle Engine — 13-state machine, mandatory SL invariant, Adaptive Rate Governor, Execution Quality Tracker
+- **ADR-011**: Pipeline Live Integration Architecture — Data bridge hook, dual-mode, hidden engine intelligence exposure
+- **ADR-012**: Risk Manager Global Enforcement + Automated Test Infrastructure — 5-layer integration, Vitest, Safety Rail Mutation Tests
 
 ---
 
@@ -173,8 +184,10 @@ After completing all steps, provide the following confirmation to the user:
 - **Meta-Evolution**: GA² [Active/Inactive], HyperDNA per-island
 - **Validation**: 4-Gate Pipeline (WFA + MC + Overfitting + Regime)
 - **Promotion**: Paper → Candidate → Active
-- **Dashboard**: 3 pages, 18 panels total (Main 9 + Pipeline 8 + Brain 1)
-- **Pipeline**: Strategy Archaeology (Gene Lineage + Gene Survival + Decision Explainer)
+- **Dashboard**: 3 pages, 22 panels total (Main 9 + Pipeline 12 + Brain 1)
+- **Pipeline**: Strategy Archaeology (Gene Lineage + Gene Survival + Decision Explainer) + Risk Shield (Risk Fortress)
+- **Risk Enforcement**: Phase 22 — RiskManager singleton in Cortex, 5-layer integration
+- **Automated Tests**: Vitest, 12 suites, 211 tests including Safety Rail Mutation Boundary Tests + Property-Based Fuzzing + Chaos Monkey + E2E Integration (33 tests)
 - **Brain Visualization**: Holographic Neural Cortex (10 neurons, 15 synapses, Memory Trace Heatmap)
 - **Persistence**: Hybrid (IndexedDB local + Supabase cloud), PersistenceBridge dual-write
 - **Binance Execution**: Phase 19 — 7 REST methods, 4 API routes, Circuit Breaker, User Data WS

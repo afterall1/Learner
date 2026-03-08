@@ -1,0 +1,15 @@
+﻿
+[36m╔══════════════════════════════════════════════╗[0m
+[36m║  🧬 Context DNA Fingerprint — Learner       ║[0m
+[36m╚══════════════════════════════════════════════╝[0m
+
+[31m[1m✗ DRIFT DETECTED — 3 issue(s) found[0m
+
+  [33mMEDIUM (2):[0m
+    [33m○[0m memory/architecture/system_design.md does not reference backtester.ts
+    [33m○[0m memory/architecture/system_design.md does not reference market-simulator.ts
+  [2mLOW (1):[0m
+    [2m·[0m src/app/pipeline/page.tsx: 2045 → 3732 lines (82% change)
+
+[33mRun with --generate to update the fingerprint after fixing drift.[0m
+

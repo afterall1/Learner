@@ -159,7 +159,7 @@ export interface MutationSuggestion {
     strategyId: string;
     strategyName: string;
     /** Which gene type to modify */
-    geneType: 'indicator' | 'signal' | 'risk' | 'microstructure' | 'priceAction' | 'composite' | 'dc';
+    geneType: 'indicator' | 'signal' | 'risk' | 'microstructure' | 'priceAction' | 'composite' | 'dc' | 'confluence';
     /** Natural language description of current weakness */
     currentWeakness: string;
     /** Specific suggested change */

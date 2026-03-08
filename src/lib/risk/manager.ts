@@ -12,6 +12,7 @@ import {
     StrategyDNA,
     BrainLog,
     LogLevel,
+    type RiskSnapshot,
 } from '@/types';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -208,6 +209,54 @@ export class RiskManager {
         this.dailyStartBalance = currentBalance;
         this.dailyPnl = 0;
         this.log(LogLevel.INFO, 'Daily risk counters reset', { balance: currentBalance });
+    }
+
+    // ─── Snapshot for Dashboard ────────────────────────────────
+
+    /**
+     * Get a serializable snapshot of all risk state for the dashboard.
+     * Called by Cortex.getSnapshot() every tick.
+     */
+    getRiskSnapshot(currentBalance: number, openPositionCount: number): RiskSnapshot {
+        const dailyDrawdownPct = this.getDailyDrawdownPercent(currentBalance);
+        const totalDrawdownPct = this.getTotalDrawdownPercent(currentBalance);
+        const positionUtilPct = openPositionCount / this.config.maxSimultaneousPositions;
+        const dailyDDUtilPct = this.config.dailyDrawdownLimit > 0
+            ? dailyDrawdownPct / this.config.dailyDrawdownLimit : 0;
+        const totalDDUtilPct = this.config.totalDrawdownLimit > 0
+            ? totalDrawdownPct / this.config.totalDrawdownLimit : 0;
+
+        // Global risk score: weighted max of all rail utilizations (0-100)
+        const globalRiskScore = Math.min(100, Math.round(
+            Math.max(positionUtilPct, dailyDDUtilPct, totalDDUtilPct) * 100
+        ));
+
+        return {
+            emergencyStopActive: this.isEmergencyStopped,
+            dailyPnl: this.dailyPnl,
+            dailyStartBalance: this.dailyStartBalance,
+            totalStartBalance: this.totalStartBalance,
+            dailyDrawdownPct,
+            totalDrawdownPct,
+            openPositionCount,
+            globalRiskScore,
+            rails: {
+                maxRiskPerTrade: this.config.maxRiskPerTrade,
+                maxSimultaneousPositions: this.config.maxSimultaneousPositions,
+                dailyDrawdownLimit: this.config.dailyDrawdownLimit,
+                totalDrawdownLimit: this.config.totalDrawdownLimit,
+                maxLeverage: this.config.maxLeverage,
+                mandatoryStopLoss: true,
+                paperTradeMinimum: this.config.paperTradeMinimum,
+                emergencyStopEnabled: this.config.emergencyStopEnabled,
+            },
+            railUtilizations: {
+                positionUtil: Math.min(1, positionUtilPct),
+                dailyDrawdownUtil: Math.min(1, dailyDDUtilPct),
+                totalDrawdownUtil: Math.min(1, totalDDUtilPct),
+            },
+            recentLogs: this.riskLogs.slice(-10),
+        };
     }
 
     // ─── Getters ─────────────────────────────────────────────────

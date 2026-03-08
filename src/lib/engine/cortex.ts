@@ -20,6 +20,7 @@ import {
     MigrationEvent,
     PerformanceMetrics,
     MarketRegime,
+    Timeframe,
 } from '@/types';
 import type { HyperDNA, MetaEvolutionConfig } from '@/types';
 import { DEFAULT_META_EVOLUTION_CONFIG } from '@/types';
@@ -29,6 +30,7 @@ import { MigrationEngine, MigrationConfig, DEFAULT_MIGRATION_CONFIG } from './mi
 import { CapitalAllocator, AllocationConfig, DEFAULT_ALLOCATION_CONFIG, calculateEqualAllocation } from './capital-allocator';
 import { MetaEvolutionEngine } from './meta-evolution';
 import { StrategicOvermind } from './overmind/strategic-overmind';
+import { RiskManager } from '@/lib/risk/manager';
 
 // ─── Cortex Configuration ────────────────────────────────────
 
@@ -73,12 +75,20 @@ export class Cortex {
     private overmindCycleInterval: number = 0;
     private readonly OVERMIND_CYCLE_EVERY_N_TRADES: number = 50;
 
+    // ─── Risk Manager (GLOBAL Safety Rails) ───────────────────
+    private riskManager: RiskManager;
+
+    // ─── Phase 23: Shared Candle Cache (Confluence Gene HTF Routing) ──
+    private candleCache: Map<string, OHLCV[]> = new Map();
+
     constructor(config: Partial<CortexConfig> = {}) {
         this.config = { ...DEFAULT_CORTEX_CONFIG, ...config };
         this.migrationEngine = new MigrationEngine(this.config.migrationConfig);
         this.capitalAllocator = new CapitalAllocator(this.config.allocationConfig);
         this.metaEvolutionEngine = new MetaEvolutionEngine();
         this.overmind = StrategicOvermind.getInstance();
+        this.riskManager = new RiskManager();
+        this.riskManager.initialize(this.config.totalCapital);
     }
 
     // ─── Island Lifecycle ────────────────────────────────────────
@@ -220,6 +230,9 @@ export class Cortex {
         island.recordTrade(trade);
         this.totalTradesAllIslands++;
 
+        // GLOBAL Risk: Record trade result for daily PnL tracking
+        this.riskManager.recordTradeResult(trade);
+
         // After recording, check if migration should run
         this.checkMigrationCycle();
 
@@ -254,6 +267,50 @@ export class Cortex {
         for (const [slotId, island] of this.islands) {
             if (island.slot.pair === pair) {
                 island.updateMarketData(candles);
+            }
+        }
+    }
+
+    /**
+     * Phase 23: Update the shared candle cache and route HTF candles to islands.
+     * Called whenever new candle data arrives for any pair/timeframe combination.
+     */
+    updateCandleCache(pair: string, timeframe: Timeframe, candles: OHLCV[]): void {
+        const cacheKey = `${pair}:${timeframe}`;
+        this.candleCache.set(cacheKey, candles);
+
+        // Route HTF candles to islands that might need them
+        this.routeHTFCandles(pair);
+    }
+
+    /**
+     * Phase 23: Route higher timeframe candles to islands.
+     * For each island of a given pair, find cached candles from higher
+     * timeframes and push them via island.setHigherTimeframeCandles().
+     *
+     * This enables confluence genes to access HTF data without
+     * each island needing to manage its own HTF subscriptions.
+     */
+    private routeHTFCandles(pair: string): void {
+        const allTimeframes: Timeframe[] = [
+            Timeframe.M1, Timeframe.M5, Timeframe.M15,
+            Timeframe.H1, Timeframe.H4, Timeframe.D1,
+        ];
+
+        for (const [, island] of this.islands) {
+            if (island.slot.pair !== pair) continue;
+
+            // Find all TFs higher than this island's own TF
+            const islandTfIndex = allTimeframes.indexOf(island.slot.timeframe as Timeframe);
+            if (islandTfIndex < 0) continue;
+
+            for (let i = islandTfIndex + 1; i < allTimeframes.length; i++) {
+                const htf = allTimeframes[i];
+                const cacheKey = `${pair}:${htf}`;
+                const cachedCandles = this.candleCache.get(cacheKey);
+                if (cachedCandles && cachedCandles.length > 0) {
+                    island.setHigherTimeframeCandles(htf, cachedCandles);
+                }
             }
         }
     }
@@ -371,6 +428,8 @@ export class Cortex {
      * Emergency stop all islands.
      */
     emergencyStopAll(): CortexSnapshot {
+        // Trigger RiskManager emergency stop (GLOBAL)
+        this.riskManager.triggerEmergencyStop('Manual emergency stop via Cortex');
         for (const [, island] of this.islands) {
             island.emergencyStop();
         }
@@ -422,6 +481,20 @@ export class Cortex {
             ? this.overmind.getSnapshot()
             : undefined;
 
+        // Count GLOBAL open positions: islands in TRADING state
+        let globalOpenPositions = 0;
+        for (const snap of islandSnapshots) {
+            if (snap.state === BrainState.TRADING) {
+                globalOpenPositions++;
+            }
+        }
+
+        // GLOBAL Risk snapshot
+        const riskSnapshot = this.riskManager.getRiskSnapshot(
+            this.config.totalCapital,
+            globalOpenPositions,
+        );
+
         return {
             islands: islandSnapshots,
             globalState: this.globalState,
@@ -434,6 +507,7 @@ export class Cortex {
             globalLogs: this.globalLogs.slice(-100),
             totalCapital: this.config.totalCapital,
             overmindSnapshot,
+            riskSnapshot,
         };
     }
 
@@ -732,6 +806,43 @@ export class Cortex {
         });
     }
 
+    /**
+     * Phase 24: Called by CortexLiveEngine after an evolution generation completes.
+     * Triggers the Overmind's per-generation hook (hypothesis seeding + directives).
+     * This is the SECOND Overmind trigger path (the first is trade-based every 50 trades).
+     */
+    onEvolutionCycleComplete(slotId: string, generationNumber: number, bestFitness: number): void {
+        if (!this.overmind.isEnabled()) return;
+
+        const island = this.islands.get(slotId);
+        if (!island) return;
+
+        const snapshot = island.getSnapshot();
+
+        // Fire-and-forget async: Overmind processes the generation
+        this.overmind.onGenerationEvolved(snapshot, generationNumber)
+            .then((result) => {
+                // Apply hypothesis seeds to the island's population
+                if (result.hypothesisSeeds.length > 0) {
+                    this.globalLog(LogLevel.EVOLUTION,
+                        `🧠 [${slotId}] Overmind seeded ${result.hypothesisSeeds.length} hypothesis strategies`,
+                    );
+                }
+
+                // Log directive if issued
+                if (result.directive) {
+                    this.globalLog(LogLevel.EVOLUTION,
+                        `🧠 [${slotId}] Overmind directive: ${result.directive.populationHealth.recommendedAction}` +
+                        ` (convergence: ${result.directive.populationHealth.convergenceRisk}, stagnation: ${result.directive.populationHealth.stagnationRisk})`,
+                    );
+                }
+            })
+            .catch((error: unknown) => {
+                const msg = error instanceof Error ? error.message : 'Unknown error';
+                this.globalLog(LogLevel.ERROR, `🧠 [${slotId}] Overmind generation hook error: ${msg}`);
+            });
+    }
+
     // ─── Private ─────────────────────────────────────────────────
 
     private globalLog(level: LogLevel, message: string, details?: Record<string, unknown>): void {
@@ -854,3 +965,4 @@ export class Cortex {
         return this.metaEvolutionEngine;
     }
 }
+

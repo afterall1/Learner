@@ -32,6 +32,7 @@ import type { OvermindSnapshot } from '@/types/overmind';
 import { TradingSlot } from '@/types/trading-slot';
 import { AIBrain, BrainSnapshot } from '@/lib/engine/brain';
 import { Cortex } from '@/lib/engine/cortex';
+import { CortexLiveEngine } from '@/lib/engine/cortex-live-engine';
 
 // ─── Brain Store ─────────────────────────────────────────────
 
@@ -550,5 +551,132 @@ export const useMarketDataStore = create<MarketDataStoreState>()((set) => ({
     setDataHealth: (health) => set({ dataHealth: health }),
     setActiveSubscriptions: (subs) => set({ activeSubscriptions: subs }),
     setLiveMode: (isLive) => set({ isLiveMode: isLive }),
+}));
+
+// ─── Cortex Live Engine Store (Phase 20) ─────────────────────
+
+interface CortexLiveStoreState {
+    engine: CortexLiveEngine | null;
+    engineStatus: 'idle' | 'initializing' | 'seeding' | 'connecting' | 'live' | 'error' | 'stopped';
+    seedProgress: { completed: number; total: number; currentSlot: string };
+    lastError: string | null;
+
+    // Actions
+    initializeEngine: (slots?: TradingSlot[], totalCapital?: number) => Promise<void>;
+    startEngine: () => Promise<void>;
+    stopEngine: () => void;
+    getEngine: () => CortexLiveEngine | null;
+    setAutoTrade: (enabled: boolean) => void;
+}
+
+export const useCortexLiveStore = create<CortexLiveStoreState>()((set, get) => ({
+    engine: null,
+    engineStatus: 'idle',
+    seedProgress: { completed: 0, total: 0, currentSlot: '' },
+    lastError: null,
+
+    initializeEngine: async (slots, totalCapital) => {
+        set({ engineStatus: 'initializing' });
+
+        try {
+            // Ensure Cortex is initialized first
+            const cortexStore = useCortexStore.getState();
+            if (!cortexStore.cortex) {
+                cortexStore.initializeCortex(slots, totalCapital);
+            }
+
+            const cortex = useCortexStore.getState().cortex;
+            if (!cortex) {
+                throw new Error('Failed to initialize Cortex');
+            }
+
+            // Create the live engine
+            const engine = new CortexLiveEngine(cortex);
+
+            // Wire ticker updates → MarketStore
+            engine.setOnTickerUpdate((tickers: MarketTick[]) => {
+                useMarketStore.getState().updateTickers(tickers);
+            });
+
+            // Wire connection changes → MarketDataStore
+            engine.setOnConnectionChange((status: ConnectionStatus) => {
+                useMarketDataStore.getState().setConnectionStatus(status);
+            });
+
+            // Wire snapshot refresh → CortexStore
+            engine.setOnSnapshotRefresh(() => {
+                useCortexStore.getState().refreshSnapshot();
+            });
+
+            // Wire evolution complete → log + refresh
+            engine.setOnEvolutionComplete((slotId: string, genNumber: number, bestFitness: number, durationMs: number) => {
+                console.log(
+                    `[CortexLive] Evolution complete: ${slotId} Gen ${genNumber}` +
+                    ` | Best: ${bestFitness.toFixed(1)} | ${durationMs}ms`,
+                );
+                useCortexStore.getState().refreshSnapshot();
+            });
+
+            set({ engine, engineStatus: 'seeding' });
+
+            // Get active trading slots
+            const activeSlots = cortex.getActiveSlots();
+            if (activeSlots.length === 0) {
+                console.warn('[CortexLive] No active trading slots — nothing to seed');
+                set({ engineStatus: 'idle' });
+                return;
+            }
+
+            // Phase 1-3: Initialize (seed + subscribe + wire)
+            await engine.initialize(activeSlots);
+
+            set({
+                engineStatus: 'seeding', // Will transition to 'live' on start()
+                seedProgress: engine.getStatus().seedProgress,
+            });
+        } catch (error) {
+            const msg = error instanceof Error ? error.message : 'Unknown error';
+            set({ engineStatus: 'error', lastError: msg });
+            console.error('[CortexLiveStore] Engine initialization failed:', msg);
+        }
+    },
+
+    startEngine: async () => {
+        const { engine } = get();
+        if (!engine) {
+            console.warn('[CortexLiveStore] No engine to start — call initializeEngine first');
+            return;
+        }
+
+        set({ engineStatus: 'connecting' });
+
+        try {
+            await engine.start();
+            set({ engineStatus: 'live' });
+            useMarketDataStore.getState().setLiveMode(true);
+        } catch (error) {
+            const msg = error instanceof Error ? error.message : 'Unknown error';
+            set({ engineStatus: 'error', lastError: msg });
+        }
+    },
+
+    stopEngine: () => {
+        const { engine } = get();
+        if (!engine) return;
+        engine.stop();
+        set({ engineStatus: 'stopped' });
+        useMarketDataStore.getState().setLiveMode(false);
+    },
+
+    getEngine: () => get().engine,
+
+    setAutoTrade: (enabled: boolean) => {
+        const { engine } = get();
+        if (!engine) {
+            console.warn('[CortexLiveStore] No engine — cannot toggle auto-trade');
+            return;
+        }
+        engine.setAutoTrade(enabled);
+    },
 }));
 
