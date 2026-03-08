@@ -4,6 +4,17 @@ All notable changes to this project are documented here.
 
 ---
 
+## [v1.2.0-beta.1] — 2026-03-08
+
+### Added
+- **Real Binance Testnet Paper Trading (Phase 31 — 4-Expert Council)**
+  - **Testnet Probe API** (`testnet-probe/route.ts`, ~210 lines): 6-point pre-flight check — credentials, testnet mode, REST reachability, time sync, account access, exchange info
+  - **Session Control API** (`session/route.ts`, ~155 lines): POST/GET/DELETE session lifecycle — validated config, live status, graceful stop with report
+  - **Testnet Session Orchestrator** (`testnet-session-orchestrator.ts`, ~370 lines): **RADICAL INNOVATION** — 5-phase lifecycle (PROBE→SEED→EVOLVE→TRADE→REPORT), safety interlocks (max loss, duration, positions), session report generation
+  - **Evolution Scheduler upgrade** (`evolution-scheduler.ts`): Phase 30 stress matrix + structured logging integration
+
+---
+
 ## [v1.1.0-beta.1] — 2026-03-08
 
 ### Added

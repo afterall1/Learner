@@ -144,8 +144,18 @@
 | `regime-propagation.ts` | **Phase 20 â€” CIRPN (Cross-Island Regime Propagation Network)** (~380 lines). Pair correlation tracking, leader/follower detection, regime arrival prediction, propagation warnings with ETA. `PropagationNetworkStatus` interface: totalRegimeEvents, leaderPairs, followerPairs, activeWarnings, knownRelationships. | ğŸ”´ |
 | `stress-matrix.ts` | **Phase 27+30 — Market Scenario Stress Matrix (MSSM)** (~420 lines). 5 canonical scenarios. **Phase 30 PFLM Upgrade**: `prepareScenarios()` pre-generates candles+caches ONCE. `batchStressMatrix()` shares IndicatorCaches across all strategies (~5× faster). RRS formula: `avgFitness × (1 - normalizedVariance) × consistencyBonus`. | 🔴 |
 | `adaptive-stress.ts` | **Phase 30 — Adaptive Stress Calibration (ASC)** (~318 lines). **RADICAL INNOVATION**: Regime-weighted scenario scoring. `AdaptiveStressCalibrator` class dynamically adjusts scenario weights based on detected regime + MRTI predictions. Calibrated RRS blends into fitness (70% backtest + 30% CRRS). 5 regime weight matrices. Dashboard-exportable `StressCalibrationState`. | 🔴 |
+| `testnet-session-orchestrator.ts` | **Phase 31 — Testnet Session Orchestrator (TSO)** (~370 lines). **RADICAL INNOVATION**: 5-phase lifecycle (PROBE→SEED→EVOLVE→TRADE→REPORT). Safety interlocks: max loss %, max duration, max positions. Session report with trade log, PnL, execution quality. Singleton via `getSessionOrchestrator()`. | 🔴 |
 
 ---
+
+## 🌐 Trading Session API (`src/app/api/trading/`) [Phase 31]
+
+| File | Purpose | Importance |
+|------|---------|------------|
+| `testnet-probe/route.ts` | **Phase 31 — Testnet Probe API** (~210 lines). GET endpoint — 6-point pre-flight check (credentials, testnet mode, REST reachability, time sync, account access, exchange info). Returns `TestnetProbeResult` with per-check latency. | 🔴 |
+| `session/route.ts` | **Phase 31 — Session Control API** (~155 lines). POST (start session with config), GET (session status), DELETE (graceful stop + report). Wires into `TestnetSessionOrchestrator`. | 🔴 |
+| `status/route.ts` | **Phase 27 — Trading Telemetry API** (~151 lines). GET endpoint — active positions, execution quality, risk status, auto-trade config. Real-time introspection. | 🟡 |
+
 
 ## ğŸ¤– Pipeline Live Integration Layer (`src/lib/`) [Phase 21]
 
