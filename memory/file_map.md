@@ -147,6 +147,7 @@
 | `adaptive-stress.ts` | **Phase 30 — Adaptive Stress Calibration (ASC)** (~318 lines). **RADICAL INNOVATION**: Regime-weighted scenario scoring. `AdaptiveStressCalibrator` class dynamically adjusts scenario weights based on detected regime + MRTI predictions. Calibrated RRS blends into fitness (70% backtest + 30% CRRS). 5 regime weight matrices. Dashboard-exportable `StressCalibrationState`. | 🔴 |
 | `stress-temporal-tracker.ts` | **Phase 35 — STTA: Stress Trend Temporal Analysis (RADICAL INNOVATION)** (~390 lines). Rolling 20-snapshot window tracking RRS/CRRS per generation. `StressTemporalTracker` singleton-per-island: `recordSnapshot()`, `getTrendData()`, `getResilienceTrend()` (linear regression, IMPROVING/STABLE/DEGRADING + slope + R²), `getVulnerabilityMatrix()` (per-scenario fitness grid with trend directions), `getSnapshot()` (STTASnapshot for dashboard). Per-island instances via `getTracker(islandId)`. | 🔴 |
 | `testnet-session-orchestrator.ts` | **Phase 31 — Testnet Session Orchestrator (TSO)** (~475 lines). **RADICAL INNOVATION**: 5-phase lifecycle (PROBE→SEED→EVOLVE→TRADE→REPORT). Safety interlocks: max loss %, max duration, max positions. Session report with trade log, PnL, execution quality. Singleton via `getSessionOrchestrator()`. | 🔴 |
+| `system-bootstrap.ts` | **Phase 36 — System Bootstrap Orchestrator** (~555 lines). Singleton 7-phase ignition sequence (ENV_CHECK→PERSISTENCE→CORTEX_SPAWN→HISTORICAL_SEED→WS_CONNECT→EVOLUTION_START→READY). Coordinated dependency-order startup with error recovery, EngineCheckpoint schema, auto-checkpoint scheduler, state change callbacks. useBootStore Zustand integration. | 🔴 |
 
 ---
 
@@ -203,7 +204,7 @@
 
 | File | Purpose | Importance |
 |------|---------|------------|
-| `store/index.ts` | 6 Zustand stores: `useBrainStore` (AI state/evolution/validation), `useCortexStore` (multi-island orchestration, 12 actions), `usePortfolioStore` (balance/positions, IndexedDB persist), `useTradeStore` (persistent trade history, IndexedDB dual-write), `useMarketStore` (live tickers), `useDashboardConfigStore` (persistent UI config). | ğŸŸ¡ |
+| `store/index.ts` | 7 Zustand stores: `useBrainStore`, `useCortexStore`, `usePortfolioStore`, `useTradeStore`, `useMarketStore`, `useDashboardConfigStore`, **`useBootStore`** (Phase 36: SystemBootstrap wrapper, ignite/shutdown, auto-wires Cortex/LiveEngine stores after boot). | 🔴 |
 | `store/persistence.ts` | **Phase 13 â€” IndexedDB Persistence Layer** (~585 lines). 6 object stores (trades, strategies, evolution_snapshots, forensic_reports, portfolio_snapshots, engine_state), `createIndexedDBStorage()` Zustand adapter, `startAutoCheckpoint()` scheduler, full CRUD for all data types, `getStorageStats()`, `clearAllData()`. | ğŸ”´ |
 | `db/supabase.ts` | **Phase 14 â€” Supabase Cloud Database Client** (~340 lines). PostgreSQL cloud client with graceful degradation (returns null if env vars missing). Full CRUD: `cloudSaveTrade()`, `cloudSaveStrategies()`, `cloudSaveEvolutionSnapshot()`, `cloudSaveForensicReport()`, `cloudSavePortfolioSnapshot()`, `cloudSaveEngineCheckpoint()`, `cloudLoadEngineCheckpoint()`, `cloudGetStats()`. JSONB data pattern for full object storage. | ğŸ”´ |
 
@@ -219,6 +220,14 @@
 | `globals.css` | Premium design system. CSS custom properties for dark glassmorphism theme + gradient accents, stagger animations, neural map styles, pipeline stages, archaeology panels, **holographic brain theme** (3D canvas, scanlines, hex grid, neuron wireframes, synapse animations, HUD, consciousness arc, heatmap multi-color). ~3120 lines. | ğŸŸ¡ |
 | `layout.tsx` | Root layout. Google Fonts (Inter, JetBrains Mono), SEO metadata. | ğŸŸ¢ |
 | `error.tsx` | **Root Error Boundary** (~146 lines). Next.js error recovery UI with crash details and retry functionality. | 🟢 |
+
+---
+
+## 🧩 Component Layer (`src/components/panels/`) [Phase 36]
+
+| File | Purpose | Importance |
+|------|---------|------------|
+| `IgnitionSequencePanel.tsx` | **Phase 36 — Ignition Sequence Panel** (~280 lines). Dashboard UI component for 7-phase system boot. Phase step icons with state-aware styling. Animated IGNITE SYSTEM button. Compact post-boot status bar with live-pulse dot. Uses `useBootStore`. | 🔴 |
 
 ---
 
@@ -343,4 +352,4 @@
 
 ---
 
-*Last Updated: 2026-03-08 22:50 (UTC+3) — Memory Integrity Audit: 25 line counts corrected, resolver bug fixed*
+*Last Updated: 2026-03-08 23:40 (UTC+3) — Phase 36 System Bootstrap Orchestrator* — Memory Integrity Audit: 25 line counts corrected, resolver bug fixed*

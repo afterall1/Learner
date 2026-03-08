@@ -1,9 +1,9 @@
 {
   "version": "1.0.0",
-  "generatedAt": "2026-03-08T19:25:21.323Z",
+  "generatedAt": "2026-03-08T20:52:12.476Z",
   "projectVersion": "v0.28.0",
   "sourceHashes": {
-    "src/types/index.ts": "8230b62fbb52292e",
+    "src/types/index.ts": "1d185441ec4204e7",
     "src/types/trading-slot.ts": "61c7ed64286070fb",
     "src/lib/engine/strategy-dna.ts": "dde58c63b46d982b",
     "src/lib/engine/evaluator.ts": "1d194d45d012f434",
@@ -27,22 +27,22 @@
     "src/lib/engine/migration.ts": "be26a436baafcb32",
     "src/lib/engine/capital-allocator.ts": "18938886803a9624",
     "src/lib/risk/manager.ts": "80b7ca76d7bcb040",
-    "src/lib/store/index.ts": "4dddc6b0296876f3",
-    "src/app/page.tsx": "45d6e83425a8a828",
+    "src/lib/store/index.ts": "318e517130463fae",
+    "src/app/page.tsx": "f496d587d0a12c07",
     "src/app/pipeline/page.tsx": "bef7ce25b6337548",
-    "src/app/globals.css": "97d4863610475cd5",
+    "src/app/globals.css": "da178f53935a63f4",
     "src/app/layout.tsx": "b7c900afea5bfe7e"
   },
   "memoryHashes": {
     "memory/overview.md": "bd7a3f79652a3050",
-    "memory/active_context.md": "a649ad70a482fcc2",
+    "memory/active_context.md": "abeae29531404f31",
     "memory/architecture/system_design.md": "8ef4173d0532305f",
-    "memory/file_map.md": "d5be8ca3985ea6ce",
-    "memory/changelog.md": "936345e0123ed1a1",
+    "memory/file_map.md": "9cdab40c17f77b40",
+    "memory/changelog.md": "a87d4aacd8e72abe",
     "memory/_SYNC_CHECKLIST.md": "db74a75eb0511be8"
   },
   "lineCounts": {
-    "src/types/index.ts": 2119,
+    "src/types/index.ts": 2197,
     "src/types/trading-slot.ts": 97,
     "src/lib/engine/strategy-dna.ts": 642,
     "src/lib/engine/evaluator.ts": 309,
@@ -66,10 +66,10 @@
     "src/lib/engine/migration.ts": 304,
     "src/lib/engine/capital-allocator.ts": 233,
     "src/lib/risk/manager.ts": 315,
-    "src/lib/store/index.ts": 683,
-    "src/app/page.tsx": 1377,
+    "src/lib/store/index.ts": 841,
+    "src/app/page.tsx": 1379,
     "src/app/pipeline/page.tsx": 5233,
-    "src/app/globals.css": 3120,
+    "src/app/globals.css": 3492,
     "src/app/layout.tsx": 28
   },
   "crossRefStatus": {

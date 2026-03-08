@@ -7,9 +7,9 @@
 ## 📅 Current State
 
 **Date**: 2026-03-08
-**Phase**: Phase 34 — Performance Optimization
+**Phase**: Phase 36 — System Bootstrap Orchestrator
 **Build Status**: ✅ Passing (zero errors)
-**Version**: v1.3.0-beta.1
+**Version**: v1.5.0-beta.1
 **Dev Server**: `http://localhost:3000`
 
 ---
@@ -48,7 +48,8 @@
 | **Strategy Roster** | strategy-roster.ts (510L): population management across islands |
 | **Directive Applicator** | Phase 24 — Overmind directive→action bridge (directive-applicator.ts, 352L) |
 | **Production Infrastructure** | Phase 29 — Structured Logger (logger.ts, 218L), Deployment Sentinel (deployment-sentinel.ts, 283L, 12-point readiness), Env Validator (env-validator.ts, 173L) wired into binance-rest/supabase. `/api/sentinel` endpoint. v1.0.0-beta.1 |
-| **Dashboard** | Main: 9 panels + Cortex Neural Map | Pipeline: 9 panels + Overmind Hub + LivePulseTelemetry + EvolutionHeartbeat + Risk Shield + StressMatrixPanel (14 total, +STTA Sparkline +Vulnerability Heatmap) | Brain: Holographic Neural Cortex |
+| **System Bootstrap** | Phase 36 — `system-bootstrap.ts` (~555L) 7-phase ignition sequence (ENV_CHECK→PERSISTENCE→CORTEX_SPAWN→HISTORICAL_SEED→WS_CONNECT→EVOLUTION_START→READY), `useBootStore` (Zustand), `IgnitionSequencePanel` dashboard component |
+| **Dashboard** | Main: 10 panels (9 original + IgnitionSequencePanel) + Cortex Neural Map | Pipeline: 9 panels + Overmind Hub + LivePulseTelemetry + EvolutionHeartbeat + Risk Shield + StressMatrixPanel (14 total, +STTA Sparkline +Vulnerability Heatmap) | Brain: Holographic Neural Cortex |
 | **Testnet Trading** | Phase 31 — Testnet Probe API (6-point check), Session Control API (POST/GET/DELETE), Testnet Session Orchestrator (5-phase: PROBE→SEED→EVOLVE→TRADE→REPORT) |
 | **Current Generation** | N/A (awaiting Binance API connection) |
 | **Best Fitness Score** | N/A |
@@ -304,6 +305,14 @@
 165. **Live MSSM Hook Integration**: `usePipelineLiveData.ts` (+200 lines) — `StressLiveSnapshot` + `StressScenarioLive` types, `deriveStressLive()` (champion→runStressMatrix→ASC calibrate via `adaptive-stress.ts`→STTA record), 30s TTL cache, per-island singleton maps for calibrators/trackers. Fixed 3 TypeScript lint errors (confidence→currentConfidence, transitionProbabilities Record→Object.entries)
 166. **Dual-Mode StressMatrixPanel**: `StressMatrixPanel` rewritten for dual-mode (stressLive OR stressData). `🔴 LIVE` badge. **STTA Sparkline** (AreaChart: RRS + CRRS over last 20 generations with trend gradient). **Regime Vulnerability Heatmap** (5×N CSS grid with color-coded fitness cells, per-scenario trend arrows, weakest scenario deterioration warning)
 
+### Session: 2026-03-08 — System Bootstrap Orchestrator (Phase 36, 5-Expert Council)
+167. **Boot Types**: Added `BootPhase` enum (9 states), `BootProgress`, `BootConfig`, `BootState` interfaces to `types/index.ts` (+78 lines)
+168. **System Bootstrap Engine**: `system-bootstrap.ts` (~555 lines) — Singleton 7-phase ignition sequence orchestrator (ENV_CHECK→PERSISTENCE→CORTEX_SPAWN→HISTORICAL_SEED→WS_CONNECT→EVOLUTION_START→READY). Correct `EngineCheckpoint` schema, `startAutoCheckpoint()`/`stopAutoCheckpoint()` integration, error recovery, state change callbacks
+169. **Boot Store**: `useBootStore` in `store/index.ts` (+160 lines) — Zustand store wrapping `SystemBootstrap`, exposes `ignite()`/`shutdown()` actions, auto-wires Cortex/LiveEngine into existing stores after boot
+170. **Ignition Sequence Panel**: `IgnitionSequencePanel.tsx` (~280 lines) — Dashboard UI with 7-phase progress indicators, animated IGNITE SYSTEM button, compact post-boot status bar with live dot
+171. **Ignition CSS**: `globals.css` (+340 lines) — Glassmorphism panel with animated gradient border, phase state styling (pending/active/complete/error), shimmer progress bar, ignition button with shine effect, spinner, compact live status bar
+172. **Boot Logger**: Added `bootLog` pre-built logger instance to `logger.ts`
+
 ---
 
 ## 🚧 Incomplete Features / Technical Debt
@@ -331,14 +340,12 @@
 
 ## 📅 Next Session Priorities
 
-1. ~~Production deployment preparation — Build optimization, environment configuration~~ ✅ (Phase 29: v1.0.0-beta.1)
-2. ~~Real Binance Testnet paper trading session — Verify LiveTradeExecutor with live kline data~~ ✅ (Phase 31: Testnet Probe + Session Orchestrator)
-3. ~~Dashboard MSSM visualization — Stress matrix results panel in pipeline page~~ ✅ (Phase 32: StressMatrixPanel + ASC Heatmap)
-4. ~~Manual testnet session — Call POST /api/trading/session and observe live trading~~ ✅ (Phase 33: TestnetMissionControlPanel)
-5. ~~Performance optimization — Backtester PFLM cache improvements, stress matrix integration into evolution pipeline~~ ✅ (Phase 34: 4 optimizations + BacktestProfiler)
-6. ~~Live MSSM integration — Wire StressMatrixPanel to live CortexLiveEngine data instead of demo~~ ✅ (Phase 35: Dual-mode + STTA)
-7. ~~Memory sync — Update all memory docs to reflect Phase 33-35 changes~~ ✅ (Phase 35: Full sync)
+1. Memory sync — Update all memory docs to reflect Phase 36 changes
+2. Binance Testnet live boot test — Press IGNITE SYSTEM button with real API keys
+3. Extended boot telemetry — Per-phase duration chart, boot history tracking
+4. Auto-recovery — Detect failed boot and offer one-click retry with last-known-good config
+5. Production deployment — Final pre-deployment readiness checks
 
 ---
 
-*Last Synced: 2026-03-08 22:50 (UTC+3)*
+*Last Synced: 2026-03-08 23:40 (UTC+3)*

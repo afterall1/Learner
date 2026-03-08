@@ -4,6 +4,28 @@ All notable changes to this project are documented here.
 
 ---
 
+## [v1.5.0-beta.1] — 2026-03-08
+
+### Added
+- **System Bootstrap Orchestrator (Phase 36 — 5-Expert Council)**
+  - **SystemBootstrap Engine** (`system-bootstrap.ts`, ~555 lines): Singleton 7-phase ignition orchestrator — ENV_CHECK → PERSISTENCE → CORTEX_SPAWN → HISTORICAL_SEED → WS_CONNECT → EVOLUTION_START → READY. Correct `EngineCheckpoint` schema integration, auto-checkpoint via `startAutoCheckpoint()`/`stopAutoCheckpoint()`, error recovery, state change callbacks
+  - **IgnitionSequencePanel** (`IgnitionSequencePanel.tsx`, ~280 lines): Dashboard UI with 7-phase progress indicators (pending/active/complete/error states), animated IGNITE SYSTEM button with gradient shine, compact post-boot status bar with live-pulse dot
+  - **useBootStore** (`store/index.ts`, +160 lines): Zustand store wrapping `SystemBootstrap`, `ignite(config)`/`shutdown()` actions, dynamically wires Cortex/LiveEngine into `useCortexStore`/`useCortexLiveStore`/`useMarketStore` after boot
+  - **Boot Types** (`types/index.ts`, +78 lines): `BootPhase` enum (9 states), `BootProgress`, `BootConfig`, `BootState` interfaces
+  - **Ignition CSS** (`globals.css`, +340 lines): Glassmorphism panel with animated gradient border (`mask-composite`), phase state animations, shimmer progress bar, ignition button shine, spinner keyframes, compact live status bar with pulsing green dot
+
+### Changed
+- `page.tsx` — `IgnitionSequencePanel` added as first item in dashboard grid (10 panels total)
+- `logger.ts` — `bootLog` pre-built logger instance for SystemBootstrap module
+
+### Build Status
+✅ Passing (zero errors)
+
+### Test Status
+✅ All tests passing (zero regressions)
+
+---
+
 ## [v1.3.0-beta.1] — 2026-03-08
 
 ### Added
