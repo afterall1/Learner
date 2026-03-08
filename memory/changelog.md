@@ -2,7 +2,51 @@
 
 All notable changes to this project are documented here.
 
----\r\n\r\n## [v1.3.0-beta.1] — 2026-03-08\r\n\r\n### Added\r\n- **Testnet Mission Control Panel (Phase 33)**\r\n  - `TestnetMissionControlPanel` in `pipeline/page.tsx`: Full testnet session dashboard — enhanced PROBE UI (TESTNET badge, drift indicator, 4-column account panel), RAF elapsed timer, seed progress bar, active config echo, live trade log feed\r\n- **Performance Optimization (Phase 34 — 5-Expert Council)**\r\n  - **O(1) LRU Cache**: Replaced `IndicatorCache` LRU tracking (`indexOf+splice` O(N)) with Map `delete+set` O(1). Capacity 100→200\r\n  - **Index-Based ATR**: `atrEndIndex` param in `calculateSlippage()` + `simulateExecution()` — eliminates 3 `atrValues.slice()` copies per loop\r\n  - **Regime Detection Cache**: 50-candle interval caching instead of per-trade recomputation\r\n  - **BacktestProfiler (RADICAL INNOVATION)**: `backtest-profiler.ts` (~330 lines) — self-aware performance telemetry with 5-category recommendation engine, wired into `evolution-scheduler.ts` at 3 pipeline points\r\n\r\n### Changed\r\n- `backtester.ts` — O(1) LRU, ATR index-based access, regime cache, capacity 100→200\r\n- `market-simulator.ts` — `atrEndIndex` optional param on `calculateSlippage()` + `simulateExecution()`\r\n- `evolution-scheduler.ts` — Profiler session lifecycle, phase timing, `getProfiler()` accessor\r\n\r\n### Build Status\r\n✅ Passing (zero errors)\r\n\r\n### Test Status\r\n✅ 211/211 tests passing (zero regressions)\r\n\r\n---
+---
+
+## [v1.3.0-beta.1] — 2026-03-08
+
+### Added
+- **Testnet Mission Control Panel (Phase 33)**
+  - `TestnetMissionControlPanel` in `pipeline/page.tsx`: Full testnet session dashboard — enhanced PROBE UI (TESTNET badge, drift indicator, 4-column account panel), RAF elapsed timer, seed progress bar, active config echo, live trade log feed
+- **Performance Optimization (Phase 34 — 5-Expert Council)**
+  - **O(1) LRU Cache**: Replaced `IndicatorCache` LRU tracking (`indexOf+splice` O(N)) with Map `delete+set` O(1). Capacity 100→200
+  - **Index-Based ATR**: `atrEndIndex` param in `calculateSlippage()` + `simulateExecution()` — eliminates 3 `atrValues.slice()` copies per loop
+  - **Regime Detection Cache**: 50-candle interval caching instead of per-trade recomputation
+  - **BacktestProfiler (RADICAL INNOVATION)**: `backtest-profiler.ts` (~330 lines) — self-aware performance telemetry with 5-category recommendation engine, wired into `evolution-scheduler.ts` at 3 pipeline points
+
+### Changed
+- `backtester.ts` — O(1) LRU, ATR index-based access, regime cache, capacity 100→200
+- `market-simulator.ts` — `atrEndIndex` optional param on `calculateSlippage()` + `simulateExecution()`
+- `evolution-scheduler.ts` — Profiler session lifecycle, phase timing, `getProfiler()` accessor
+
+### Build Status
+✅ Passing (zero errors)
+
+### Test Status
+✅ 211/211 tests passing (zero regressions)
+
+---
+
+## [v1.4.0-beta.1] — 2026-03-08
+
+### Added
+- **Live MSSM Integration + STTA Radical Innovation (Phase 35 — 5-Expert Council)**
+  - **StressTemporalTracker** (`stress-temporal-tracker.ts`, ~290 lines): **RADICAL INNOVATION** — Stress Trend Temporal Analysis engine. Rolling 20-snapshot window tracking RRS/CRRS per generation. Linear regression trend classification (IMPROVING/STABLE/DEGRADING with slope+R²). VulnerabilityMatrix: per-scenario fitness grid + per-scenario trend detection, `weakestScenarioTrend` early warning
+  - **Live MSSM Hook**: `usePipelineLiveData.ts` (+200 lines) — `StressLiveSnapshot` + `StressScenarioLive` types, `deriveStressLive()` (champion→runStressMatrix→ASC calibrate→STTA record), 30s TTL cache via `stressCacheMap`, per-island `calibratorMap` + `trackerMap` singletons
+  - **Dual-Mode StressMatrixPanel**: Rewritten to accept `stressLive | stressData` (both nullable). `🔴 LIVE` badge. **STTA Sparkline** (AreaChart: RRS + CRRS trend over generations). **Regime Vulnerability Heatmap** (5×N color-coded grid with per-scenario trend arrows + deterioration warning)
+
+### Changed
+- `usePipelineLiveData.ts` — Now ~900 lines (added StressLiveSnapshot, deriveStressLive, STTA integration). Fixed 3 TypeScript lint errors (confidence→currentConfidence, transitionProbabilities Record→Object.entries)
+- `pipeline/page.tsx` — Now ~5230 lines (StressMatrixPanel dual-mode rewrite +175 lines STTA section)
+
+### Build Status
+✅ Passing (zero errors)
+
+### Test Status
+✅ All tests passing (zero regressions)
+
+---
 
 ## [v1.2.0-beta.1] — 2026-03-08
 

@@ -35,11 +35,11 @@
 | **Binance Execution Layer** | Phase 19 — 7 REST methods, 4 API routes, User Data WebSocket, Account Sync, Exchange Circuit Breaker + ExchangeInfoCache |
 | **AOLE** | Phase 19.1 — 13-state atomic order lifecycle (Entry→SL→TP), Adaptive Rate Governor, Execution Quality Tracker |
 | **Live Engine** | Phase 20 — CortexLiveEngine + ADFI (Adaptive Data Flow Intelligence) + CIRPN (Cross-Island Regime Propagation) + EvolutionScheduler + CortexLiveStore |
-| **Pipeline Live** | Phase 21 — `usePipelineLiveData` hook (dual-mode), Island selector, LivePulseTelemetryPanel (ADFI+CIRPN), EvolutionHeartbeatPanel (convergence detector) |
+| **Pipeline Live** | Phase 21→35 — `usePipelineLiveData` hook (dual-mode), Island selector, LivePulseTelemetryPanel (ADFI+CIRPN), EvolutionHeartbeatPanel (convergence detector). **Phase 35**: `StressLiveSnapshot` type, `deriveStressLive()` (champion→MSSM→ASC→STTA), 30s TTL cache, per-island calibrator+tracker singletons |
 | **Risk Enforcement** | Phase 22 — RiskManager singleton in Cortex, `getRiskSnapshot()`, `RiskSnapshot` type, dashboard Risk Fortress visualization |
 | **Automated Tests** | Phase 27 — Vitest framework, 12 suites (211 tests), E2E Integration Tests (33), Property-Based Fuzzing + Chaos Monkey |
 | **Integration Tests** | Phase 27 — 8-category E2E suite: Full Backtest Pipeline, Batch PFLM, Evolution Cycle, Market Scenarios, Signal Logic, HTF Aggregation, Fitness Convergence, Edge Cases |
-| **Stress Matrix** | Phase 27 — MSSM: 5-regime stress testing (bull/bear/sideways/high-vol/regime-transition) with Regime Resilience Score (RRS) |
+| **Stress Matrix** | Phase 27→35 — MSSM: 5-regime stress testing with RRS. **Phase 35**: Live integration via `deriveStressLive()`, `StressTemporalTracker` (STTA radical innovation — rolling RRS/CRRS tracking, linear regression trend, vulnerability matrix), dual-mode StressMatrixPanel (LIVE/DEMO) |
 | **Live Trade Execution** | Phase 26 — LiveTradeExecutor (`src/lib/api/live-trade-executor.ts`): signal→order pipeline, risk validation, position sizing, /api/trading/status telemetry endpoint |
 | **Cognitive Intelligence** | Phase 18-20 — MAP-Elites (quality-diversity.ts), Coevolution (coevolution.ts), NEAT Topology (genome-topology.ts), SAIE (surrogate-illumination.ts), Bayesian Calibrator (bayesian-signal-calibrator.ts), Market Intelligence (market-intelligence.ts), Metacognitive Monitor (metacognitive-monitor.ts), KDSS (knowledge-directed-synthesis.ts) |
 | **Order Flow Intelligence** | Phase 9.5 — Order Flow genes (orderflow-genes.ts): CVD, large trades, liquidation cascades, funding rate, absorption |
@@ -48,7 +48,7 @@
 | **Strategy Roster** | strategy-roster.ts (510L): population management across islands |
 | **Directive Applicator** | Phase 24 — Overmind directive→action bridge (directive-applicator.ts, 352L) |
 | **Production Infrastructure** | Phase 29 — Structured Logger (logger.ts, 218L), Deployment Sentinel (deployment-sentinel.ts, 283L, 12-point readiness), Env Validator (env-validator.ts, 173L) wired into binance-rest/supabase. `/api/sentinel` endpoint. v1.0.0-beta.1 |
-| **Dashboard** | Main: 9 panels + Cortex Neural Map | Pipeline: 9 panels + Overmind Hub + LivePulseTelemetry + EvolutionHeartbeat + Risk Shield + StressMatrixPanel (13 total) | Brain: Holographic Neural Cortex |
+| **Dashboard** | Main: 9 panels + Cortex Neural Map | Pipeline: 9 panels + Overmind Hub + LivePulseTelemetry + EvolutionHeartbeat + Risk Shield + StressMatrixPanel (14 total, +STTA Sparkline +Vulnerability Heatmap) | Brain: Holographic Neural Cortex |
 | **Testnet Trading** | Phase 31 — Testnet Probe API (6-point check), Session Control API (POST/GET/DELETE), Testnet Session Orchestrator (5-phase: PROBE→SEED→EVOLVE→TRADE→REPORT) |
 | **Current Generation** | N/A (awaiting Binance API connection) |
 | **Best Fitness Score** | N/A |
@@ -299,6 +299,11 @@
 162. **Regime Detection Cache**: Regime detection now cached with 50-candle interval instead of per-trade recomputation. `detectSingleCandleRegime()` updated for index-based access
 163. **BacktestProfiler (RADICAL INNOVATION)**: `backtest-profiler.ts` (~330 lines) — Self-aware performance telemetry singleton. Session lifecycle (start/end), phase tracking (beginPhase/endPhase), per-strategy timing, 5-category recommendation engine (cache size, population, candle count, regime interval, batch strategy). Wired into `evolution-scheduler.ts` at 3 pipeline points
 
+### Session: 2026-03-08 — Live MSSM Integration + STTA (Phase 35, 5-Expert Council)
+164. **StressTemporalTracker (RADICAL INNOVATION)**: `stress-temporal-tracker.ts` (~290 lines) — Stress Trend Temporal Analysis engine. Rolling 20-snapshot window tracking RRS/CRRS per generation. Linear regression trend classification (IMPROVING/STABLE/DEGRADING with slope+R²). VulnerabilityMatrix: per-scenario fitness grid + per-scenario trend detection. `weakestScenarioTrend` early warning for deteriorating scenarios
+165. **Live MSSM Hook Integration**: `usePipelineLiveData.ts` (+200 lines) — `StressLiveSnapshot` + `StressScenarioLive` types, `deriveStressLive()` (champion→runStressMatrix→ASC calibrate via `adaptive-stress.ts`→STTA record), 30s TTL cache, per-island singleton maps for calibrators/trackers. Fixed 3 TypeScript lint errors (confidence→currentConfidence, transitionProbabilities Record→Object.entries)
+166. **Dual-Mode StressMatrixPanel**: `StressMatrixPanel` rewritten for dual-mode (stressLive OR stressData). `🔴 LIVE` badge. **STTA Sparkline** (AreaChart: RRS + CRRS over last 20 generations with trend gradient). **Regime Vulnerability Heatmap** (5×N CSS grid with color-coded fitness cells, per-scenario trend arrows, weakest scenario deterioration warning)
+
 ---
 
 ## 🚧 Incomplete Features / Technical Debt
@@ -331,9 +336,9 @@
 3. ~~Dashboard MSSM visualization — Stress matrix results panel in pipeline page~~ ✅ (Phase 32: StressMatrixPanel + ASC Heatmap)
 4. ~~Manual testnet session — Call POST /api/trading/session and observe live trading~~ ✅ (Phase 33: TestnetMissionControlPanel)
 5. ~~Performance optimization — Backtester PFLM cache improvements, stress matrix integration into evolution pipeline~~ ✅ (Phase 34: 4 optimizations + BacktestProfiler)
-6. Live MSSM integration — Wire StressMatrixPanel to live CortexLiveEngine data instead of demo
-7. Memory sync — Update all memory docs to reflect Phase 33-34 changes
+6. ~~Live MSSM integration — Wire StressMatrixPanel to live CortexLiveEngine data instead of demo~~ ✅ (Phase 35: Dual-mode + STTA)
+7. ~~Memory sync — Update all memory docs to reflect Phase 33-35 changes~~ ✅ (Phase 35: Full sync)
 
 ---
 
-*Last Synced: 2026-03-08 21:47 (UTC+3)*
+*Last Synced: 2026-03-08 22:50 (UTC+3)*

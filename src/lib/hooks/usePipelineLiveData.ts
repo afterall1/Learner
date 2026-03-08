@@ -21,6 +21,9 @@ import { useCortexLiveStore } from '@/lib/store';
 import type { Cortex } from '@/lib/engine/cortex';
 import type { Island } from '@/lib/engine/island';
 import { computeGenomeHealth, type GenomeHealthSnapshot } from '@/lib/engine/evolution-health';
+import { runStressMatrix, type StressMatrixResult } from '@/lib/engine/stress-matrix';
+import { AdaptiveStressCalibrator, type CalibratedStressResult } from '@/lib/engine/adaptive-stress';
+import { StressTemporalTracker, type STTASnapshot } from '@/lib/engine/stress-temporal-tracker';
 import type {
     RegimeTransitionForecast,
     TransitionMatrixSnapshot,
@@ -129,6 +132,8 @@ export interface PipelineLiveData {
     overmindLive: OvermindLiveSnapshot | null;
     /** Risk Manager GLOBAL state — null when not available */
     riskLive: RiskSnapshot | null;
+    /** Live MSSM stress data + STTA temporal analysis — null when not available */
+    stressLive: StressLiveSnapshot | null;
 }
 
 /** Simplified telemetry snapshot for dashboard rendering (no Maps) */
@@ -228,6 +233,52 @@ export interface OvermindLiveSnapshot {
     predictionAccuracyRate: number;
     /** Islands with imminent transition */
     imminentTransitions: number;
+}
+
+// ─── Stress Live Types ──────────────────────────────────────
+
+/** Scenario result for dashboard rendering */
+export interface StressScenarioLive {
+    name: string;
+    fitnessScore: number;
+    equityReturnPercent: number;
+    trades: number;
+    detectedRegime: string;
+    regimeConfidence: number;
+}
+
+/** Full stress live snapshot for StressMatrixPanel */
+export interface StressLiveSnapshot {
+    /** Strategy being tested */
+    strategyName: string;
+    /** Raw RRS (0-100) */
+    resilienceScore: number;
+    /** Average fitness across all scenarios */
+    avgFitness: number;
+    /** Scenario variance (lower = better) */
+    scenarioVariance: number;
+    /** Max drawdown in worst scenario */
+    maxDrawdownWorst: number;
+    /** Per-scenario breakdown */
+    scenarios: StressScenarioLive[];
+    /** Strongest scenario name */
+    strongest: string;
+    /** Weakest scenario name */
+    weakest: string;
+    /** ASC calibration data */
+    calibration: {
+        currentRegime: string;
+        regimeConfidence: number;
+        totalCalibrations: number;
+        weights: Record<string, number>;
+        calibratedRRS: number;
+    };
+    /** STTA temporal analysis (radical innovation) */
+    stta: STTASnapshot | null;
+    /** Total execution time in ms */
+    totalExecutionMs: number;
+    /** Timestamp of this snapshot */
+    timestamp: number;
 }
 
 // ─── Data Derivation Functions ───────────────────────────────
@@ -452,6 +503,42 @@ function derivePipelineStages(brainState: BrainState): Record<PipelineStage, Sta
     return stages;
 }
 
+// ─── Stress Cache + Tracker Singletons ──────────────────────
+
+/** Cached stress result with TTL to avoid redundant computation */
+interface StressCache {
+    result: StressLiveSnapshot;
+    expiresAt: number;
+}
+
+/** Per-island stress cache (30s TTL) */
+const stressCacheMap = new Map<string, StressCache>();
+const STRESS_CACHE_TTL_MS = 30_000;
+
+/** Per-island ASC calibrator singletons */
+const calibratorMap = new Map<string, AdaptiveStressCalibrator>();
+
+/** Per-island STTA tracker singletons */
+const sttaTrackerMap = new Map<string, StressTemporalTracker>();
+
+function getCalibrator(slotId: string): AdaptiveStressCalibrator {
+    let cal = calibratorMap.get(slotId);
+    if (!cal) {
+        cal = new AdaptiveStressCalibrator();
+        calibratorMap.set(slotId, cal);
+    }
+    return cal;
+}
+
+function getSTTATracker(slotId: string): StressTemporalTracker {
+    let tracker = sttaTrackerMap.get(slotId);
+    if (!tracker) {
+        tracker = new StressTemporalTracker();
+        sttaTrackerMap.set(slotId, tracker);
+    }
+    return tracker;
+}
+
 // ─── Main Hook ──────────────────────────────────────────────
 
 const POLL_INTERVAL_MS = 3000;
@@ -526,6 +613,7 @@ export function usePipelineLiveData(selectedSlotId: string | null): PipelineLive
                 mrtiSnapshot: deriveMRTISnapshot(island),
                 overmindLive: deriveOvermindSnapshot(),
                 riskLive: deriveRiskSnapshot(),
+                stressLive: deriveStressLive(island, slotId),
             });
         } catch (error) {
             console.error('[PipelineLive] Error deriving live data:', error);
@@ -653,6 +741,132 @@ export function usePipelineLiveData(selectedSlotId: string | null): PipelineLive
         if (!cortexSnapshot?.riskSnapshot) return null;
         try {
             return cortexSnapshot.riskSnapshot;
+        } catch {
+            return null;
+        }
+    }
+
+    // Derive live MSSM stress data from Island champion strategy
+    function deriveStressLive(island: Island, slotId: string): StressLiveSnapshot | null {
+        try {
+            // Check cache first (30s TTL)
+            const cached = stressCacheMap.get(slotId);
+            if (cached && Date.now() < cached.expiresAt) {
+                return cached.result;
+            }
+
+            // Get the champion strategy (best fitness in current population)
+            const engine = island.getEvolutionEngine();
+            const gens = engine.getGenerations();
+            if (gens.length === 0) return null;
+
+            const latestGen = gens[gens.length - 1];
+            const champion = latestGen.population.reduce(
+                (best, s) => (s.metadata.fitnessScore > best.metadata.fitnessScore ? s : best),
+                latestGen.population[0],
+            );
+            if (!champion) return null;
+
+            // Run the 5-scenario stress matrix on the champion
+            const stressResult: StressMatrixResult = runStressMatrix(champion, 300);
+
+            // Get calibrator and update regime from MRTI if available
+            const calibrator = getCalibrator(slotId);
+            const snapshot = island.getSnapshot();
+            if (snapshot.currentRegime) {
+                const regimeAnalysis = island.getRegimeIntelligence?.();
+                const confidence = regimeAnalysis?.isCalibrated?.()
+                    ? (island.getRegimeForecast?.()?.currentConfidence ?? 0.5)
+                    : 0.5;
+                calibrator.updateRegime(snapshot.currentRegime, confidence);
+
+                // Apply MRTI prediction if available
+                const forecast = island.getRegimeForecast?.();
+                if (forecast?.recommendation === 'SWITCH' || forecast?.recommendation === 'PREPARE') {
+                    const transitionProbs = forecast.transitionProbabilities;
+                    if (transitionProbs) {
+                        // Find the highest probability transition target
+                        let topRegime: MarketRegime | null = null;
+                        let topProb = 0;
+                        for (const [regime, prob] of Object.entries(transitionProbs)) {
+                            if (regime !== snapshot.currentRegime && prob > topProb) {
+                                topProb = prob;
+                                topRegime = regime as MarketRegime;
+                            }
+                        }
+                        if (topRegime && topProb > 0) {
+                            calibrator.updatePrediction(topRegime, topProb);
+                        }
+                    }
+                }
+            }
+
+            // Calibrate RRS
+            const calibrated: CalibratedStressResult = calibrator.calibrateRRS(
+                stressResult,
+                champion.metadata.fitnessScore,
+            );
+            const calState = calibrator.getCalibrationState();
+
+            // Record STTA snapshot if this is a new generation
+            const sttaTracker = getSTTATracker(slotId);
+            const lastSttaGen = sttaTracker.getTrendData();
+            const lastRecordedGen = lastSttaGen.length > 0
+                ? lastSttaGen[lastSttaGen.length - 1].generation
+                : -1;
+            if (latestGen.generationNumber > lastRecordedGen) {
+                sttaTracker.recordSnapshot(
+                    latestGen.generationNumber,
+                    stressResult,
+                    calibrated,
+                );
+            }
+
+            // Map scenario names from engine format to display format
+            const SCENARIO_DISPLAY: Record<string, string> = {
+                'bull_trend': 'Bull Trend',
+                'bear_crash': 'Bear Crash',
+                'sideways_range': 'Sideways',
+                'high_volatility': 'High Volatility',
+                'regime_transition': 'Regime Transition',
+            };
+
+            // Build live snapshot
+            const result: StressLiveSnapshot = {
+                strategyName: champion.name,
+                resilienceScore: stressResult.resilienceScore,
+                avgFitness: stressResult.avgFitness,
+                scenarioVariance: stressResult.scenarioVariance,
+                maxDrawdownWorst: stressResult.maxDrawdownWorst,
+                scenarios: stressResult.scenarioResults.map(sr => ({
+                    name: SCENARIO_DISPLAY[sr.name] ?? sr.name,
+                    fitnessScore: sr.fitnessScore,
+                    equityReturnPercent: sr.equityReturnPercent,
+                    trades: sr.trades,
+                    detectedRegime: sr.detectedRegime,
+                    regimeConfidence: sr.regimeConfidence,
+                })),
+                strongest: SCENARIO_DISPLAY[stressResult.strongestScenario.name] ?? stressResult.strongestScenario.name,
+                weakest: SCENARIO_DISPLAY[stressResult.weakestScenario.name] ?? stressResult.weakestScenario.name,
+                calibration: {
+                    currentRegime: calState.currentRegime ?? 'UNKNOWN',
+                    regimeConfidence: calState.regimeConfidence,
+                    totalCalibrations: calState.totalCalibrations,
+                    weights: { ...calState.activeWeights },
+                    calibratedRRS: calibrated.calibratedScore,
+                },
+                stta: sttaTracker.hasEnoughData() ? sttaTracker.getSnapshot() : null,
+                totalExecutionMs: stressResult.totalExecutionMs,
+                timestamp: Date.now(),
+            };
+
+            // Cache with 30s TTL
+            stressCacheMap.set(slotId, {
+                result,
+                expiresAt: Date.now() + STRESS_CACHE_TTL_MS,
+            });
+
+            return result;
         } catch {
             return null;
         }

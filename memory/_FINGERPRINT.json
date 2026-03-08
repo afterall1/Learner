@@ -1,6 +1,6 @@
 {
   "version": "1.0.0",
-  "generatedAt": "2026-03-08T18:52:20.115Z",
+  "generatedAt": "2026-03-08T19:25:21.323Z",
   "projectVersion": "v0.28.0",
   "sourceHashes": {
     "src/types/index.ts": "8230b62fbb52292e",
@@ -29,16 +29,16 @@
     "src/lib/risk/manager.ts": "80b7ca76d7bcb040",
     "src/lib/store/index.ts": "4dddc6b0296876f3",
     "src/app/page.tsx": "45d6e83425a8a828",
-    "src/app/pipeline/page.tsx": "a3cf2f96285f5e22",
+    "src/app/pipeline/page.tsx": "bef7ce25b6337548",
     "src/app/globals.css": "97d4863610475cd5",
     "src/app/layout.tsx": "b7c900afea5bfe7e"
   },
   "memoryHashes": {
     "memory/overview.md": "bd7a3f79652a3050",
-    "memory/active_context.md": "c36c71f604cf08f2",
+    "memory/active_context.md": "a649ad70a482fcc2",
     "memory/architecture/system_design.md": "8ef4173d0532305f",
-    "memory/file_map.md": "775a414f2df8ace3",
-    "memory/changelog.md": "c2ea256b3b94e3a7",
+    "memory/file_map.md": "d5be8ca3985ea6ce",
+    "memory/changelog.md": "936345e0123ed1a1",
     "memory/_SYNC_CHECKLIST.md": "db74a75eb0511be8"
   },
   "lineCounts": {
@@ -68,7 +68,7 @@
     "src/lib/risk/manager.ts": 315,
     "src/lib/store/index.ts": 683,
     "src/app/page.tsx": 1377,
-    "src/app/pipeline/page.tsx": 5020,
+    "src/app/pipeline/page.tsx": 5233,
     "src/app/globals.css": 3120,
     "src/app/layout.tsx": 28
   },

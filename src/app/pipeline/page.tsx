@@ -21,6 +21,7 @@ import {
     type LivePropagationSnapshot,
     type MRTISnapshot,
     type OvermindLiveSnapshot,
+    type StressLiveSnapshot,
 } from '@/lib/hooks/usePipelineLiveData';
 import type { RiskSnapshot } from '@/types';
 import type {
@@ -3666,23 +3667,45 @@ const ASC_REGIME_CLR: Record<string, string> = {
     LOW_VOLATILITY: '#22d3ee',
 };
 
-function StressMatrixPanel({ stressData }: { stressData: DemoStressData }) {
-    const radarData = stressData.scenarios.map(s => ({
+function StressMatrixPanel({ stressData, stressLive }: {
+    stressData: DemoStressData | null;
+    stressLive: StressLiveSnapshot | null;
+}) {
+    // Dual-mode: prefer live data, fall back to demo
+    const isLiveMode = stressLive !== null;
+    const data = isLiveMode ? stressLive : stressData;
+    if (!data) return null;
+
+    const radarData = data.scenarios.map(s => ({
         scenario: s.name.replace(' ', '\n'),
         fitness: s.fitnessScore,
         fullMark: 100,
     }));
 
     // RRS gauge calculation
-    const rrs = stressData.resilienceScore;
+    const rrs = data.resilienceScore;
     const rrsColor = rrs >= 60 ? '#34d399' : rrs >= 35 ? '#fbbf24' : '#f43f5e';
     const rrsRadius = 55;
     const rrsCircumference = Math.PI * rrsRadius;
     const rrsOffset = rrsCircumference * (1 - rrs / 100);
 
     // Calibration weights
-    const cal = stressData.calibration;
+    const cal = data.calibration;
     const maxWeight = Math.max(...Object.values(cal.weights), 0.01);
+
+    // STTA data (only from live)
+    const stta = isLiveMode ? stressLive!.stta : null;
+    const trend = stta?.resilienceTrend ?? null;
+    const vulnMatrix = stta?.vulnerabilityMatrix ?? null;
+
+    // Trend display helpers
+    const trendArrow = trend?.direction === 'IMPROVING' ? '↑' :
+        trend?.direction === 'DEGRADING' ? '↓' : '→';
+    const trendColor = trend?.direction === 'IMPROVING' ? '#34d399' :
+        trend?.direction === 'DEGRADING' ? '#f43f5e' : '#fbbf24';
+    const trendLabel = trend?.direction === 'IMPROVING' ? `IMPROVING (+${Math.abs(trend.slopePerGeneration).toFixed(1)}/gen)` :
+        trend?.direction === 'DEGRADING' ? `DEGRADING (${trend.slopePerGeneration.toFixed(1)}/gen)` :
+            `STABLE (${(trend?.slopePerGeneration ?? 0).toFixed(1)}/gen)`;
 
     return (
         <section id="stress-matrix-panel" className="glass-card glass-card-accent accent-secondary col-12 stagger-in stagger-3">
@@ -3692,9 +3715,21 @@ function StressMatrixPanel({ stressData }: { stressData: DemoStressData }) {
                     <span>MSSM — Market Scenario Stress Matrix</span>
                 </div>
                 <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                    {isLiveMode && (
+                        <span className="card-badge" style={{
+                            background: 'rgba(244, 63, 94, 0.15)',
+                            color: '#f43f5e',
+                            border: '1px solid rgba(244, 63, 94, 0.4)',
+                            fontWeight: 700,
+                            fontSize: '0.55rem',
+                            animation: 'pulse-glow 2s ease-in-out infinite',
+                        }}>
+                            🔴 LIVE
+                        </span>
+                    )}
                     <span className="card-badge badge-primary"
                         style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '0.6rem' }}>
-                        {stressData.scenarios.length} Scenarios
+                        {data.scenarios.length} Scenarios
                     </span>
                     <span className="card-badge" style={{
                         background: `${rrsColor}15`,
@@ -3791,7 +3826,7 @@ function StressMatrixPanel({ stressData }: { stressData: DemoStressData }) {
                         }}>
                             <span style={{ color: 'var(--text-muted)' }}>Strongest</span>
                             <span style={{ color: '#34d399', fontWeight: 700, fontFamily: "'JetBrains Mono', monospace" }}>
-                                {SCENARIO_ICON[stressData.strongest]} {stressData.strongest}
+                                {SCENARIO_ICON[data.strongest]} {data.strongest}
                             </span>
                         </div>
                         <div style={{
@@ -3803,22 +3838,22 @@ function StressMatrixPanel({ stressData }: { stressData: DemoStressData }) {
                         }}>
                             <span style={{ color: 'var(--text-muted)' }}>Weakest</span>
                             <span style={{ color: '#f43f5e', fontWeight: 700, fontFamily: "'JetBrains Mono', monospace" }}>
-                                {SCENARIO_ICON[stressData.weakest]} {stressData.weakest}
+                                {SCENARIO_ICON[data.weakest]} {data.weakest}
                             </span>
                         </div>
                         <div style={{ display: 'flex', gap: 6 }}>
                             <div className="metric-card" style={{ flex: 1, padding: '6px 8px' }}>
                                 <div className="metric-value" style={{ fontSize: '0.85rem', fontFamily: "'JetBrains Mono', monospace" }}>
-                                    {stressData.avgFitness.toFixed(1)}
+                                    {data.avgFitness.toFixed(1)}
                                 </div>
                                 <div className="metric-label">Avg Fit</div>
                             </div>
                             <div className="metric-card" style={{ flex: 1, padding: '6px 8px' }}>
                                 <div className="metric-value" style={{
                                     fontSize: '0.85rem', fontFamily: "'JetBrains Mono', monospace",
-                                    color: stressData.scenarioVariance < 0.15 ? '#34d399' : '#fbbf24',
+                                    color: data.scenarioVariance < 0.15 ? '#34d399' : '#fbbf24',
                                 }}>
-                                    {stressData.scenarioVariance.toFixed(3)}
+                                    {data.scenarioVariance.toFixed(3)}
                                 </div>
                                 <div className="metric-label">Variance</div>
                             </div>
@@ -3832,7 +3867,7 @@ function StressMatrixPanel({ stressData }: { stressData: DemoStressData }) {
                         Per-Scenario Breakdown
                     </div>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                        {stressData.scenarios.map(s => {
+                        {data.scenarios.map(s => {
                             const color = SCENARIO_CLR[s.name] ?? '#6366f1';
                             const barWidth = Math.max(2, Math.min(100, s.fitnessScore));
                             const returnColor = s.equityReturnPercent >= 0 ? '#34d399' : '#f43f5e';
@@ -3880,7 +3915,7 @@ function StressMatrixPanel({ stressData }: { stressData: DemoStressData }) {
                 </div>
             </div>
 
-            {/* ── RADICAL INNOVATION: ASC Calibration Heatmap ────── */}
+            {/* ── ASC Calibration Heatmap ────── */}
             <div style={{
                 marginTop: 16, padding: '12px 16px',
                 borderRadius: 'var(--radius-sm)',
@@ -4001,6 +4036,181 @@ function StressMatrixPanel({ stressData }: { stressData: DemoStressData }) {
                     </div>
                 </div>
             </div>
+
+            {/* ── RADICAL INNOVATION: STTA — Stress Trend Temporal Analysis ────── */}
+            {stta && stta.trendData.length >= 3 && (
+                <div style={{
+                    marginTop: 16, padding: '12px 16px',
+                    borderRadius: 'var(--radius-sm)',
+                    background: 'rgba(14, 17, 30, 0.5)',
+                    border: '1px solid rgba(99, 115, 171, 0.08)',
+                }}>
+                    <div style={{
+                        display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                        fontSize: '0.55rem', color: 'var(--text-muted)',
+                        fontWeight: 600, textTransform: 'uppercase',
+                        letterSpacing: '0.08em', marginBottom: 10,
+                    }}>
+                        <span>📈 Resilience Trend (STTA)</span>
+                        <div style={{ display: 'flex', gap: 8, alignItems: 'center', textTransform: 'none' }}>
+                            <span style={{
+                                padding: '2px 8px', borderRadius: 'var(--radius-sm)',
+                                background: `${trendColor}15`,
+                                color: trendColor,
+                                fontWeight: 700, fontFamily: "'JetBrains Mono', monospace",
+                                fontSize: '0.65rem',
+                            }}>
+                                {trendArrow} {trendLabel}
+                            </span>
+                            <span style={{ fontFamily: "'JetBrains Mono', monospace", color: 'var(--text-muted)' }}>
+                                R² {trend?.rSquared?.toFixed(2) ?? '—'}
+                            </span>
+                        </div>
+                    </div>
+
+                    {/* STTA Sparkline: RRS over generations */}
+                    <ResponsiveContainer width="100%" height={100}>
+                        <AreaChart data={stta.trendData.map(p => ({
+                            gen: `G${p.generation}`,
+                            rrs: p.rrs,
+                            crrs: p.crrs,
+                        }))}>
+                            <defs>
+                                <linearGradient id="sttaGradient" x1="0" y1="0" x2="0" y2="1">
+                                    <stop offset="0%" stopColor={trendColor} stopOpacity={0.3} />
+                                    <stop offset="100%" stopColor={trendColor} stopOpacity={0.02} />
+                                </linearGradient>
+                            </defs>
+                            <XAxis
+                                dataKey="gen"
+                                tick={{ fill: '#64748b', fontSize: 8, fontFamily: "'JetBrains Mono', monospace" }}
+                                axisLine={false}
+                                tickLine={false}
+                            />
+                            <YAxis
+                                domain={[0, 100]}
+                                tick={{ fill: '#64748b', fontSize: 8, fontFamily: "'JetBrains Mono', monospace" }}
+                                axisLine={false}
+                                tickLine={false}
+                                width={25}
+                            />
+                            <Tooltip
+                                contentStyle={TOOLTIP_STYLE}
+                                formatter={(value: string | number | undefined) => [
+                                    `${Number(value ?? 0).toFixed(1)}`, 'Score'
+                                ]}
+                            />
+                            <Area
+                                type="monotone"
+                                dataKey="rrs"
+                                stroke={trendColor}
+                                strokeWidth={2}
+                                fill="url(#sttaGradient)"
+                                dot={{ r: 2, fill: trendColor, strokeWidth: 0 }}
+                            />
+                            <Area
+                                type="monotone"
+                                dataKey="crrs"
+                                stroke="#8b5cf6"
+                                strokeWidth={1.5}
+                                strokeDasharray="4 2"
+                                fill="none"
+                                dot={false}
+                            />
+                        </AreaChart>
+                    </ResponsiveContainer>
+
+                    {/* Regime Vulnerability Heatmap */}
+                    {vulnMatrix && vulnMatrix.generations.length >= 3 && (
+                        <div style={{ marginTop: 12 }}>
+                            <div style={{
+                                fontSize: '0.5rem', color: 'var(--text-muted)',
+                                fontWeight: 600, textTransform: 'uppercase',
+                                letterSpacing: '0.08em', marginBottom: 6,
+                            }}>
+                                🧬 Regime Vulnerability Heatmap
+                                {vulnMatrix.weakestScenarioTrend && (
+                                    <span style={{
+                                        marginLeft: 8, color: '#f43f5e',
+                                        fontWeight: 700, textTransform: 'none',
+                                        fontFamily: "'JetBrains Mono', monospace",
+                                    }}>
+                                        ⚠ {vulnMatrix.weakestScenarioTrend.scenario} deteriorating ({vulnMatrix.weakestScenarioTrend.slope.toFixed(1)}/gen)
+                                    </span>
+                                )}
+                            </div>
+                            <div style={{
+                                display: 'grid',
+                                gridTemplateColumns: `80px repeat(${Math.min(vulnMatrix.generations.length, 20)}, 1fr)`,
+                                gap: 2,
+                            }}>
+                                {/* Header row: generation numbers */}
+                                <div style={{ fontSize: '0.45rem', color: 'var(--text-muted)' }} />
+                                {vulnMatrix.generations.slice(-20).map(gen => (
+                                    <div key={`hdr-${gen}`} style={{
+                                        fontSize: '0.4rem', color: 'var(--text-muted)',
+                                        textAlign: 'center', fontFamily: "'JetBrains Mono', monospace",
+                                    }}>
+                                        G{gen}
+                                    </div>
+                                ))}
+
+                                {/* Scenario rows */}
+                                {vulnMatrix.scenarios.map((scenario, sIdx) => {
+                                    const scenarioColor = SCENARIO_CLR[scenario] ?? '#6366f1';
+                                    const scenarioTrend = vulnMatrix.scenarioTrends[scenario];
+                                    const scenarioTrendArrow = scenarioTrend?.direction === 'IMPROVING' ? '↑' :
+                                        scenarioTrend?.direction === 'DEGRADING' ? '↓' : '';
+                                    const cellValues = vulnMatrix.cells[sIdx] ?? [];
+                                    const maxFitInRow = Math.max(...cellValues, 1);
+
+                                    return (
+                                        <React.Fragment key={scenario}>
+                                            {/* Row label */}
+                                            <div style={{
+                                                fontSize: '0.45rem', color: scenarioColor,
+                                                fontWeight: 600, display: 'flex', alignItems: 'center',
+                                                gap: 3, whiteSpace: 'nowrap', overflow: 'hidden',
+                                                fontFamily: "'JetBrains Mono', monospace",
+                                            }}>
+                                                {SCENARIO_ICON[scenario]} {scenario}
+                                                {scenarioTrendArrow && (
+                                                    <span style={{
+                                                        color: scenarioTrend?.direction === 'IMPROVING' ? '#34d399' : '#f43f5e',
+                                                        fontWeight: 800,
+                                                    }}>
+                                                        {scenarioTrendArrow}
+                                                    </span>
+                                                )}
+                                            </div>
+
+                                            {/* Fitness cells */}
+                                            {cellValues.slice(-20).map((fitness, cIdx) => {
+                                                const intensity = maxFitInRow > 0 ? fitness / maxFitInRow : 0;
+                                                const cellColor = fitness >= 50 ? `rgba(52,211,153,${0.1 + intensity * 0.4})` :
+                                                    fitness >= 25 ? `rgba(251,191,36,${0.1 + intensity * 0.3})` :
+                                                        `rgba(244,63,94,${0.1 + intensity * 0.3})`;
+                                                return (
+                                                    <div
+                                                        key={`cell-${sIdx}-${cIdx}`}
+                                                        style={{
+                                                            height: 18,
+                                                            borderRadius: 2,
+                                                            background: cellColor,
+                                                            transition: 'background 0.3s ease',
+                                                        }}
+                                                        title={`${scenario} G${vulnMatrix.generations[vulnMatrix.generations.length - 20 + cIdx] ?? cIdx}: ${fitness.toFixed(1)}`}
+                                                    />
+                                                );
+                                            })}
+                                        </React.Fragment>
+                                    );
+                                })}
+                            </div>
+                        </div>
+                    )}
+                </div>
+            )}
         </section>
     );
 }
@@ -4972,9 +5182,12 @@ export default function PipelinePage() {
                     propagation={isLive && liveData ? liveData.propagation : null}
                 />
 
-                {/* Row 1.9: Stress Matrix Resilience Monitor (Phase 32) */}
-                {demoData && (
-                    <StressMatrixPanel stressData={demoData.stressData} />
+                {/* Row 1.9: Stress Matrix Resilience Monitor (Phase 32 + Phase 35 Live) */}
+                {(demoData || (isLive && liveData?.stressLive)) && (
+                    <StressMatrixPanel
+                        stressData={demoData?.stressData ?? null}
+                        stressLive={isLive && liveData ? liveData.stressLive : null}
+                    />
                 )}
 
                 {/* Row 2: Fitness + Validation */}
