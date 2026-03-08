@@ -17,9 +17,10 @@
 // ============================================================
 
 import type { Cortex } from './cortex';
-import { batchBacktest } from './backtester';
+import { batchBacktest, IndicatorCache } from './backtester';
 import { batchStressMatrix, type StressMatrixResult } from './stress-matrix';
 import { AdaptiveStressCalibrator } from './adaptive-stress';
+import { BacktestProfiler } from './backtest-profiler';
 import type { OHLCV, EvolutionSchedulerConfig, EvolutionSlotStatus, StrategyDNA } from '@/types';
 import { schedulerLog } from '@/lib/utils/logger';
 
@@ -62,11 +63,13 @@ export class EvolutionScheduler {
     private isProcessing = false;
     private onEvolutionComplete: EvolutionCompleteCallback | null = null;
     private stressCalibrator: AdaptiveStressCalibrator;
+    private profiler: BacktestProfiler;
 
     constructor(cortex: Cortex, config: Partial<EvolutionSchedulerConfig> = {}) {
         this.cortex = cortex;
         this.config = { ...DEFAULT_SCHEDULER_CONFIG, ...config };
         this.stressCalibrator = new AdaptiveStressCalibrator();
+        this.profiler = BacktestProfiler.getInstance();
     }
 
     // ─── Public API ─────────────────────────────────────────
@@ -159,6 +162,13 @@ export class EvolutionScheduler {
         return this.stressCalibrator;
     }
 
+    /**
+     * Get the performance profiler for dashboard telemetry.
+     */
+    getProfiler(): BacktestProfiler {
+        return this.profiler;
+    }
+
     // ─── Private Methods ────────────────────────────────────
 
     private getOrCreateSlotStatus(slotId: string): EvolutionSlotStatus {
@@ -247,7 +257,18 @@ export class EvolutionScheduler {
 
             // Run batch backtest on the population (PFLM shared cache)
             const population = currentGen.population;
+
+            // Phase 34: Profile the evolution cycle
+            this.profiler.startSession(slotId, population.length, candles.length);
+
+            this.profiler.beginPhase('batch_backtest');
             const backtestResults = batchBacktest(population, candles);
+            this.profiler.endPhase();
+
+            // Record per-strategy timings from batch results
+            for (const result of backtestResults) {
+                this.profiler.recordStrategyTiming(result.executionTimeMs);
+            }
 
             // Assign fitness scores back to strategies
             for (const result of backtestResults) {
@@ -271,7 +292,9 @@ export class EvolutionScheduler {
 
                 if (topCandidates.length > 0) {
                     try {
+                        this.profiler.beginPhase('stress_matrix');
                         stressResults = batchStressMatrix(topCandidates, STRESS_CANDLES);
+                        this.profiler.endPhase();
 
                         // Apply calibrated RRS blending to top candidates
                         for (const stressResult of stressResults) {
@@ -335,6 +358,9 @@ export class EvolutionScheduler {
                 candles: candles.length,
                 stressTested: stressResults.length,
             });
+
+            // Phase 34: End profiler session
+            this.profiler.endSession();
 
             // Emit callback
             if (this.onEvolutionComplete) {

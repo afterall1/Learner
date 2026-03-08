@@ -6,7 +6,7 @@ import {
     Brain, Activity, Dna, Shield, GitBranch, Zap,
     Target, BookOpen, Database, RefreshCw, ArrowRight,
     CheckCircle, XCircle, Clock, Layers, Radar, Grid3X3,
-    TrendingUp, TrendingDown, Minus, BarChart3,
+    TrendingUp, TrendingDown, Minus, BarChart3, Crosshair, Radio,
 } from 'lucide-react';
 import {
     AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer,
@@ -14,7 +14,7 @@ import {
     BarChart, Bar, CartesianGrid, ReferenceLine,
     LineChart, Line,
 } from 'recharts';
-import { MarketRegime } from '@/types';
+import { MarketRegime, Timeframe } from '@/types';
 import {
     usePipelineLiveData,
     type LiveTelemetrySnapshot,
@@ -4006,6 +4006,823 @@ function StressMatrixPanel({ stressData }: { stressData: DemoStressData }) {
 }
 
 // ═══════════════════════════════════════════════════════════════
+// PANEL 14: Testnet Mission Control (Phase 33)
+// ═══════════════════════════════════════════════════════════════
+
+type MissionPhase = 'IDLE' | 'PROBE' | 'SEED' | 'EVOLVE' | 'TRADE' | 'REPORT' | 'STOPPED' | 'ERROR';
+
+interface ProbeCheckUI {
+    name: string;
+    status: 'pass' | 'fail' | 'warn';
+    latencyMs: number;
+    details: string;
+}
+
+interface SessionStateUI {
+    phase: MissionPhase;
+    sessionId: string | null;
+    startTime: number | null;
+    elapsedMs: number;
+    tradeCount: number;
+    openPositions: number;
+    cumulativePnl: number;
+    lastError: string | null;
+    report: {
+        totalTrades: number;
+        winningTrades: number;
+        losingTrades: number;
+        totalPnlPercent: number;
+        maxDrawdownPercent: number;
+        bestTradePnl: number;
+        worstTradePnl: number;
+        evolutionCycles: number;
+        finalChampionFitness: number;
+        durationMs: number;
+        phases: { phase: string; durationMs: number }[];
+    } | null;
+    config: {
+        maxLossPercent: number;
+        maxDurationMinutes: number;
+        maxPositions: number;
+    } | null;
+}
+
+const MISSION_PHASES: { key: MissionPhase; label: string; icon: string }[] = [
+    { key: 'PROBE', label: 'Probe', icon: '📡' },
+    { key: 'SEED', label: 'Seed', icon: '🌱' },
+    { key: 'EVOLVE', label: 'Evolve', icon: '🧬' },
+    { key: 'TRADE', label: 'Trade', icon: '⚡' },
+    { key: 'REPORT', label: 'Report', icon: '📊' },
+];
+
+const PHASE_COLORS: Record<string, string> = {
+    PROBE: '#22d3ee',
+    SEED: '#6366f1',
+    EVOLVE: '#a855f7',
+    TRADE: '#34d399',
+    REPORT: '#fbbf24',
+};
+
+function TestnetMissionControlPanel() {
+    // ─── Session Config ────────────────────────────────────
+    const [configPairs, setConfigPairs] = useState('BTCUSDT');
+    const [configTimeframe, setConfigTimeframe] = useState(Timeframe.H1);
+    const [configCapital, setConfigCapital] = useState(1000);
+    const [configDryRun, setConfigDryRun] = useState(false);
+    const [configMaxDuration, setConfigMaxDuration] = useState(60);
+    const [configMaxLoss, setConfigMaxLoss] = useState(-10);
+    const [configMaxPositions, setConfigMaxPositions] = useState(3);
+
+    // ─── State ─────────────────────────────────────────────
+    const [probeResult, setProbeResult] = useState<{
+        ready: boolean;
+        isTestnet: boolean;
+        checks: ProbeCheckUI[];
+        account: {
+            walletBalance: number;
+            availableBalance: number;
+            unrealizedPnl: number;
+            openPositions: number;
+        } | null;
+        serverTimeDrift: number;
+        totalLatencyMs: number;
+        timestamp: number;
+    } | null>(null);
+    const [isProbing, setIsProbing] = useState(false);
+    const [isStarting, setIsStarting] = useState(false);
+    const [isStopping, setIsStopping] = useState(false);
+    const [sessionState, setSessionState] = useState<SessionStateUI & {
+        seedProgress: { completed: number; total: number } | null;
+        trades: { slotId: string; direction: string; entryPrice: number; pnlPercent: number | null; status: string; entryTime: number }[];
+    }>({
+        phase: 'IDLE', sessionId: null, startTime: null, elapsedMs: 0,
+        tradeCount: 0, openPositions: 0, cumulativePnl: 0,
+        lastError: null, report: null, config: null,
+        seedProgress: null, trades: [],
+    });
+    const [pnlHistory, setPnlHistory] = useState<number[]>([]);
+    const [clientElapsed, setClientElapsed] = useState(0);
+    const sessionStartRef = useRef<number | null>(null);
+    const rafRef = useRef<number | null>(null);
+    const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+    const tradeFeedRef = useRef<HTMLDivElement>(null);
+
+    // ─── Helpers ───────────────────────────────────────────
+    const isActive = sessionState.phase === 'TRADE' || sessionState.phase === 'EVOLVE' || sessionState.phase === 'SEED';
+    const isIdle = sessionState.phase === 'IDLE' || sessionState.phase === 'STOPPED' || sessionState.phase === 'ERROR';
+
+    const formatElapsed = (ms: number) => {
+        const s = Math.floor(ms / 1000);
+        const m = Math.floor(s / 60);
+        const h = Math.floor(m / 60);
+        if (h > 0) return `${h}h ${m % 60}m ${s % 60}s`;
+        if (m > 0) return `${m}m ${s % 60}s`;
+        return `${s}s`;
+    };
+
+    // ─── Polling ───────────────────────────────────────────
+    const pollSession = useCallback(async () => {
+        try {
+            const res = await fetch('/api/trading/session', { cache: 'no-store' });
+            if (!res.ok) return;
+            const data = await res.json();
+            setSessionState(prev => ({ ...prev, ...data }));
+            // Track session start time for client-side elapsed
+            if (data.startTime && !sessionStartRef.current) {
+                sessionStartRef.current = data.startTime;
+            }
+            if (data.cumulativePnl !== undefined) {
+                setPnlHistory(prev => [...prev.slice(-49), data.cumulativePnl]);
+            }
+        } catch {
+            // Silently handle — network errors during polling are non-critical
+        }
+    }, []);
+
+    useEffect(() => {
+        if (isActive && !pollRef.current) {
+            pollRef.current = setInterval(pollSession, 3000);
+        } else if (!isActive && pollRef.current) {
+            clearInterval(pollRef.current);
+            pollRef.current = null;
+        }
+        return () => {
+            if (pollRef.current) { clearInterval(pollRef.current); pollRef.current = null; }
+        };
+    }, [isActive, pollSession]);
+
+    // ─── Client-Side RAF Elapsed Timer ─────────────────────
+    useEffect(() => {
+        if (isActive && sessionStartRef.current) {
+            const tick = () => {
+                setClientElapsed(Date.now() - (sessionStartRef.current ?? Date.now()));
+                rafRef.current = requestAnimationFrame(tick);
+            };
+            rafRef.current = requestAnimationFrame(tick);
+        } else if (!isActive) {
+            if (rafRef.current) { cancelAnimationFrame(rafRef.current); rafRef.current = null; }
+            if (!isActive && sessionState.phase === 'IDLE') {
+                sessionStartRef.current = null;
+                setClientElapsed(0);
+            }
+        }
+        return () => {
+            if (rafRef.current) { cancelAnimationFrame(rafRef.current); rafRef.current = null; }
+        };
+    }, [isActive, sessionState.phase]);
+
+    // ─── Probe Action ─────────────────────────────────────
+    const handleProbe = useCallback(async () => {
+        setIsProbing(true);
+        setProbeResult(null);
+        try {
+            const res = await fetch('/api/trading/testnet-probe', { cache: 'no-store' });
+            if (!res.ok) throw new Error(`Probe failed: ${res.status}`);
+            const data = await res.json();
+            setProbeResult(data);
+        } catch (error) {
+            setProbeResult({
+                ready: false,
+                isTestnet: false,
+                checks: [{ name: 'network', status: 'fail', latencyMs: 0, details: error instanceof Error ? error.message : 'Unknown error' }],
+                account: null,
+                serverTimeDrift: 0,
+                totalLatencyMs: 0,
+                timestamp: Date.now(),
+            });
+        } finally {
+            setIsProbing(false);
+        }
+    }, []);
+
+    // ─── Start Session ────────────────────────────────────
+    const handleStart = useCallback(async () => {
+        setIsStarting(true);
+        setPnlHistory([]);
+        try {
+            const res = await fetch('/api/trading/session', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    pairs: configPairs.split(',').map(p => p.trim()).filter(Boolean),
+                    timeframe: configTimeframe,
+                    capitalPerSlot: configCapital,
+                    dryRun: configDryRun,
+                    maxDurationMinutes: configMaxDuration,
+                    maxLossPercent: configMaxLoss,
+                    maxPositions: configMaxPositions,
+                }),
+            });
+            if (!res.ok) throw new Error(`Start failed: ${res.status}`);
+            const data = await res.json();
+            if (data.state) setSessionState(data.state);
+        } catch (error) {
+            setSessionState(prev => ({
+                ...prev,
+                phase: 'ERROR',
+                lastError: error instanceof Error ? error.message : 'Start failed',
+            }));
+        } finally {
+            setIsStarting(false);
+        }
+    }, [configPairs, configTimeframe, configCapital, configDryRun, configMaxDuration, configMaxLoss, configMaxPositions]);
+
+    // ─── Stop Session ─────────────────────────────────────
+    const handleStop = useCallback(async () => {
+        setIsStopping(true);
+        try {
+            const res = await fetch('/api/trading/session', { method: 'DELETE' });
+            if (!res.ok) throw new Error(`Stop failed: ${res.status}`);
+            const data = await res.json();
+            // Refresh session state to get final report
+            if (data.report) {
+                setSessionState(prev => ({
+                    ...prev,
+                    phase: 'STOPPED',
+                    report: data.report,
+                }));
+            } else {
+                await pollSession();
+            }
+        } catch (error) {
+            setSessionState(prev => ({
+                ...prev,
+                lastError: error instanceof Error ? error.message : 'Stop failed',
+            }));
+        } finally {
+            setIsStopping(false);
+        }
+    }, [pollSession]);
+
+    // ─── Phase State Helpers ──────────────────────────────
+    const getPhaseNodeClass = (phaseKey: MissionPhase) => {
+        const phaseOrder: MissionPhase[] = ['PROBE', 'SEED', 'EVOLVE', 'TRADE', 'REPORT'];
+        const currentIdx = phaseOrder.indexOf(sessionState.phase);
+        const thisIdx = phaseOrder.indexOf(phaseKey);
+        if (sessionState.phase === 'ERROR') return thisIdx <= currentIdx ? 'error' : '';
+        if (thisIdx < currentIdx) return 'completed';
+        if (thisIdx === currentIdx) return 'active';
+        return '';
+    };
+
+    const getConnectorClass = (idx: number) => {
+        const phaseOrder: MissionPhase[] = ['PROBE', 'SEED', 'EVOLVE', 'TRADE', 'REPORT'];
+        const currentIdx = phaseOrder.indexOf(sessionState.phase);
+        if (idx < currentIdx) return 'filled';
+        if (idx === currentIdx) return 'filling';
+        return '';
+    };
+
+    // ─── Safety Interlock Calculation ─────────────────────
+    const getLossUtilization = () => {
+        if (!sessionState.config) return 0;
+        const maxLoss = Math.abs(sessionState.config.maxLossPercent);
+        return maxLoss > 0 ? Math.abs(sessionState.cumulativePnl) / maxLoss : 0;
+    };
+
+    const getDurationUtilization = () => {
+        if (!sessionState.config || sessionState.config.maxDurationMinutes <= 0) return 0;
+        const maxMs = sessionState.config.maxDurationMinutes * 60 * 1000;
+        return sessionState.elapsedMs / maxMs;
+    };
+
+    const getPositionUtilization = () => {
+        if (!sessionState.config || sessionState.config.maxPositions <= 0) return 0;
+        return sessionState.openPositions / sessionState.config.maxPositions;
+    };
+
+    const getInterlockLevel = (util: number) => {
+        if (util >= 0.8) return 'danger';
+        if (util >= 0.5) return 'warning';
+        return 'safe';
+    };
+
+    // ─── PnL Sparkline SVG ────────────────────────────────
+    const sparklinePath = useMemo(() => {
+        if (pnlHistory.length < 2) return '';
+        const w = 300;
+        const h = 40;
+        const max = Math.max(...pnlHistory.map(Math.abs), 0.01);
+        const mid = h / 2;
+        return pnlHistory.map((val, i) => {
+            const x = (i / (pnlHistory.length - 1)) * w;
+            const y = mid - (val / max) * (mid - 2);
+            return `${i === 0 ? 'M' : 'L'}${x.toFixed(1)},${y.toFixed(1)}`;
+        }).join(' ');
+    }, [pnlHistory]);
+
+    // ─── Phase Badge ──────────────────────────────────────
+    const phaseBadge = () => {
+        const p = sessionState.phase;
+        if (p === 'IDLE') return <span className="card-badge badge-info">IDLE</span>;
+        if (p === 'STOPPED') return <span className="card-badge badge-info">STOPPED</span>;
+        if (p === 'ERROR') return <span className="card-badge badge-danger">ERROR</span>;
+        if (p === 'TRADE') return <span className="card-badge badge-success" style={{ animation: 'pulse-glow 2s ease-in-out infinite' }}>TRADING</span>;
+        return <span className="card-badge badge-primary">{p}</span>;
+    };
+
+    return (
+        <section id="testnet-mission-control" className="glass-card glass-card-accent accent-neural col-12 stagger-in stagger-8">
+            <div className="card-header">
+                <div className="card-title">
+                    <Crosshair size={18} style={{ color: '#22d3ee' }} />
+                    <span>Testnet Mission Control</span>
+                </div>
+                {phaseBadge()}
+            </div>
+            <div className="card-body">
+
+                {/* ─── 5-Phase Progress Track ──────────────────── */}
+                <div className="mission-phase-track">
+                    {MISSION_PHASES.map((mp, idx) => (
+                        <React.Fragment key={mp.key}>
+                            {idx > 0 && (
+                                <div className={`mission-phase-connector ${getConnectorClass(idx - 1)}`} />
+                            )}
+                            <div className={`mission-phase-node ${getPhaseNodeClass(mp.key)}`}>
+                                <div className="mission-phase-circle">{mp.icon}</div>
+                                <div className="mission-phase-label">{mp.label}</div>
+                            </div>
+                        </React.Fragment>
+                    ))}
+                </div>
+
+                {/* ─── Session Config (only when idle) ─────────── */}
+                {isIdle && (
+                    <div className="mission-config-grid">
+                        <div className="mission-config-field">
+                            <label className="mission-config-label">Pairs</label>
+                            <input
+                                className="mission-config-input"
+                                type="text"
+                                value={configPairs}
+                                onChange={e => setConfigPairs(e.target.value)}
+                                placeholder="BTCUSDT,ETHUSDT"
+                            />
+                        </div>
+                        <div className="mission-config-field">
+                            <label className="mission-config-label">Timeframe</label>
+                            <select
+                                className="mission-config-input"
+                                value={configTimeframe}
+                                onChange={e => setConfigTimeframe(e.target.value as Timeframe)}
+                            >
+                                <option value={Timeframe.M15}>15m</option>
+                                <option value={Timeframe.H1}>1h</option>
+                                <option value={Timeframe.H4}>4h</option>
+                            </select>
+                        </div>
+                        <div className="mission-config-field">
+                            <label className="mission-config-label">Capital / Slot</label>
+                            <input
+                                className="mission-config-input"
+                                type="number"
+                                value={configCapital}
+                                onChange={e => setConfigCapital(Number(e.target.value))}
+                                min={10}
+                                step={100}
+                            />
+                        </div>
+                        <div className="mission-config-field">
+                            <label className="mission-config-label">Max Duration (min)</label>
+                            <input
+                                className="mission-config-input"
+                                type="number"
+                                value={configMaxDuration}
+                                onChange={e => setConfigMaxDuration(Number(e.target.value))}
+                                min={0}
+                                step={5}
+                            />
+                        </div>
+                        <div className="mission-config-field">
+                            <label className="mission-config-label">Max Loss %</label>
+                            <input
+                                className="mission-config-input"
+                                type="number"
+                                value={configMaxLoss}
+                                onChange={e => setConfigMaxLoss(Number(e.target.value))}
+                                max={0}
+                                step={1}
+                            />
+                        </div>
+                        <div className="mission-config-field">
+                            <label className="mission-config-label">Max Positions</label>
+                            <input
+                                className="mission-config-input"
+                                type="number"
+                                value={configMaxPositions}
+                                onChange={e => setConfigMaxPositions(Number(e.target.value))}
+                                min={1}
+                                max={10}
+                            />
+                        </div>
+                        <div className="mission-config-field">
+                            <label className="mission-config-label">Dry Run</label>
+                            <button
+                                className="mission-config-input"
+                                onClick={() => setConfigDryRun(prev => !prev)}
+                                style={{
+                                    cursor: 'pointer',
+                                    textAlign: 'left',
+                                    color: configDryRun ? '#fbbf24' : '#34d399',
+                                }}
+                            >
+                                {configDryRun ? '⚠ DRY RUN' : '🔥 LIVE'}
+                            </button>
+                        </div>
+                    </div>
+                )}
+
+                {/* ─── Active Config Echo (during active session) ── */}
+                {!isIdle && sessionState.config && (
+                    <div style={{
+                        display: 'flex', gap: 10, padding: '6px 12px', borderRadius: 'var(--radius-sm)',
+                        background: 'rgba(99, 115, 171, 0.04)', border: '1px solid rgba(99, 115, 171, 0.1)',
+                        marginBottom: 12, fontSize: '0.6rem', fontFamily: 'var(--font-mono)',
+                        color: 'var(--text-muted)', flexWrap: 'wrap', alignItems: 'center',
+                    }}>
+                        <span>🔒</span>
+                        <span>Pairs: <b style={{ color: 'var(--text-primary)' }}>{configPairs}</b></span>
+                        <span>TF: <b style={{ color: 'var(--text-primary)' }}>{configTimeframe}</b></span>
+                        <span>Capital: <b style={{ color: 'var(--text-primary)' }}>${configCapital}</b></span>
+                        <span>Max Loss: <b style={{ color: '#f43f5e' }}>{sessionState.config.maxLossPercent}%</b></span>
+                        <span>Max Pos: <b style={{ color: 'var(--text-primary)' }}>{sessionState.config.maxPositions}</b></span>
+                        <span>Duration: <b style={{ color: 'var(--text-primary)' }}>{sessionState.config.maxDurationMinutes}m</b></span>
+                    </div>
+                )}
+
+                {/* ─── Seed Progress Bar (during SEED phase) ─────── */}
+                {sessionState.phase === 'SEED' && sessionState.seedProgress && (
+                    <div style={{ marginBottom: 12 }}>
+                        <div style={{
+                            display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                            fontSize: '0.6rem', color: 'var(--text-muted)', marginBottom: 4,
+                        }}>
+                            <span>🌱 Seeding historical data...</span>
+                            <span style={{ fontFamily: 'var(--font-mono)', fontWeight: 700, color: '#6366f1' }}>
+                                {sessionState.seedProgress.completed}/{sessionState.seedProgress.total} candles
+                            </span>
+                        </div>
+                        <div style={{
+                            height: 6, borderRadius: 3, background: 'rgba(99, 102, 241, 0.1)',
+                            overflow: 'hidden',
+                        }}>
+                            <div style={{
+                                height: '100%', borderRadius: 3,
+                                background: 'linear-gradient(90deg, #6366f1, #818cf8)',
+                                width: `${Math.min(100, (sessionState.seedProgress.completed / Math.max(1, sessionState.seedProgress.total)) * 100)}%`,
+                                transition: 'width 0.5s ease',
+                                boxShadow: '0 0 8px rgba(99, 102, 241, 0.3)',
+                            }} />
+                        </div>
+                    </div>
+                )}
+
+                {/* ─── Probe Results (Enhanced) ────────────────── */}
+                {probeResult && (
+                    <div style={{ marginBottom: 14 }}>
+                        {/* Probe Header with testnet badge + drift */}
+                        <div style={{
+                            fontSize: '0.65rem', fontWeight: 600, color: 'var(--text-muted)',
+                            textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 6,
+                            display: 'flex', alignItems: 'center', gap: 6,
+                        }}>
+                            <Radio size={12} style={{ color: probeResult.ready ? '#34d399' : '#f43f5e' }} />
+                            Probe — {probeResult.checks.filter(c => c.status === 'pass').length}/{probeResult.checks.length} passed
+                            {/* Testnet Safety Badge */}
+                            <span style={{
+                                padding: '1px 6px', borderRadius: 4, fontSize: '0.5rem', fontWeight: 700,
+                                background: probeResult.isTestnet ? 'rgba(52, 211, 153, 0.12)' : 'rgba(244, 63, 94, 0.15)',
+                                color: probeResult.isTestnet ? '#34d399' : '#f43f5e',
+                                border: `1px solid ${probeResult.isTestnet ? 'rgba(52, 211, 153, 0.3)' : 'rgba(244, 63, 94, 0.3)'}`,
+                            }}>
+                                {probeResult.isTestnet ? '🟢 TESTNET' : '🔴 MAINNET'}
+                            </span>
+                            {/* Server Time Drift */}
+                            <span style={{
+                                padding: '1px 6px', borderRadius: 4, fontSize: '0.5rem', fontWeight: 700,
+                                fontFamily: 'var(--font-mono)',
+                                background: Math.abs(probeResult.serverTimeDrift) < 1000 ? 'rgba(52, 211, 153, 0.08)' : 'rgba(251, 191, 36, 0.1)',
+                                color: Math.abs(probeResult.serverTimeDrift) < 1000 ? '#34d399' : '#fbbf24',
+                            }}>
+                                Δ{probeResult.serverTimeDrift}ms
+                            </span>
+                            <span style={{ marginLeft: 'auto', fontFamily: 'var(--font-mono)', fontSize: '0.6rem' }}>
+                                {probeResult.totalLatencyMs}ms
+                            </span>
+                        </div>
+                        {probeResult.checks.map(check => (
+                            <div className="mission-probe-check" key={check.name}>
+                                <span className="mission-probe-icon">
+                                    {check.status === 'pass' ? '✅' : check.status === 'warn' ? '⚠️' : '❌'}
+                                </span>
+                                <span className="mission-probe-name">{check.name}</span>
+                                <span className="mission-probe-detail">{check.details}</span>
+                                <span className="mission-probe-latency">{check.latencyMs}ms</span>
+                            </div>
+                        ))}
+                        {/* Full Account Panel (Enhanced) */}
+                        {probeResult.account && (
+                            <div style={{
+                                marginTop: 6, padding: '8px 12px', borderRadius: 'var(--radius-sm)',
+                                background: 'rgba(52, 211, 153, 0.06)', border: '1px solid rgba(52, 211, 153, 0.15)',
+                                fontSize: '0.65rem', display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8,
+                                fontFamily: 'var(--font-mono)',
+                            }}>
+                                <div>
+                                    <div style={{ color: 'var(--text-muted)', fontSize: '0.5rem', marginBottom: 2 }}>WALLET</div>
+                                    <div style={{ color: '#34d399', fontWeight: 700 }}>${probeResult.account.walletBalance.toFixed(2)}</div>
+                                </div>
+                                <div>
+                                    <div style={{ color: 'var(--text-muted)', fontSize: '0.5rem', marginBottom: 2 }}>AVAILABLE</div>
+                                    <div style={{ color: '#34d399', fontWeight: 700 }}>${probeResult.account.availableBalance.toFixed(2)}</div>
+                                </div>
+                                <div>
+                                    <div style={{ color: 'var(--text-muted)', fontSize: '0.5rem', marginBottom: 2 }}>UNREALIZED</div>
+                                    <div style={{ color: probeResult.account.unrealizedPnl >= 0 ? '#34d399' : '#f43f5e', fontWeight: 700 }}>
+                                        {probeResult.account.unrealizedPnl >= 0 ? '+' : ''}{probeResult.account.unrealizedPnl.toFixed(2)}
+                                    </div>
+                                </div>
+                                <div>
+                                    <div style={{ color: 'var(--text-muted)', fontSize: '0.5rem', marginBottom: 2 }}>POSITIONS</div>
+                                    <div style={{ color: probeResult.account.openPositions > 0 ? '#fbbf24' : '#34d399', fontWeight: 700 }}>
+                                        {probeResult.account.openPositions}
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                )}
+
+                {/* ─── Live Telemetry (during active session) ──── */}
+                {!isIdle && (
+                    <div className="mission-telemetry-grid">
+                        <div className="mission-telemetry-cell">
+                            <span className="mission-telemetry-label">Elapsed</span>
+                            <span className="mission-telemetry-value">{formatElapsed(clientElapsed || sessionState.elapsedMs)}</span>
+                        </div>
+                        <div className="mission-telemetry-cell">
+                            <span className="mission-telemetry-label">Trades</span>
+                            <span className="mission-telemetry-value">{sessionState.tradeCount}</span>
+                        </div>
+                        <div className="mission-telemetry-cell">
+                            <span className="mission-telemetry-label">Open</span>
+                            <span className="mission-telemetry-value">{sessionState.openPositions}</span>
+                        </div>
+                        <div className="mission-telemetry-cell" style={{ gridColumn: 'span 3' }}>
+                            <span className="mission-telemetry-label">Cumulative PnL</span>
+                            <span className={`mission-telemetry-value ${sessionState.cumulativePnl >= 0 ? 'positive' : 'negative'}`}>
+                                {sessionState.cumulativePnl >= 0 ? '+' : ''}{sessionState.cumulativePnl.toFixed(2)}%
+                            </span>
+                        </div>
+                    </div>
+                )}
+
+                {/* ─── Error Display ───────────────────────────── */}
+                {sessionState.lastError && (
+                    <div style={{
+                        padding: '8px 12px', borderRadius: 'var(--radius-sm)',
+                        background: 'rgba(244, 63, 94, 0.08)', border: '1px solid rgba(244, 63, 94, 0.2)',
+                        fontSize: '0.7rem', color: '#f43f5e', marginBottom: 10,
+                        display: 'flex', alignItems: 'center', gap: 6,
+                    }}>
+                        <XCircle size={14} /> {sessionState.lastError}
+                    </div>
+                )}
+
+                {/* ─── Session Report (after stop) ─────────────── */}
+                {sessionState.report && sessionState.phase === 'STOPPED' && (
+                    <div style={{
+                        padding: '14px 16px', borderRadius: 'var(--radius-md)',
+                        background: 'var(--bg-card)', border: '1px solid var(--glass-border)',
+                        marginBottom: 14,
+                    }}>
+                        <div style={{
+                            fontSize: '0.65rem', fontWeight: 700, color: 'var(--text-muted)',
+                            textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 10,
+                        }}>📊 Session Report</div>
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 10, fontSize: '0.7rem' }}>
+                            <div>
+                                <div style={{ color: 'var(--text-muted)', fontSize: '0.55rem', marginBottom: 2 }}>TOTAL PnL</div>
+                                <div style={{
+                                    fontFamily: 'var(--font-mono)', fontWeight: 800, fontSize: '1rem',
+                                    color: sessionState.report.totalPnlPercent >= 0 ? '#34d399' : '#f43f5e',
+                                }}>
+                                    {sessionState.report.totalPnlPercent >= 0 ? '+' : ''}{sessionState.report.totalPnlPercent.toFixed(2)}%
+                                </div>
+                            </div>
+                            <div>
+                                <div style={{ color: 'var(--text-muted)', fontSize: '0.55rem', marginBottom: 2 }}>WIN / LOSS</div>
+                                <div style={{ fontFamily: 'var(--font-mono)', fontWeight: 700 }}>
+                                    <span style={{ color: '#34d399' }}>{sessionState.report.winningTrades}</span>
+                                    {' / '}
+                                    <span style={{ color: '#f43f5e' }}>{sessionState.report.losingTrades}</span>
+                                </div>
+                            </div>
+                            <div>
+                                <div style={{ color: 'var(--text-muted)', fontSize: '0.55rem', marginBottom: 2 }}>MAX DD</div>
+                                <div style={{ fontFamily: 'var(--font-mono)', fontWeight: 700, color: '#f43f5e' }}>
+                                    {sessionState.report.maxDrawdownPercent.toFixed(2)}%
+                                </div>
+                            </div>
+                            <div>
+                                <div style={{ color: 'var(--text-muted)', fontSize: '0.55rem', marginBottom: 2 }}>CHAMPION</div>
+                                <div style={{ fontFamily: 'var(--font-mono)', fontWeight: 700, color: '#818cf8' }}>
+                                    {sessionState.report.finalChampionFitness.toFixed(1)}
+                                </div>
+                            </div>
+                        </div>
+                        <div style={{ display: 'flex', gap: 12, marginTop: 10, fontSize: '0.62rem', color: 'var(--text-muted)' }}>
+                            <span>Duration: <b style={{ color: 'var(--text-primary)' }}>{formatElapsed(sessionState.report.durationMs)}</b></span>
+                            <span>Evo Cycles: <b style={{ color: 'var(--text-primary)' }}>{sessionState.report.evolutionCycles}</b></span>
+                            <span>Best Trade: <b style={{ color: '#34d399' }}>+{sessionState.report.bestTradePnl.toFixed(2)}%</b></span>
+                            <span>Worst Trade: <b style={{ color: '#f43f5e' }}>{sessionState.report.worstTradePnl.toFixed(2)}%</b></span>
+                        </div>
+                    </div>
+                )}
+
+                {/* ─── Live Trade Log Feed ──────────────────────── */}
+                {sessionState.trades && sessionState.trades.length > 0 && (
+                    <div style={{ marginBottom: 14 }}>
+                        <div style={{
+                            fontSize: '0.6rem', fontWeight: 700, color: 'var(--text-muted)',
+                            textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 6,
+                        }}>⚡ Trade Log ({sessionState.trades.length})</div>
+                        <div
+                            ref={tradeFeedRef}
+                            className="mission-trade-feed"
+                            style={{
+                                maxHeight: 120, overflowY: 'auto', borderRadius: 'var(--radius-sm)',
+                                background: 'rgba(6, 10, 20, 0.4)', border: '1px solid var(--glass-border)',
+                                padding: '4px 0',
+                            }}
+                        >
+                            {sessionState.trades.map((t, i) => (
+                                <div
+                                    key={`${t.slotId}-${t.entryTime}-${i}`}
+                                    style={{
+                                        display: 'flex', alignItems: 'center', gap: 8,
+                                        padding: '4px 10px', fontSize: '0.6rem',
+                                        fontFamily: 'var(--font-mono)',
+                                        borderBottom: '1px solid rgba(99, 115, 171, 0.05)',
+                                    }}
+                                >
+                                    <span style={{
+                                        fontWeight: 800, fontSize: '0.7rem',
+                                        color: t.direction === 'LONG' ? '#34d399' : '#f43f5e',
+                                    }}>
+                                        {t.direction === 'LONG' ? '▲' : '▼'}
+                                    </span>
+                                    <span style={{ color: 'var(--text-secondary)', minWidth: 50 }}>
+                                        {new Date(t.entryTime).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+                                    </span>
+                                    <span style={{ color: 'var(--text-primary)', fontWeight: 600 }}>
+                                        ${t.entryPrice.toFixed(2)}
+                                    </span>
+                                    <span style={{
+                                        marginLeft: 'auto',
+                                        fontWeight: 700,
+                                        color: t.pnlPercent === null ? 'var(--text-muted)'
+                                            : t.pnlPercent >= 0 ? '#34d399' : '#f43f5e',
+                                    }}>
+                                        {t.pnlPercent !== null
+                                            ? `${t.pnlPercent >= 0 ? '+' : ''}${t.pnlPercent.toFixed(2)}%`
+                                            : '—'}
+                                    </span>
+                                    <span style={{
+                                        fontSize: '0.5rem', padding: '1px 4px', borderRadius: 3,
+                                        background: t.status === 'OPEN' ? 'rgba(52, 211, 153, 0.1)' : 'rgba(99, 115, 171, 0.08)',
+                                        color: t.status === 'OPEN' ? '#34d399' : 'var(--text-muted)',
+                                    }}>
+                                        {t.status}
+                                    </span>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                )}
+
+                {/* ─── RADICAL INNOVATION: Session Replay Timeline ─── */}
+                {sessionState.report && sessionState.report.phases && sessionState.report.phases.length > 0 && (
+                    <div className="mission-timeline-section">
+                        <div style={{
+                            fontSize: '0.6rem', fontWeight: 700, color: 'var(--text-muted)',
+                            textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 6,
+                        }}>Phase Timeline</div>
+                        <div className="mission-timeline-bars">
+                            {sessionState.report.phases.map((p, i) => {
+                                const totalMs = sessionState.report!.phases.reduce((s, ph) => s + ph.durationMs, 0);
+                                const pct = totalMs > 0 ? (p.durationMs / totalMs) * 100 : 0;
+                                return (
+                                    <div
+                                        key={`${p.phase}-${i}`}
+                                        className="mission-timeline-bar"
+                                        data-label={pct > 15 ? p.phase : ''}
+                                        style={{
+                                            flexGrow: Math.max(1, pct),
+                                            background: PHASE_COLORS[p.phase] ?? '#6366f1',
+                                            opacity: 0.7,
+                                        }}
+                                        title={`${p.phase}: ${formatElapsed(p.durationMs)}`}
+                                    />
+                                );
+                            })}
+                        </div>
+                        <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+                            {sessionState.report.phases.map((p, i) => (
+                                <div key={`${p.phase}-legend-${i}`} style={{
+                                    display: 'flex', alignItems: 'center', gap: 4, fontSize: '0.55rem',
+                                }}>
+                                    <div style={{
+                                        width: 8, height: 8, borderRadius: 2,
+                                        background: PHASE_COLORS[p.phase] ?? '#6366f1',
+                                    }} />
+                                    <span style={{ color: 'var(--text-muted)' }}>{p.phase}</span>
+                                    <span style={{ fontFamily: 'var(--font-mono)', fontWeight: 600, color: 'var(--text-secondary)' }}>
+                                        {formatElapsed(p.durationMs)}
+                                    </span>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                )}
+
+                {/* ─── PnL Sparkline ───────────────────────────── */}
+                {pnlHistory.length >= 2 && (
+                    <div className="mission-pnl-spark">
+                        <svg viewBox="0 0 300 40" preserveAspectRatio="none">
+                            <line x1="0" y1="20" x2="300" y2="20" stroke="rgba(99,115,171,0.1)" strokeWidth="0.5" />
+                            <path
+                                d={sparklinePath}
+                                fill="none"
+                                stroke={pnlHistory[pnlHistory.length - 1] >= 0 ? '#34d399' : '#f43f5e'}
+                                strokeWidth="1.5"
+                                strokeLinejoin="round"
+                            />
+                        </svg>
+                    </div>
+                )}
+
+                {/* ─── Safety Interlocks (during TRADE phase) ───── */}
+                {(sessionState.phase === 'TRADE' || sessionState.phase === 'EVOLVE') && sessionState.config && (
+                    <div className="mission-interlocks">
+                        <div className="mission-interlock">
+                            <div className={`mission-interlock-dot ${getInterlockLevel(getLossUtilization())}`} />
+                            <span className="mission-interlock-label">Max Loss</span>
+                            <span className="mission-interlock-value">
+                                {(getLossUtilization() * 100).toFixed(0)}%
+                            </span>
+                        </div>
+                        <div className="mission-interlock">
+                            <div className={`mission-interlock-dot ${getInterlockLevel(getDurationUtilization())}`} />
+                            <span className="mission-interlock-label">Duration</span>
+                            <span className="mission-interlock-value">
+                                {(getDurationUtilization() * 100).toFixed(0)}%
+                            </span>
+                        </div>
+                        <div className="mission-interlock">
+                            <div className={`mission-interlock-dot ${getInterlockLevel(getPositionUtilization())}`} />
+                            <span className="mission-interlock-label">Positions</span>
+                            <span className="mission-interlock-value">
+                                {sessionState.openPositions}/{sessionState.config.maxPositions}
+                            </span>
+                        </div>
+                    </div>
+                )}
+
+                {/* ─── Control Buttons ─────────────────────────── */}
+                <div className="mission-controls">
+                    <button
+                        className="mission-btn probe"
+                        onClick={handleProbe}
+                        disabled={isProbing || isActive}
+                    >
+                        <Radio size={14} />
+                        {isProbing ? 'Probing...' : 'Run Probe'}
+                    </button>
+                    <button
+                        className="mission-btn start"
+                        onClick={handleStart}
+                        disabled={isStarting || isActive}
+                    >
+                        <Zap size={14} />
+                        {isStarting ? 'Starting...' : 'Start Session'}
+                    </button>
+                    <button
+                        className="mission-btn stop"
+                        onClick={handleStop}
+                        disabled={isStopping || !isActive}
+                    >
+                        <Shield size={14} />
+                        {isStopping ? 'Stopping...' : 'Stop Session'}
+                    </button>
+                </div>
+            </div>
+        </section>
+    );
+}
+
+// ═══════════════════════════════════════════════════════════════
 // MAIN PIPELINE PAGE
 // ═══════════════════════════════════════════════════════════════
 
@@ -4192,6 +5009,9 @@ export default function PipelinePage() {
                 <RiskShieldPanel
                     riskLive={isLive && liveData ? liveData.riskLive : null}
                 />
+
+                {/* Row 8: Testnet Mission Control — Session Lifecycle (Phase 33) */}
+                <TestnetMissionControlPanel />
             </main>
         </>
     );

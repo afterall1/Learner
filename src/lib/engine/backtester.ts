@@ -125,11 +125,10 @@ export class IndicatorCache {
     private candles: OHLCV[];
     private atrValues: number[] = [];
     private readonly maxEntries: number;
-    private accessOrder: string[] = [];  // LRU tracking: most recent at end
     private hits = 0;
     private misses = 0;
 
-    constructor(candles: OHLCV[], maxEntries: number = 100) {
+    constructor(candles: OHLCV[], maxEntries: number = 200) {
         this.candles = candles;
         this.maxEntries = maxEntries;
         // Always pre-compute ATR(14) for slippage modeling
@@ -158,27 +157,27 @@ export class IndicatorCache {
         const cached = this.cache.get(key);
         if (cached) {
             this.hits++;
-            // Move to end of access order (most recently used)
-            const idx = this.accessOrder.indexOf(key);
-            if (idx >= 0) {
-                this.accessOrder.splice(idx, 1);
-                this.accessOrder.push(key);
-            }
+            // O(1) LRU promotion: delete + re-set moves entry to Map's end
+            this.cache.delete(key);
+            this.cache.set(key, cached);
             return cached;
         }
 
         this.misses++;
 
-        // Evict LRU entries if at capacity
-        while (this.cache.size >= this.maxEntries && this.accessOrder.length > 0) {
-            const evictKey = this.accessOrder.shift()!;
-            this.cache.delete(evictKey);
+        // O(1) LRU eviction: Map.keys().next() gives the oldest entry
+        while (this.cache.size >= this.maxEntries) {
+            const oldestKey = this.cache.keys().next().value;
+            if (oldestKey !== undefined) {
+                this.cache.delete(oldestKey);
+            } else {
+                break;
+            }
         }
 
         // Compute the indicator for the full candle series
         const entry = this.computeIndicator(gene);
         this.cache.set(key, entry);
-        this.accessOrder.push(key);
         return entry;
     }
 
@@ -511,9 +510,17 @@ export function runBacktest(
     // MAIN SIMULATION LOOP
     // ═══════════════════════════════════════════════════════════
 
+    // Regime detection cache: re-detect every 50 candles (regime doesn't change per-candle)
+    let cachedRegime: MarketRegime | null = null;
+    let lastRegimeDetectionIndex = -1;
+    const REGIME_CACHE_INTERVAL = 50;
+
     for (let i = warmup; i < candles.length; i++) {
         const currentCandle = candles[i];
-        const candleSlice = candles.slice(0, i + 1); // All candles up to current
+        // Build candleSlice only when signal evaluation requires it (lazy)
+        // evaluateStrategy and calculateAdvancedSignals both use candles[candles.length - 1]
+        // so we still need a proper view — but we only slice when entering signal evaluation
+        // instead of on EVERY candle iteration, which saves ~N unnecessary copies
 
         // ─── Step 1: Check open position for SL/TP hits ──────
         if (openPosition) {
@@ -535,7 +542,8 @@ export function runBacktest(
                     openPosition.direction,
                     false,  // isEntry = false
                     config.execution,
-                    atrValues.slice(0, i + 1),
+                    atrValues,
+                    i,  // Index-based ATR access — no slice copy
                 );
 
                 const exitReason = sltpResult.hitType === 'SL'
@@ -565,10 +573,13 @@ export function runBacktest(
                 totalFees += exitExecution.totalCost;
                 balance += pnlResult.pnlUSD;
 
-                // Tag with regime if enabled
+                // Tag with cached regime if enabled (reuses detection from cache)
                 if (config.enableRegimeTagging) {
-                    const regime = detectSingleCandleRegime(candleSlice);
-                    const regimeKey = regime || 'UNKNOWN';
+                    if (i - lastRegimeDetectionIndex >= REGIME_CACHE_INTERVAL || cachedRegime === null) {
+                        cachedRegime = detectSingleCandleRegime(candles, i);
+                        lastRegimeDetectionIndex = i;
+                    }
+                    const regimeKey = cachedRegime || 'UNKNOWN';
                     regimeBreakdown[regimeKey] = (regimeBreakdown[regimeKey] || 0) + 1;
                 }
 
@@ -580,6 +591,7 @@ export function runBacktest(
         // ─── Step 2: Evaluate strategy signals ───────────────
         if (!openPosition) {
             // Only look for entries if no open position
+            const candleSlice = candles.slice(0, i + 1);
             const signal = evaluateStrategy(dna, candleSlice, null);
 
             if (signal.action === TradeSignalAction.LONG || signal.action === TradeSignalAction.SHORT) {
@@ -629,7 +641,8 @@ export function runBacktest(
                             direction,
                             true,  // isEntry = true
                             config.execution,
-                            atrValues.slice(0, i + 1),
+                            atrValues,
+                            i,  // Index-based ATR access — no slice copy
                         );
 
                         // Calculate SL/TP levels
@@ -666,7 +679,7 @@ export function runBacktest(
             // Check for exit signals on open position
             const signal = evaluateStrategy(
                 dna,
-                candleSlice,
+                candles.slice(0, i + 1),
                 openPosition.direction,
             );
 
@@ -681,7 +694,8 @@ export function runBacktest(
                     openPosition.direction,
                     false,
                     config.execution,
-                    atrValues.slice(0, i + 1),
+                    atrValues,
+                    i,  // Index-based ATR access — no slice copy
                 );
 
                 const pnlResult = calculatePnL(
@@ -707,8 +721,11 @@ export function runBacktest(
                 balance += pnlResult.pnlUSD;
 
                 if (config.enableRegimeTagging) {
-                    const regime = detectSingleCandleRegime(candleSlice);
-                    const regimeKey = regime || 'UNKNOWN';
+                    if (i - lastRegimeDetectionIndex >= REGIME_CACHE_INTERVAL || cachedRegime === null) {
+                        cachedRegime = detectSingleCandleRegime(candles, i);
+                        lastRegimeDetectionIndex = i;
+                    }
+                    const regimeKey = cachedRegime || 'UNKNOWN';
                     regimeBreakdown[regimeKey] = (regimeBreakdown[regimeKey] || 0) + 1;
                 }
 
@@ -955,13 +972,16 @@ function createTradeRecord(
 
 /**
  * Detect market regime at a single point in time.
- * Uses the last 50 candles for quick regime classification.
+ * Uses the last 50 candles up to endIndex for quick regime classification.
+ * Accepts full array + index to avoid caller-side slice copies.
  */
-function detectSingleCandleRegime(candles: OHLCV[]): MarketRegime | null {
-    if (candles.length < 50) return null;
+function detectSingleCandleRegime(candles: OHLCV[], endIndex?: number): MarketRegime | null {
+    const end = endIndex !== undefined ? endIndex + 1 : candles.length;
+    if (end < 50) return null;
 
     try {
-        const analysis = detectRegime(candles.slice(-50));
+        const recentCandles = candles.slice(Math.max(0, end - 50), end);
+        const analysis = detectRegime(recentCandles);
         return analysis.currentRegime;
     } catch {
         return null;

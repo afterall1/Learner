@@ -55,21 +55,30 @@ export interface SLTPCheckResult {
  * Higher volatility → more slippage (realistic: volatile markets have wider spreads).
  *
  * @param baseSlippageBps - Base slippage in basis points
- * @param atrValues - Recent ATR values for volatility assessment
+ * @param atrValues - ATR values for volatility assessment
  * @param currentPrice - Current market price
+ * @param atrEndIndex - Optional: only consider atrValues[0..atrEndIndex] (avoids array copy)
  * @returns Slippage as a decimal multiplier (e.g., 0.0002 = 2bps)
  */
 export function calculateSlippage(
     baseSlippageBps: number,
     atrValues: number[],
     currentPrice: number,
+    atrEndIndex?: number,
 ): number {
-    if (!atrValues.length || currentPrice <= 0) {
+    const endIdx = atrEndIndex !== undefined ? Math.min(atrEndIndex, atrValues.length - 1) : atrValues.length - 1;
+    if (endIdx < 0 || !atrValues.length || currentPrice <= 0) {
         return baseSlippageBps / 10000;
     }
 
-    const recentATR = atrValues[atrValues.length - 1];
-    const avgATR = atrValues.reduce((sum, v) => sum + v, 0) / atrValues.length;
+    const recentATR = atrValues[endIdx];
+    // Compute average only over [0..endIdx] range — avoids full-array reduce on slices
+    let sum = 0;
+    const count = endIdx + 1;
+    for (let j = 0; j <= endIdx; j++) {
+        sum += atrValues[j];
+    }
+    const avgATR = sum / count;
 
     // Volatility ratio: current ATR vs average ATR
     // If current volatility is 2x average, slippage doubles
@@ -208,6 +217,7 @@ export function checkStopLossAndTakeProfit(
  * @param isEntry - Entry or exit
  * @param config - Execution configuration
  * @param atrValues - ATR values for adaptive slippage
+ * @param atrEndIndex - Optional: current candle index into atrValues (avoids slice copy)
  * @returns Complete execution result
  */
 export function simulateExecution(
@@ -218,10 +228,11 @@ export function simulateExecution(
     isEntry: boolean,
     config: ExecutionConfig,
     atrValues: number[] = [],
+    atrEndIndex?: number,
 ): ExecutionResult {
     // Calculate slippage
     const slippageDecimal = config.useAdaptiveSlippage
-        ? calculateSlippage(config.slippageBps, atrValues, price)
+        ? calculateSlippage(config.slippageBps, atrValues, price, atrEndIndex)
         : config.slippageBps / 10000;
 
     // Get fill price
