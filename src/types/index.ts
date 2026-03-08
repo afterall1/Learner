@@ -2116,3 +2116,81 @@ export interface EvolutionSlotStatus {
   lastGenerationFitness: number;
 }
 
+// ─── System Bootstrap (Phase 36) ─────────────────────────────
+
+/**
+ * Boot sequence phases — executed in strict order.
+ * Each phase depends on the successful completion of the previous one.
+ */
+export enum BootPhase {
+  IDLE = 'IDLE',
+  ENV_CHECK = 'ENV_CHECK',
+  PERSISTENCE = 'PERSISTENCE',
+  CORTEX_SPAWN = 'CORTEX_SPAWN',
+  HISTORICAL_SEED = 'HISTORICAL_SEED',
+  WS_CONNECT = 'WS_CONNECT',
+  EVOLUTION_START = 'EVOLUTION_START',
+  READY = 'READY',
+  ERROR = 'ERROR',
+  SHUTDOWN = 'SHUTDOWN',
+}
+
+/**
+ * Real-time progress within a boot phase.
+ */
+export interface BootProgress {
+  /** Current phase in execution */
+  phase: BootPhase;
+  /** Overall boot progress 0-100 */
+  overallPercent: number;
+  /** Human-readable status message for the current phase */
+  message: string;
+  /** Slot-level seed progress (only during HISTORICAL_SEED) */
+  slotProgress: {
+    completed: number;
+    total: number;
+    currentSlot: string;
+  };
+}
+
+/**
+ * Configuration overrides for the boot sequence.
+ */
+export interface BootConfig {
+  /** Trading pairs to activate. Default: ['BTCUSDT', 'ETHUSDT'] */
+  pairs: string[];
+  /** Timeframe per slot. Default: Timeframe.H1 */
+  timeframe: Timeframe;
+  /** Starting capital. Default: 10000 */
+  totalCapital: number;
+  /** Skip persistence hydration (fresh start). Default: false */
+  skipPersistence: boolean;
+  /** Enable auto-trade after boot. Default: false */
+  autoTrade: boolean;
+}
+
+/**
+ * Complete boot system snapshot — exposed to UI via BootStore.
+ */
+export interface BootState {
+  /** Current boot phase */
+  phase: BootPhase;
+  /** Detailed progress */
+  progress: BootProgress;
+  /** Per-subsystem status indicators */
+  envStatus: 'pending' | 'valid' | 'invalid';
+  persistenceStatus: 'pending' | 'hydrated' | 'fresh' | 'error';
+  cortexStatus: 'pending' | 'spawned' | 'error';
+  seedStatus: 'pending' | 'seeding' | 'complete' | 'error';
+  wsStatus: 'pending' | 'connecting' | 'connected' | 'error';
+  evolutionStatus: 'pending' | 'active' | 'error';
+  /** Total boot duration in milliseconds */
+  bootDurationMs: number;
+  /** Per-phase completion times */
+  phaseDurations: Partial<Record<BootPhase, number>>;
+  /** Error message, if any */
+  error: string | null;
+  /** Whether the system has successfully booted at least once */
+  hasBooted: boolean;
+}
+

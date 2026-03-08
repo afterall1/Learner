@@ -24,6 +24,7 @@ import type {
 import { generateRandomStrategy } from '@/lib/engine/strategy-dna';
 import { evaluatePerformance, calculateFitnessScore } from '@/lib/engine/evaluator';
 import { useMarketStore, useMarketDataStore } from '@/lib/store';
+import { IgnitionSequencePanel } from '@/components/panels/IgnitionSequencePanel';
 
 // ═══════════════════════════════════════════════════════════════
 // DEMO DATA GENERATORS — Simulation engine for realistic data
@@ -1354,6 +1355,7 @@ export default function DashboardPage() {
 
       {/* ─── Dashboard Grid ───────────────────────────────── */}
       <main className="dashboard-grid">
+        <IgnitionSequencePanel />
         <PortfolioOverview summary={demoData.portfolio} />
         <ActiveStrategyPanel strategy={demoData.strategy} metrics={demoData.metrics} />
         <RiskGauge

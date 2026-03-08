@@ -3118,3 +3118,375 @@ body::before {
     animation: none !important;
   }
 }
+
+/* ─── Ignition Sequence Panel (Phase 36) ─────────────────────── */
+
+.ignition-panel {
+  position: relative;
+  overflow: hidden;
+}
+
+.ignition-panel::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: var(--radius-lg);
+  padding: 1px;
+  background: linear-gradient(135deg, rgba(99, 102, 241, 0.3), rgba(139, 92, 246, 0.2), rgba(34, 211, 238, 0.15));
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  mask-composite: exclude;
+  pointer-events: none;
+}
+
+/* Phase Steps Container */
+.ignition-phases {
+  display: flex;
+  align-items: flex-start;
+  gap: 0;
+  margin: 20px 0 12px;
+  position: relative;
+}
+
+/* Individual Phase Step */
+.ignition-phase {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex: 1;
+  position: relative;
+  min-width: 0;
+}
+
+.ignition-phase-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: 2px solid var(--glass-border);
+  background: rgba(14, 17, 30, 0.8);
+  color: var(--text-muted);
+  transition: all var(--transition-base);
+  position: relative;
+  z-index: 2;
+  flex-shrink: 0;
+}
+
+.ignition-phase-info {
+  margin-top: 8px;
+  text-align: center;
+  min-width: 0;
+}
+
+.ignition-phase-label {
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  transition: color var(--transition-base);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.ignition-phase-desc {
+  font-size: 0.65rem;
+  color: var(--text-muted);
+  margin-top: 2px;
+  line-height: 1.3;
+  opacity: 0.7;
+}
+
+/* Phase Connector Line */
+.ignition-phase-connector {
+  position: absolute;
+  top: 18px;
+  left: calc(50% + 18px);
+  right: calc(-50% + 18px);
+  height: 2px;
+  background: var(--glass-border);
+  z-index: 1;
+  transition: background var(--transition-base);
+}
+
+.ignition-phase-connector--complete {
+  background: var(--accent-primary);
+  box-shadow: 0 0 6px rgba(99, 102, 241, 0.3);
+}
+
+/* Phase States */
+.ignition-phase--active .ignition-phase-icon {
+  border-color: var(--accent-primary);
+  background: rgba(99, 102, 241, 0.15);
+  color: var(--accent-primary);
+  box-shadow: 0 0 16px rgba(99, 102, 241, 0.3);
+  animation: ignition-phase-pulse 2s ease-in-out infinite;
+}
+
+.ignition-phase--active .ignition-phase-label {
+  color: var(--accent-primary);
+}
+
+.ignition-phase--complete .ignition-phase-icon {
+  border-color: var(--success);
+  background: rgba(52, 211, 153, 0.15);
+  color: var(--success);
+}
+
+.ignition-phase--complete .ignition-phase-label {
+  color: var(--text-secondary);
+}
+
+.ignition-phase--error .ignition-phase-icon {
+  border-color: var(--danger);
+  background: rgba(244, 63, 94, 0.15);
+  color: var(--danger);
+  box-shadow: 0 0 12px rgba(244, 63, 94, 0.3);
+}
+
+.ignition-phase--error .ignition-phase-label {
+  color: var(--danger);
+}
+
+@keyframes ignition-phase-pulse {
+
+  0%,
+  100% {
+    box-shadow: 0 0 12px rgba(99, 102, 241, 0.2);
+  }
+
+  50% {
+    box-shadow: 0 0 24px rgba(99, 102, 241, 0.5);
+  }
+}
+
+/* Progress Bar */
+.ignition-progress-container {
+  margin-bottom: 8px;
+}
+
+.ignition-progress-bar {
+  width: 100%;
+  height: 4px;
+  background: rgba(99, 115, 171, 0.1);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.ignition-progress-fill {
+  height: 100%;
+  border-radius: 2px;
+  background: var(--gradient-primary);
+  transition: width 300ms ease-out;
+  position: relative;
+}
+
+.ignition-progress-fill::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 40px;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3));
+  animation: ignition-shimmer 1.5s ease-in-out infinite;
+}
+
+.ignition-progress-fill.error {
+  background: var(--gradient-rose);
+}
+
+@keyframes ignition-shimmer {
+  0% {
+    transform: translateX(-40px);
+  }
+
+  100% {
+    transform: translateX(40px);
+  }
+}
+
+.ignition-progress-label {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  margin-top: 6px;
+  font-style: italic;
+}
+
+/* Seed Detail */
+.ignition-seed-detail {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  background: rgba(14, 17, 30, 0.5);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-sm);
+  margin-top: 12px;
+}
+
+.ignition-seed-label {
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  color: var(--accent-cyan);
+  font-weight: 600;
+}
+
+.ignition-seed-count {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+}
+
+/* Error Display */
+.ignition-error {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 12px;
+  padding: 10px 14px;
+  background: rgba(244, 63, 94, 0.08);
+  border: 1px solid rgba(244, 63, 94, 0.2);
+  border-radius: var(--radius-sm);
+  color: var(--danger);
+  font-size: 0.8rem;
+}
+
+/* Ignite Button */
+.ignition-action {
+  display: flex;
+  justify-content: center;
+  margin-top: 20px;
+}
+
+.ignition-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 40px;
+  border: none;
+  border-radius: var(--radius-lg);
+  background: var(--gradient-primary);
+  color: white;
+  font-family: var(--font-sans);
+  font-size: 1rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: all var(--transition-base);
+  position: relative;
+  overflow: hidden;
+  box-shadow:
+    0 0 20px rgba(99, 102, 241, 0.25),
+    0 0 60px rgba(99, 102, 241, 0.1);
+}
+
+.ignition-button:hover:not(:disabled) {
+  transform: translateY(-2px) scale(1.02);
+  box-shadow:
+    0 0 30px rgba(99, 102, 241, 0.4),
+    0 0 80px rgba(99, 102, 241, 0.2);
+}
+
+.ignition-button:active:not(:disabled) {
+  transform: translateY(0) scale(0.98);
+}
+
+.ignition-button:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.ignition-button::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1), transparent);
+  animation: ignition-button-shine 3s ease-in-out infinite;
+}
+
+@keyframes ignition-button-shine {
+  0% {
+    transform: translateX(-100%);
+  }
+
+  50% {
+    transform: translateX(100%);
+  }
+
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+/* Spinner */
+.ignition-spinner {
+  animation: ignition-spin 1s linear infinite;
+}
+
+@keyframes ignition-spin {
+  from {
+    transform: rotate(0deg);
+  }
+
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Compact Status Bar (Post-Boot) */
+.ignition-compact {
+  min-height: auto !important;
+}
+
+.ignition-compact-inner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 20px;
+}
+
+.ignition-compact-status {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.ignition-live-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--success);
+  box-shadow: 0 0 10px rgba(52, 211, 153, 0.5);
+  animation: ignition-live-pulse 2s ease-in-out infinite;
+}
+
+@keyframes ignition-live-pulse {
+
+  0%,
+  100% {
+    box-shadow: 0 0 8px rgba(52, 211, 153, 0.3);
+  }
+
+  50% {
+    box-shadow: 0 0 16px rgba(52, 211, 153, 0.6);
+  }
+}
+
+.ignition-compact-label {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--success);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.ignition-compact-detail {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+}

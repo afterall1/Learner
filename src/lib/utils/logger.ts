@@ -223,3 +223,6 @@ export const stressLog = createLogger('StressMatrix');
 /** Logger for Evolution Scheduler */
 export const schedulerLog = createLogger('EvolutionScheduler');
 
+/** Logger for System Bootstrap */
+export const bootLog = createLogger('SystemBoot');
+

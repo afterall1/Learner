@@ -680,3 +680,161 @@ export const useCortexLiveStore = create<CortexLiveStoreState>()((set, get) => (
     },
 }));
 
+// ─── Boot Store (Phase 36 — System Ignition) ─────────────────
+
+interface BootStoreState {
+    phase: import('@/types').BootPhase;
+    progress: import('@/types').BootProgress;
+    error: string | null;
+    envStatus: 'pending' | 'valid' | 'invalid';
+    persistenceStatus: 'pending' | 'hydrated' | 'fresh' | 'error';
+    cortexStatus: 'pending' | 'spawned' | 'error';
+    seedStatus: 'pending' | 'seeding' | 'complete' | 'error';
+    wsStatus: 'pending' | 'connecting' | 'connected' | 'error';
+    evolutionStatus: 'pending' | 'active' | 'error';
+    bootDurationMs: number;
+    phaseDurations: Partial<Record<import('@/types').BootPhase, number>>;
+    hasBooted: boolean;
+
+    // Actions
+    ignite: (config?: Partial<import('@/types').BootConfig>) => Promise<void>;
+    shutdown: () => Promise<void>;
+    updateFromBootState: (state: import('@/types').BootState) => void;
+}
+
+export const useBootStore = create<BootStoreState>()((set, get) => ({
+    phase: 'IDLE' as import('@/types').BootPhase,
+    progress: {
+        phase: 'IDLE' as import('@/types').BootPhase,
+        overallPercent: 0,
+        message: 'Awaiting ignition...',
+        slotProgress: { completed: 0, total: 0, currentSlot: '' },
+    },
+    error: null,
+    envStatus: 'pending',
+    persistenceStatus: 'pending',
+    cortexStatus: 'pending',
+    seedStatus: 'pending',
+    wsStatus: 'pending',
+    evolutionStatus: 'pending',
+    bootDurationMs: 0,
+    phaseDurations: {},
+    hasBooted: false,
+
+    ignite: async (config) => {
+        const { getSystemBootstrap } = await import('@/lib/engine/system-bootstrap');
+        const bootstrap = getSystemBootstrap();
+
+        // Wire real-time state updates into the store
+        bootstrap.setOnStateChange((state) => {
+            get().updateFromBootState(state);
+        });
+
+        const finalState = await bootstrap.ignite(config);
+        get().updateFromBootState(finalState);
+
+        // After boot: wire Cortex + LiveEngine into existing stores
+        const cortex = bootstrap.getCortex();
+        const liveEngine = bootstrap.getLiveEngine();
+
+        if (cortex) {
+            // Update CortexStore with the booted Cortex instance
+            const snapshot = cortex.getSnapshot();
+            useCortexStore.setState({
+                cortex,
+                cortexSnapshot: snapshot,
+                islands: snapshot.islands,
+                globalState: snapshot.globalState,
+                totalIslands: snapshot.totalIslands,
+                activeIslands: snapshot.activeIslands,
+                totalTradesAllIslands: snapshot.totalTradesAllIslands,
+                globalBestFitness: snapshot.globalBestFitness,
+                capitalAllocations: snapshot.capitalAllocations,
+                migrationHistory: snapshot.migrationHistory,
+                totalCapital: snapshot.totalCapital,
+                overmindSnapshot: snapshot.overmindSnapshot ?? null,
+            });
+        }
+
+        if (liveEngine) {
+            // Wire ticker updates → MarketStore
+            liveEngine.setOnTickerUpdate((tickers: MarketTick[]) => {
+                useMarketStore.getState().updateTickers(tickers);
+            });
+
+            // Wire connection changes → MarketDataStore
+            liveEngine.setOnConnectionChange((status: ConnectionStatus) => {
+                useMarketDataStore.getState().setConnectionStatus(status);
+            });
+
+            // Wire snapshot refresh → CortexStore
+            liveEngine.setOnSnapshotRefresh(() => {
+                useCortexStore.getState().refreshSnapshot();
+            });
+
+            // Wire evolution complete callback
+            liveEngine.setOnEvolutionComplete((slotId, genNumber, bestFitness, durationMs) => {
+                console.log(
+                    `[SystemBoot] Evolution complete: ${slotId} Gen ${genNumber}` +
+                    ` | Best: ${bestFitness.toFixed(1)} | ${durationMs}ms`,
+                );
+                useCortexStore.getState().refreshSnapshot();
+            });
+
+            // Update CortexLiveStore with the engine
+            useCortexLiveStore.setState({
+                engine: liveEngine,
+                engineStatus: 'live',
+            });
+
+            // Mark live mode
+            useMarketDataStore.getState().setLiveMode(true);
+        }
+    },
+
+    shutdown: async () => {
+        const { getSystemBootstrap } = await import('@/lib/engine/system-bootstrap');
+        const bootstrap = getSystemBootstrap();
+        await bootstrap.shutdown();
+
+        set({
+            phase: 'IDLE' as import('@/types').BootPhase,
+            progress: {
+                phase: 'IDLE' as import('@/types').BootPhase,
+                overallPercent: 0,
+                message: 'System shut down.',
+                slotProgress: { completed: 0, total: 0, currentSlot: '' },
+            },
+            error: null,
+            envStatus: 'pending',
+            persistenceStatus: 'pending',
+            cortexStatus: 'pending',
+            seedStatus: 'pending',
+            wsStatus: 'pending',
+            evolutionStatus: 'pending',
+            bootDurationMs: 0,
+            phaseDurations: {},
+        });
+
+        // Clear live mode
+        useMarketDataStore.getState().setLiveMode(false);
+    },
+
+    updateFromBootState: (state) => {
+        set({
+            phase: state.phase,
+            progress: state.progress,
+            error: state.error,
+            envStatus: state.envStatus,
+            persistenceStatus: state.persistenceStatus,
+            cortexStatus: state.cortexStatus,
+            seedStatus: state.seedStatus,
+            wsStatus: state.wsStatus,
+            evolutionStatus: state.evolutionStatus,
+            bootDurationMs: state.bootDurationMs,
+            phaseDurations: state.phaseDurations,
+            hasBooted: state.hasBooted,
+        });
+    },
+}));
+
