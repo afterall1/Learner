@@ -7,9 +7,9 @@
 ## 📅 Current State
 
 **Date**: 2026-03-08
-**Phase**: Phase 29 — Production Deployment Preparation
+**Phase**: Phase 32 — Dashboard MSSM Visualization
 **Build Status**: ✅ Passing (zero errors)
-**Version**: v1.0.0-beta.1
+**Version**: v1.2.0-beta.1
 **Dev Server**: `http://localhost:3000`
 
 ---
@@ -48,7 +48,8 @@
 | **Strategy Roster** | strategy-roster.ts (510L): population management across islands |
 | **Directive Applicator** | Phase 24 — Overmind directive→action bridge (directive-applicator.ts, 352L) |
 | **Production Infrastructure** | Phase 29 — Structured Logger (logger.ts, 218L), Deployment Sentinel (deployment-sentinel.ts, 283L, 12-point readiness), Env Validator (env-validator.ts, 173L) wired into binance-rest/supabase. `/api/sentinel` endpoint. v1.0.0-beta.1 |
-| **Dashboard** | Main: 9 panels + Cortex Neural Map | Pipeline: 9 panels + Overmind Hub + LivePulseTelemetry + EvolutionHeartbeat + Risk Shield (12 total) | Brain: Holographic Neural Cortex |
+| **Dashboard** | Main: 9 panels + Cortex Neural Map | Pipeline: 9 panels + Overmind Hub + LivePulseTelemetry + EvolutionHeartbeat + Risk Shield + StressMatrixPanel (13 total) | Brain: Holographic Neural Cortex |
+| **Testnet Trading** | Phase 31 — Testnet Probe API (6-point check), Session Control API (POST/GET/DELETE), Testnet Session Orchestrator (5-phase: PROBE→SEED→EVOLVE→TRADE→REPORT) |
 | **Current Generation** | N/A (awaiting Binance API connection) |
 | **Best Fitness Score** | N/A |
 | **Active Strategy** | Demo: "Nova Tiger" (Score: 67) |
@@ -282,6 +283,13 @@
     - `batchStressMatrix(population)` — Batch population analysis, sorted by RRS
     - Per-scenario: fitness, trades, metrics, detected regime, equity return, execution time
 
+### Session: 2026-03-08 — Binance Testnet Trading + MSSM Dashboard (Phase 31-32, 4-Expert Council ×2)
+154. **Testnet Probe API** (`testnet-probe/route.ts`, ~210 lines): 6-point pre-flight check — credentials, testnet mode, REST, time sync, account, exchange info
+155. **Session Control API** (`session/route.ts`, ~155 lines): POST/GET/DELETE session lifecycle — config validation, live status, graceful stop with report
+156. **Testnet Session Orchestrator** (`testnet-session-orchestrator.ts`, ~370 lines): **RADICAL INNOVATION** — 5-phase lifecycle (PROBE→SEED→EVOLVE→TRADE→REPORT), safety interlocks (max loss %, max duration, max positions), session report generation, singleton management
+157. **StressMatrixPanel** (`pipeline/page.tsx`, +380 lines): 5-axis radar chart (Bull/Bear/Sideways/HighVol/Transition), RRS semi-circle SVG gauge, per-scenario fitness bars with gradient fills, strongest/weakest scenario badges, avg fitness + variance metrics
+158. **ASC Calibration Heatmap** (RADICAL INNOVATION): Regime weight heatmap (5 cells with intensity encoding), Raw RRS → Calibrated CRRS comparison, regime confidence progress bar, total calibrations counter
+
 ---
 
 ## 🚧 Incomplete Features / Technical Debt
@@ -310,10 +318,12 @@
 ## 📅 Next Session Priorities
 
 1. ~~Production deployment preparation — Build optimization, environment configuration~~ ✅ (Phase 29: v1.0.0-beta.1)
-2. Performance optimization — Backtester PFLM cache improvements, stress matrix integration into evolution pipeline
-3. Real Binance Testnet paper trading session — Verify LiveTradeExecutor with live kline data
-4. Dashboard MSSM visualization — Stress matrix results panel in pipeline page
+2. ~~Real Binance Testnet paper trading session — Verify LiveTradeExecutor with live kline data~~ ✅ (Phase 31: Testnet Probe + Session Orchestrator)
+3. ~~Dashboard MSSM visualization — Stress matrix results panel in pipeline page~~ ✅ (Phase 32: StressMatrixPanel + ASC Heatmap)
+4. Manual testnet session — Call POST /api/trading/session and observe live trading
+5. Performance optimization — Backtester PFLM cache improvements, stress matrix integration into evolution pipeline
+6. Live MSSM integration — Wire StressMatrixPanel to live CortexLiveEngine data instead of demo
 
 ---
 
-*Last Synced: 2026-03-08 01:25 (UTC+3)*
+*Last Synced: 2026-03-08 20:55 (UTC+3)*
