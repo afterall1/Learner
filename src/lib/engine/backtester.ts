@@ -124,9 +124,14 @@ export class IndicatorCache {
     private cache: Map<string, IndicatorCacheEntry> = new Map();
     private candles: OHLCV[];
     private atrValues: number[] = [];
+    private readonly maxEntries: number;
+    private accessOrder: string[] = [];  // LRU tracking: most recent at end
+    private hits = 0;
+    private misses = 0;
 
-    constructor(candles: OHLCV[]) {
+    constructor(candles: OHLCV[], maxEntries: number = 100) {
         this.candles = candles;
+        this.maxEntries = maxEntries;
         // Always pre-compute ATR(14) for slippage modeling
         this.atrValues = calculateATR(candles, 14);
     }
@@ -145,16 +150,35 @@ export class IndicatorCache {
     /**
      * Get or compute indicator values for a given gene configuration.
      * If this (type, period, params) was already computed, returns cached result.
+     * Uses LRU eviction when cache exceeds maxEntries.
      */
     getOrCompute(gene: IndicatorGene): IndicatorCacheEntry {
         const key = this.getCacheKey(gene.type, gene.period, gene.params);
 
         const cached = this.cache.get(key);
-        if (cached) return cached;
+        if (cached) {
+            this.hits++;
+            // Move to end of access order (most recently used)
+            const idx = this.accessOrder.indexOf(key);
+            if (idx >= 0) {
+                this.accessOrder.splice(idx, 1);
+                this.accessOrder.push(key);
+            }
+            return cached;
+        }
+
+        this.misses++;
+
+        // Evict LRU entries if at capacity
+        while (this.cache.size >= this.maxEntries && this.accessOrder.length > 0) {
+            const evictKey = this.accessOrder.shift()!;
+            this.cache.delete(evictKey);
+        }
 
         // Compute the indicator for the full candle series
         const entry = this.computeIndicator(gene);
         this.cache.set(key, entry);
+        this.accessOrder.push(key);
         return entry;
     }
 
@@ -240,12 +264,33 @@ export class IndicatorCache {
     /**
      * Get cache statistics for monitoring.
      */
-    getStats(): { totalEntries: number; uniqueTypes: number } {
+    getStats(): { totalEntries: number; uniqueTypes: number; hitRate: number; memoryEstimateMB: number } {
         const types = new Set<IndicatorType>();
         for (const entry of this.cache.values()) {
             types.add(entry.type);
         }
-        return { totalEntries: this.cache.size, uniqueTypes: types.size };
+        const totalRequests = this.hits + this.misses;
+        const hitRate = totalRequests > 0 ? this.hits / totalRequests : 0;
+        return {
+            totalEntries: this.cache.size,
+            uniqueTypes: types.size,
+            hitRate: Math.round(hitRate * 1000) / 1000,
+            memoryEstimateMB: this.getMemoryEstimate(),
+        };
+    }
+
+    /**
+     * Estimate memory usage of the cache in MB.
+     * Each number = 8 bytes. Each entry has 1-3 arrays of candleCount length.
+     */
+    getMemoryEstimate(): number {
+        let totalNumbers = this.atrValues.length; // ATR always present
+        for (const entry of this.cache.values()) {
+            totalNumbers += entry.values.length;
+            if (entry.secondaryValues) totalNumbers += entry.secondaryValues.length;
+            if (entry.tertiaryValues) totalNumbers += entry.tertiaryValues.length;
+        }
+        return Math.round((totalNumbers * 8) / (1024 * 1024) * 100) / 100;
     }
 }
 

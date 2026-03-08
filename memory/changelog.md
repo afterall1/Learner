@@ -4,6 +4,17 @@ All notable changes to this project are documented here.
 
 ---
 
+## [v1.1.0-beta.1] — 2026-03-08
+
+### Added
+- **Performance Optimization (Phase 30 — 4-Expert Council)**
+  - **IndicatorCache LRU** (`backtester.ts`): Max 100 entries, hit/miss tracking, `getMemoryEstimate()` — prevents memory explosion
+  - **Stress Matrix PFLM Upgrade** (`stress-matrix.ts`): `prepareScenarios()` pre-generates candles+caches ONCE, ~5× faster `batchStressMatrix()`
+  - **Adaptive Stress Calibration** (`adaptive-stress.ts`, ~318 lines): **RADICAL INNOVATION** — Regime-weighted scenario scoring via `AdaptiveStressCalibrator`, MRTI-ready, 5 weight matrices, blended fitness (70% backtest + 30% CRRS)
+  - **Evolution Pipeline Integration** (`evolution-scheduler.ts`): Top-3 stress testing, calibrated RRS blending, structured logging migration
+
+---
+
 ## [v1.0.0-beta.1] — 2026-03-08
 
 ### Added

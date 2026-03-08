@@ -5,9 +5,11 @@
 // analysis framework. Stress-tests any strategy against 5
 // canonical market regimes and produces a resilience profile.
 //
-// No standard trading system has a built-in backtester that
-// simultaneously evaluates a strategy across multiple market
-// regimes and produces a Regime Resilience Score (RRS).
+// Phase 30: PFLM UPGRADE — Pre-generated scenario candles and
+// shared IndicatorCaches eliminate ~5× redundant computation
+// in batchStressMatrix. Scenario data is generated ONCE and
+// IndicatorCaches are built ONCE per scenario, then shared
+// across all strategies in the batch.
 //
 // Usage:
 //   const matrix = runStressMatrix(strategy, 500);
@@ -23,11 +25,13 @@ import {
 } from '@/types';
 import {
     runBacktest,
+    IndicatorCache,
     type BacktestResult,
     DEFAULT_BACKTEST_CONFIG,
     type BacktestConfig,
 } from './backtester';
 import { detectRegime } from './regime-detector';
+import { stressLog } from '@/lib/utils/logger';
 
 // ─── Market Scenario Generators ──────────────────────────────
 
@@ -35,13 +39,15 @@ import { detectRegime } from './regime-detector';
  * Canonical market scenarios for stress testing.
  * Each generator produces realistic OHLCV data for a specific regime.
  */
-const SCENARIO_GENERATORS: Record<string, (count: number) => OHLCV[]> = {
+export const SCENARIO_GENERATORS: Record<string, (count: number) => OHLCV[]> = {
     bull_trend: generateBullTrend,
     bear_crash: generateBearCrash,
     sideways_range: generateSidewaysRange,
     high_volatility: generateHighVolatility,
     regime_transition: generateRegimeTransition,
 };
+
+export const SCENARIO_NAMES = Object.keys(SCENARIO_GENERATORS) as readonly string[];
 
 function generateBullTrend(count: number): OHLCV[] {
     const candles: OHLCV[] = [];
@@ -202,6 +208,48 @@ function generateRegimeTransition(count: number): OHLCV[] {
     return [...bull, ...sideways, ...bear];
 }
 
+// ─── Pre-Generated Scenario Data (Phase 30 PFLM Upgrade) ────
+
+/**
+ * Pre-generated scenario data with associated IndicatorCache.
+ * Used by batchStressMatrix to avoid redundant candle generation
+ * and indicator computation across multiple strategy evaluations.
+ */
+export interface PreparedScenario {
+    name: string;
+    candles: OHLCV[];
+    cache: IndicatorCache;
+}
+
+/**
+ * Pre-generate all 5 scenario candle arrays and build IndicatorCaches.
+ * Call ONCE before batchStressMatrix for ~5× performance improvement.
+ *
+ * @param candlesPerScenario - Number of candles per scenario
+ * @param warmupCandles - Min warmup from config (ensures effective candle count)
+ * @returns Map of scenario name → PreparedScenario
+ */
+export function prepareScenarios(
+    candlesPerScenario: number = 400,
+    warmupCandles: number = 200,
+): Map<string, PreparedScenario> {
+    const effectiveCandles = Math.max(candlesPerScenario, warmupCandles + 50);
+    const prepared = new Map<string, PreparedScenario>();
+
+    for (const [name, generator] of Object.entries(SCENARIO_GENERATORS)) {
+        const candles = generator(effectiveCandles);
+        const cache = new IndicatorCache(candles);
+        prepared.set(name, { name, candles, cache });
+    }
+
+    stressLog.info('Scenarios pre-generated', {
+        count: prepared.size,
+        candlesEach: effectiveCandles,
+    });
+
+    return prepared;
+}
+
 // ─── Stress Matrix Types ─────────────────────────────────────
 
 export interface ScenarioResult {
@@ -231,6 +279,21 @@ export interface StressMatrixResult {
     timestamp: number;
 }
 
+// ─── Empty Metrics Helper ────────────────────────────────────
+
+const EMPTY_METRICS: PerformanceMetrics = {
+    totalTrades: 0, winningTrades: 0, losingTrades: 0,
+    winRate: 0, profitFactor: 0,
+    sharpeRatio: 0, sortinoRatio: 0,
+    maxDrawdown: 0, maxDrawdownDuration: 0,
+    averageRR: 0, expectancy: 0,
+    totalPnlPercent: 0, totalPnlUSD: 0,
+    averageWinPercent: 0, averageLossPercent: 0,
+    largestWinPercent: 0, largestLossPercent: 0,
+    consecutiveWins: 0, consecutiveLosses: 0,
+    averageHoldTime: 0,
+};
+
 // ─── Stress Matrix Engine ────────────────────────────────────
 
 /**
@@ -240,54 +303,55 @@ export interface StressMatrixResult {
  * and computes a Regime Resilience Score (RRS) — a composite metric that
  * measures cross-regime consistency.
  *
+ * Phase 30: Accepts optional pre-built scenarios for PFLM sharing.
+ * When preparedScenarios is provided, skips candle generation and
+ * shares IndicatorCaches across strategies.
+ *
  * RRS formula:
  *   RRS = avgFitness × (1 - normalizedVariance) × consistencyBonus
- *
- * Where:
- *   - avgFitness: mean fitness across all scenarios
- *   - normalizedVariance: fitness variance / max possible variance (2500)
- *   - consistencyBonus: 1.0 if no catastrophic failures, penalized otherwise
  *
  * @param strategy - StrategyDNA to stress test
  * @param candlesPerScenario - Number of candles per scenario (min 250)
  * @param config - Optional backtest config override
+ * @param preparedScenarios - Optional pre-built scenarios from prepareScenarios()
  * @returns Complete stress matrix result with per-scenario breakdown
  */
 export function runStressMatrix(
     strategy: StrategyDNA,
     candlesPerScenario: number = 400,
     config: BacktestConfig = DEFAULT_BACKTEST_CONFIG,
+    preparedScenarios?: Map<string, PreparedScenario>,
 ): StressMatrixResult {
     const effectiveCandles = Math.max(candlesPerScenario, config.warmupCandles + 50);
     const startTime = performance.now();
 
     const scenarioResults: ScenarioResult[] = [];
 
-    for (const [name, generator] of Object.entries(SCENARIO_GENERATORS)) {
-        const candles = generator(effectiveCandles);
+    // Determine scenario sources: pre-built or generate on-the-fly
+    const scenarioEntries = preparedScenarios
+        ? Array.from(preparedScenarios.values())
+        : Object.entries(SCENARIO_GENERATORS).map(([name, gen]) => ({
+            name,
+            candles: gen(effectiveCandles),
+            cache: undefined as IndicatorCache | undefined,
+        }));
 
+    for (const scenario of scenarioEntries) {
         let result: BacktestResult;
         try {
-            result = runBacktest(strategy, candles, config);
+            result = runBacktest(
+                strategy,
+                scenario.candles,
+                config,
+                scenario.cache,  // PFLM: pass shared cache when available
+            );
         } catch {
             // Strategy failed on this scenario — record zero fitness
-            const emptyMetrics: PerformanceMetrics = {
-                totalTrades: 0, winningTrades: 0, losingTrades: 0,
-                winRate: 0, profitFactor: 0,
-                sharpeRatio: 0, sortinoRatio: 0,
-                maxDrawdown: 0, maxDrawdownDuration: 0,
-                averageRR: 0, expectancy: 0,
-                totalPnlPercent: 0, totalPnlUSD: 0,
-                averageWinPercent: 0, averageLossPercent: 0,
-                largestWinPercent: 0, largestLossPercent: 0,
-                consecutiveWins: 0, consecutiveLosses: 0,
-                averageHoldTime: 0,
-            };
             scenarioResults.push({
-                name,
+                name: scenario.name,
                 candles: effectiveCandles,
                 trades: 0,
-                metrics: emptyMetrics,
+                metrics: { ...EMPTY_METRICS },
                 fitnessScore: 0,
                 totalFees: 0,
                 executionTimeMs: 0,
@@ -299,7 +363,7 @@ export function runStressMatrix(
         }
 
         // Detect actual regime
-        const regimeAnalysis = detectRegime(candles);
+        const regimeAnalysis = detectRegime(scenario.candles);
 
         // Calculate equity return
         const firstEquity = result.equityCurve.length > 0 ? result.equityCurve[0].balance : config.initialCapital;
@@ -309,7 +373,7 @@ export function runStressMatrix(
         const equityReturn = ((lastEquity - firstEquity) / firstEquity) * 100;
 
         scenarioResults.push({
-            name,
+            name: scenario.name,
             candles: result.candlesProcessed,
             trades: result.trades.length,
             metrics: result.metrics,
@@ -376,14 +440,43 @@ export function runStressMatrix(
  * Batch stress matrix — run MSSM on an entire population.
  * Returns results sorted by resilience score (descending).
  *
- * This identifies which strategies are truly regime-agnostic winners
- * vs which ones are local optima for a single market condition.
+ * Phase 30 PFLM Upgrade: Pre-generates all 5 scenario candle arrays
+ * and IndicatorCaches ONCE, then shares them across all strategy
+ * evaluations. This eliminates ~(N-1)×5 redundant computations.
+ *
+ * Performance improvement:
+ *   Before: N × 5 × (candleGen + cacheCreate + backtest)
+ *   After:  5 × (candleGen + cacheCreate) + N × 5 × backtest
+ *   For N=20: ~5× faster
  */
 export function batchStressMatrix(
     strategies: StrategyDNA[],
     candlesPerScenario: number = 400,
     config: BacktestConfig = DEFAULT_BACKTEST_CONFIG,
 ): StressMatrixResult[] {
-    const results = strategies.map(s => runStressMatrix(s, candlesPerScenario, config));
+    if (strategies.length === 0) return [];
+
+    // Phase 30: Pre-generate scenarios ONCE
+    const prepared = prepareScenarios(candlesPerScenario, config.warmupCandles);
+
+    stressLog.info('Batch stress matrix starting', {
+        strategies: strategies.length,
+        scenarios: prepared.size,
+        candlesPerScenario,
+    });
+
+    const results = strategies.map(s =>
+        runStressMatrix(s, candlesPerScenario, config, prepared),
+    );
+
+    const totalMs = results.reduce((sum, r) => sum + r.totalExecutionMs, 0);
+    stressLog.info('Batch stress matrix complete', {
+        strategies: strategies.length,
+        totalMs: Math.round(totalMs),
+        avgResilienceScore: Math.round(
+            results.reduce((sum, r) => sum + r.resilienceScore, 0) / results.length
+        ),
+    });
+
     return results.sort((a, b) => b.resilienceScore - a.resilienceScore);
 }

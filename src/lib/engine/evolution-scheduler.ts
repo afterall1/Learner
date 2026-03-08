@@ -5,15 +5,23 @@
 // island based on candle close events. Prevents CPU spikes by
 // sequentializing evolution cycles and enforcing cooldowns.
 //
+// Phase 30: Integrates stress matrix into evolution pipeline.
+// After batchBacktest(), top-3 candidates are stress-tested
+// across 5 scenarios. Calibrated RRS blends into final fitness.
+//
 // Flow:
 //   CandleClose → onCandleClose(slotId) → threshold check
 //   → if ready: queue evolution → dequeue → batchBacktest() + evolve()
+//   → stress test top-3 → calibrate RRS → blend fitness
 //   → emit onEvolutionComplete callback
 // ============================================================
 
 import type { Cortex } from './cortex';
 import { batchBacktest } from './backtester';
+import { batchStressMatrix, type StressMatrixResult } from './stress-matrix';
+import { AdaptiveStressCalibrator } from './adaptive-stress';
 import type { OHLCV, EvolutionSchedulerConfig, EvolutionSlotStatus, StrategyDNA } from '@/types';
+import { schedulerLog } from '@/lib/utils/logger';
 
 // ─── Default Configuration ──────────────────────────────────
 
@@ -23,6 +31,18 @@ const DEFAULT_SCHEDULER_CONFIG: EvolutionSchedulerConfig = {
     cooldownMs: 5000,
     autoEvolveEnabled: true,
 };
+
+// ─── Stress Configuration ───────────────────────────────────
+
+/** Number of top candidates to stress-test per evolution cycle */
+const STRESS_TOP_N = 3;
+
+/** Candles per stress scenario */
+const STRESS_CANDLES = 300;
+
+/** Fitness blend: backtest weight vs resilience weight */
+const BACKTEST_WEIGHT = 0.7;
+const RESILIENCE_WEIGHT = 0.3;
 
 // ─── Evolution Scheduler ────────────────────────────────────
 
@@ -41,10 +61,12 @@ export class EvolutionScheduler {
     private activeEvolutions = 0;
     private isProcessing = false;
     private onEvolutionComplete: EvolutionCompleteCallback | null = null;
+    private stressCalibrator: AdaptiveStressCalibrator;
 
     constructor(cortex: Cortex, config: Partial<EvolutionSchedulerConfig> = {}) {
         this.cortex = cortex;
         this.config = { ...DEFAULT_SCHEDULER_CONFIG, ...config };
+        this.stressCalibrator = new AdaptiveStressCalibrator();
     }
 
     // ─── Public API ─────────────────────────────────────────
@@ -130,6 +152,13 @@ export class EvolutionScheduler {
         }
     }
 
+    /**
+     * Get the adaptive stress calibrator for dashboard state.
+     */
+    getStressCalibrator(): AdaptiveStressCalibrator {
+        return this.stressCalibrator;
+    }
+
     // ─── Private Methods ────────────────────────────────────
 
     private getOrCreateSlotStatus(slotId: string): EvolutionSlotStatus {
@@ -177,7 +206,7 @@ export class EvolutionScheduler {
                     await this.runEvolutionCycle(slotId);
                 } catch (error) {
                     const msg = error instanceof Error ? error.message : 'Unknown error';
-                    console.error(`[EvolutionScheduler] Evolution failed for ${slotId}:`, msg);
+                    schedulerLog.error(`Evolution failed for ${slotId}`, { error: msg });
                 } finally {
                     this.activeEvolutions--;
                 }
@@ -191,7 +220,7 @@ export class EvolutionScheduler {
         const status = this.getOrCreateSlotStatus(slotId);
         const island = this.cortex.getIsland(slotId);
         if (!island) {
-            console.warn(`[EvolutionScheduler] Island ${slotId} not found, skipping`);
+            schedulerLog.warn(`Island ${slotId} not found, skipping`);
             return;
         }
 
@@ -202,20 +231,21 @@ export class EvolutionScheduler {
             // Get the island's current market candles
             const candles = island.getMarketCandles();
             if (!candles || candles.length < 200) {
-                console.warn(
-                    `[EvolutionScheduler] Insufficient candles for ${slotId}: ${candles?.length ?? 0} (need 200+)`,
-                );
+                schedulerLog.warn(`Insufficient candles for ${slotId}`, {
+                    count: candles?.length ?? 0,
+                    required: 200,
+                });
                 return;
             }
 
             // Get current population from the evolution engine
             const currentGen = island.getCurrentGeneration();
             if (!currentGen) {
-                console.warn(`[EvolutionScheduler] No current generation for ${slotId}`);
+                schedulerLog.warn(`No current generation for ${slotId}`);
                 return;
             }
 
-            // Run batch backtest on the population
+            // Run batch backtest on the population (PFLM shared cache)
             const population = currentGen.population;
             const backtestResults = batchBacktest(population, candles);
 
@@ -224,6 +254,62 @@ export class EvolutionScheduler {
                 const strategy = population.find((s: StrategyDNA) => s.id === result.strategyId);
                 if (strategy) {
                     strategy.metadata.fitnessScore = result.fitnessScore;
+                }
+            }
+
+            // ─── Phase 30: Stress Matrix Integration ────────────
+            //
+            // Run stress matrix on top-N candidates to assess
+            // regime resilience. Blend calibrated RRS into fitness.
+            //
+            let stressResults: StressMatrixResult[] = [];
+            if (backtestResults.length >= STRESS_TOP_N) {
+                const topCandidates = backtestResults
+                    .slice(0, STRESS_TOP_N)
+                    .map(r => population.find((s: StrategyDNA) => s.id === r.strategyId))
+                    .filter((s): s is StrategyDNA => s !== undefined);
+
+                if (topCandidates.length > 0) {
+                    try {
+                        stressResults = batchStressMatrix(topCandidates, STRESS_CANDLES);
+
+                        // Apply calibrated RRS blending to top candidates
+                        for (const stressResult of stressResults) {
+                            const strategy = population.find(
+                                (s: StrategyDNA) => s.id === stressResult.strategyId,
+                            );
+                            if (strategy) {
+                                const backtestFitness = strategy.metadata.fitnessScore;
+                                const calibrated = this.stressCalibrator.calibrateRRS(
+                                    stressResult,
+                                    backtestFitness,
+                                );
+
+                                // Blend: 70% backtest + 30% calibrated RRS
+                                strategy.metadata.fitnessScore = calibrated.blendedFitness;
+
+                                schedulerLog.debug('Stress calibration applied', {
+                                    strategy: strategy.name,
+                                    backtestFitness: Math.round(backtestFitness * 10) / 10,
+                                    rrs: stressResult.resilienceScore,
+                                    calibratedRRS: calibrated.calibratedScore,
+                                    blendedFitness: calibrated.blendedFitness,
+                                });
+                            }
+                        }
+
+                        schedulerLog.info(`Stress matrix complete for ${slotId}`, {
+                            candidates: topCandidates.length,
+                            avgRRS: Math.round(
+                                stressResults.reduce((s, r) => s + r.resilienceScore, 0) / stressResults.length,
+                            ),
+                        });
+                    } catch (error) {
+                        const msg = error instanceof Error ? error.message : 'Unknown';
+                        schedulerLog.warn('Stress matrix failed, using backtest fitness only', {
+                            error: msg,
+                        });
+                    }
                 }
             }
 
@@ -242,11 +328,13 @@ export class EvolutionScheduler {
             status.lastBacktestDurationMs = durationMs;
             status.lastGenerationFitness = bestFitness;
 
-            console.log(
-                `[EvolutionScheduler] ✅ ${slotId} — Gen ${currentGen.generationNumber + 1}` +
-                ` | Best: ${bestFitness.toFixed(1)} | ${durationMs}ms` +
-                ` | ${population.length} strategies × ${candles.length} candles`,
-            );
+            schedulerLog.info(`✅ ${slotId} — Gen ${currentGen.generationNumber + 1}`, {
+                bestFitness: Math.round(bestFitness * 10) / 10,
+                durationMs,
+                strategies: population.length,
+                candles: candles.length,
+                stressTested: stressResults.length,
+            });
 
             // Emit callback
             if (this.onEvolutionComplete) {
@@ -259,7 +347,7 @@ export class EvolutionScheduler {
             }
         } catch (error) {
             const msg = error instanceof Error ? error.message : 'Unknown error';
-            console.error(`[EvolutionScheduler] Evolution cycle error for ${slotId}:`, msg);
+            schedulerLog.error(`Evolution cycle error for ${slotId}`, { error: msg });
             throw error; // Re-throw for processQueue error handler
         } finally {
             status.isEvolving = false;

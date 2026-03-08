@@ -216,3 +216,10 @@ export const orderLog = createLogger('OrderLifecycle');
 
 /** Logger for Deployment Sentinel */
 export const sentinelLog = createLogger('Sentinel');
+
+/** Logger for Stress Matrix */
+export const stressLog = createLogger('StressMatrix');
+
+/** Logger for Evolution Scheduler */
+export const schedulerLog = createLogger('EvolutionScheduler');
+
