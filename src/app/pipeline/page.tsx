@@ -188,6 +188,92 @@ function generateDemoReplayHeatmap(): ReplayCell[] {
     return cells;
 }
 
+// ─── Demo Stress Matrix Data ─────────────────────────────────
+
+interface DemoScenarioResult {
+    name: string;
+    fitnessScore: number;
+    equityReturnPercent: number;
+    trades: number;
+    detectedRegime: string;
+    regimeConfidence: number;
+}
+
+interface DemoStressData {
+    strategyName: string;
+    resilienceScore: number;
+    avgFitness: number;
+    scenarioVariance: number;
+    maxDrawdownWorst: number;
+    scenarios: DemoScenarioResult[];
+    strongest: string;
+    weakest: string;
+    calibration: {
+        currentRegime: string;
+        regimeConfidence: number;
+        totalCalibrations: number;
+        weights: Record<string, number>;
+        calibratedRRS: number;
+    };
+}
+
+const SCENARIO_NAMES = ['Bull Trend', 'Bear Crash', 'Sideways', 'High Volatility', 'Regime Transition'] as const;
+const SCENARIO_KEYS = ['bull_trend', 'bear_crash', 'sideways', 'high_vol', 'regime_transition'] as const;
+
+function generateDemoStressData(): DemoStressData {
+    const scenarios: DemoScenarioResult[] = SCENARIO_NAMES.map((name, i) => {
+        const fitness = rng(15, 85);
+        return {
+            name,
+            fitnessScore: Math.round(fitness * 10) / 10,
+            equityReturnPercent: Math.round(rng(-12, 25) * 100) / 100,
+            trades: Math.floor(rng(8, 45)),
+            detectedRegime: name,
+            regimeConfidence: Math.round(rng(0.4, 0.95) * 100) / 100,
+        };
+    });
+
+    const fitnesses = scenarios.map(s => s.fitnessScore);
+    const avg = fitnesses.reduce((a, b) => a + b, 0) / fitnesses.length;
+    const variance = fitnesses.reduce((sum, f) => sum + (f - avg) ** 2, 0) / fitnesses.length;
+    const normalizedVar = Math.min(1, variance / (avg * avg + 1));
+    const consistency = scenarios.filter(s => s.fitnessScore > avg * 0.6).length / scenarios.length;
+    const rrs = Math.round(avg * (1 - normalizedVar) * (0.7 + consistency * 0.3) * 10) / 10;
+
+    const strongest = scenarios.reduce((a, b) => a.fitnessScore > b.fitnessScore ? a : b);
+    const weakest = scenarios.reduce((a, b) => a.fitnessScore < b.fitnessScore ? a : b);
+
+    // ASC calibration demo
+    const regimes = ['TRENDING_UP', 'TRENDING_DOWN', 'RANGING', 'HIGH_VOLATILITY', 'LOW_VOLATILITY'];
+    const currentRegime = regimes[Math.floor(Math.random() * regimes.length)];
+    const weights: Record<string, number> = {};
+    let remaining = 1.0;
+    SCENARIO_KEYS.forEach((key, i) => {
+        const isLast = i === SCENARIO_KEYS.length - 1;
+        const w = isLast ? remaining : Math.round(rng(0.05, remaining * 0.5) * 100) / 100;
+        weights[key] = w;
+        remaining -= w;
+    });
+
+    return {
+        strategyName: `Alpha-${Math.floor(rng(100, 999))}`,
+        resilienceScore: Math.max(0, Math.min(100, rrs)),
+        avgFitness: Math.round(avg * 10) / 10,
+        scenarioVariance: Math.round(normalizedVar * 1000) / 1000,
+        maxDrawdownWorst: Math.round(rng(8, 35) * 100) / 100,
+        scenarios,
+        strongest: strongest.name,
+        weakest: weakest.name,
+        calibration: {
+            currentRegime,
+            regimeConfidence: Math.round(rng(0.4, 0.92) * 100) / 100,
+            totalCalibrations: Math.floor(rng(5, 120)),
+            weights,
+            calibratedRRS: Math.round(rrs * rng(0.85, 1.15) * 10) / 10,
+        },
+    };
+}
+
 // ═══════════════════════════════════════════════════════════════
 // PIPELINE STATE MACHINE — Auto-cycling demo engine
 // ═══════════════════════════════════════════════════════════════
@@ -3545,6 +3631,381 @@ function MRTIForecastPanel({
 }
 
 // ═══════════════════════════════════════════════════════════════
+// PANEL: Stress Matrix Resilience Monitor (Phase 32)
+// ═══════════════════════════════════════════════════════════════
+
+const SCENARIO_CLR: Record<string, string> = {
+    'Bull Trend': '#34d399',
+    'Bear Crash': '#f43f5e',
+    'Sideways': '#6366f1',
+    'High Volatility': '#fbbf24',
+    'Regime Transition': '#22d3ee',
+};
+
+const SCENARIO_ICON: Record<string, string> = {
+    'Bull Trend': '📈',
+    'Bear Crash': '📉',
+    'Sideways': '↔️',
+    'High Volatility': '⚡',
+    'Regime Transition': '🔄',
+};
+
+const ASC_REGIME_LABEL: Record<string, string> = {
+    TRENDING_UP: 'Trend ▲',
+    TRENDING_DOWN: 'Trend ▼',
+    RANGING: 'Ranging',
+    HIGH_VOLATILITY: 'High Vol',
+    LOW_VOLATILITY: 'Low Vol',
+};
+
+const ASC_REGIME_CLR: Record<string, string> = {
+    TRENDING_UP: '#34d399',
+    TRENDING_DOWN: '#f43f5e',
+    RANGING: '#6366f1',
+    HIGH_VOLATILITY: '#fbbf24',
+    LOW_VOLATILITY: '#22d3ee',
+};
+
+function StressMatrixPanel({ stressData }: { stressData: DemoStressData }) {
+    const radarData = stressData.scenarios.map(s => ({
+        scenario: s.name.replace(' ', '\n'),
+        fitness: s.fitnessScore,
+        fullMark: 100,
+    }));
+
+    // RRS gauge calculation
+    const rrs = stressData.resilienceScore;
+    const rrsColor = rrs >= 60 ? '#34d399' : rrs >= 35 ? '#fbbf24' : '#f43f5e';
+    const rrsRadius = 55;
+    const rrsCircumference = Math.PI * rrsRadius;
+    const rrsOffset = rrsCircumference * (1 - rrs / 100);
+
+    // Calibration weights
+    const cal = stressData.calibration;
+    const maxWeight = Math.max(...Object.values(cal.weights), 0.01);
+
+    return (
+        <section id="stress-matrix-panel" className="glass-card glass-card-accent accent-secondary col-12 stagger-in stagger-3">
+            <div className="card-header">
+                <div className="card-title">
+                    <Shield size={18} style={{ color: '#8b5cf6' }} />
+                    <span>MSSM — Market Scenario Stress Matrix</span>
+                </div>
+                <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                    <span className="card-badge badge-primary"
+                        style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '0.6rem' }}>
+                        {stressData.scenarios.length} Scenarios
+                    </span>
+                    <span className="card-badge" style={{
+                        background: `${rrsColor}15`,
+                        color: rrsColor,
+                        border: `1px solid ${rrsColor}40`,
+                        fontWeight: 700,
+                        fontFamily: "'JetBrains Mono', monospace",
+                        fontSize: '0.6rem',
+                    }}>
+                        RRS {rrs.toFixed(1)}
+                    </span>
+                </div>
+            </div>
+            <div className="card-body" style={{ display: 'flex', gap: 20, flexWrap: 'wrap' }}>
+
+                {/* ── Sub-Zone 1: Scenario Fitness Radar ────────── */}
+                <div style={{ flex: '1 1 260px', minWidth: 240 }}>
+                    <div style={{ fontSize: '0.6rem', color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 8 }}>
+                        Scenario Fitness Profile
+                    </div>
+                    <ResponsiveContainer width="100%" height={220}>
+                        <RadarChart cx="50%" cy="50%" outerRadius="68%" data={radarData}>
+                            <PolarGrid stroke="rgba(99, 115, 171, 0.1)" />
+                            <PolarAngleAxis
+                                dataKey="scenario"
+                                tick={{ fill: 'var(--text-muted)', fontSize: 9, fontFamily: "'JetBrains Mono', monospace" }}
+                            />
+                            <RechartsRadar
+                                dataKey="fitness"
+                                stroke="#8b5cf6"
+                                fill="#8b5cf6"
+                                fillOpacity={0.18}
+                                strokeWidth={2}
+                                dot={{ r: 3, fill: '#8b5cf6', strokeWidth: 0 }}
+                            />
+                            <Tooltip
+                                contentStyle={TOOLTIP_STYLE}
+                                formatter={(value: string | number | undefined) => [
+                                    `${Number(value ?? 0).toFixed(1)}/100`, 'Fitness'
+                                ]}
+                            />
+                        </RadarChart>
+                    </ResponsiveContainer>
+                </div>
+
+                {/* ── Sub-Zone 2: RRS Gauge + Champion Stats ───── */}
+                <div style={{ flex: '1 1 200px', minWidth: 180 }}>
+                    <div style={{ fontSize: '0.6rem', color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 8 }}>
+                        Regime Resilience Score
+                    </div>
+
+                    {/* SVG Gauge */}
+                    <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 8 }}>
+                        <svg viewBox="0 0 130 75" width="130" height="75">
+                            {/* Background arc */}
+                            <path
+                                d="M 10 65 A 55 55 0 0 1 120 65"
+                                fill="none"
+                                stroke="rgba(99, 115, 171, 0.1)"
+                                strokeWidth={8}
+                                strokeLinecap="round"
+                            />
+                            {/* Filled arc */}
+                            <path
+                                d="M 10 65 A 55 55 0 0 1 120 65"
+                                fill="none"
+                                stroke={rrsColor}
+                                strokeWidth={8}
+                                strokeLinecap="round"
+                                strokeDasharray={rrsCircumference}
+                                strokeDashoffset={rrsOffset}
+                                style={{ transition: 'stroke-dashoffset 0.8s ease, stroke 0.5s ease' }}
+                            />
+                            {/* Center text */}
+                            <text x="65" y="55" textAnchor="middle" fill={rrsColor}
+                                fontSize="20" fontWeight="800" fontFamily="'JetBrains Mono', monospace">
+                                {rrs.toFixed(0)}
+                            </text>
+                            <text x="65" y="68" textAnchor="middle" fill="rgba(148, 163, 184, 0.5)"
+                                fontSize="7" fontWeight="600" fontFamily="'JetBrains Mono', monospace">
+                                / 100
+                            </text>
+                        </svg>
+                    </div>
+
+                    {/* Champion Stats */}
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                        <div style={{
+                            display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                            padding: '6px 10px', borderRadius: 'var(--radius-sm)',
+                            background: 'rgba(52, 211, 153, 0.06)',
+                            border: '1px solid rgba(52, 211, 153, 0.15)',
+                            fontSize: '0.6rem',
+                        }}>
+                            <span style={{ color: 'var(--text-muted)' }}>Strongest</span>
+                            <span style={{ color: '#34d399', fontWeight: 700, fontFamily: "'JetBrains Mono', monospace" }}>
+                                {SCENARIO_ICON[stressData.strongest]} {stressData.strongest}
+                            </span>
+                        </div>
+                        <div style={{
+                            display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                            padding: '6px 10px', borderRadius: 'var(--radius-sm)',
+                            background: 'rgba(244, 63, 94, 0.06)',
+                            border: '1px solid rgba(244, 63, 94, 0.15)',
+                            fontSize: '0.6rem',
+                        }}>
+                            <span style={{ color: 'var(--text-muted)' }}>Weakest</span>
+                            <span style={{ color: '#f43f5e', fontWeight: 700, fontFamily: "'JetBrains Mono', monospace" }}>
+                                {SCENARIO_ICON[stressData.weakest]} {stressData.weakest}
+                            </span>
+                        </div>
+                        <div style={{ display: 'flex', gap: 6 }}>
+                            <div className="metric-card" style={{ flex: 1, padding: '6px 8px' }}>
+                                <div className="metric-value" style={{ fontSize: '0.85rem', fontFamily: "'JetBrains Mono', monospace" }}>
+                                    {stressData.avgFitness.toFixed(1)}
+                                </div>
+                                <div className="metric-label">Avg Fit</div>
+                            </div>
+                            <div className="metric-card" style={{ flex: 1, padding: '6px 8px' }}>
+                                <div className="metric-value" style={{
+                                    fontSize: '0.85rem', fontFamily: "'JetBrains Mono', monospace",
+                                    color: stressData.scenarioVariance < 0.15 ? '#34d399' : '#fbbf24',
+                                }}>
+                                    {stressData.scenarioVariance.toFixed(3)}
+                                </div>
+                                <div className="metric-label">Variance</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                {/* ── Sub-Zone 3: Scenario Comparison Bars ──────── */}
+                <div style={{ flex: '1 1 300px', minWidth: 260 }}>
+                    <div style={{ fontSize: '0.6rem', color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 8 }}>
+                        Per-Scenario Breakdown
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                        {stressData.scenarios.map(s => {
+                            const color = SCENARIO_CLR[s.name] ?? '#6366f1';
+                            const barWidth = Math.max(2, Math.min(100, s.fitnessScore));
+                            const returnColor = s.equityReturnPercent >= 0 ? '#34d399' : '#f43f5e';
+                            return (
+                                <div key={s.name}>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.6rem', marginBottom: 3 }}>
+                                        <span style={{ color: color, fontWeight: 600 }}>
+                                            {SCENARIO_ICON[s.name]} {s.name}
+                                        </span>
+                                        <span style={{ display: 'flex', gap: 8, fontFamily: "'JetBrains Mono', monospace" }}>
+                                            <span style={{ color: 'var(--text-muted)' }}>
+                                                {s.trades} trades
+                                            </span>
+                                            <span style={{ color: returnColor, fontWeight: 700 }}>
+                                                {s.equityReturnPercent >= 0 ? '+' : ''}{s.equityReturnPercent.toFixed(1)}%
+                                            </span>
+                                        </span>
+                                    </div>
+                                    <div style={{
+                                        height: 7, borderRadius: 4,
+                                        background: 'rgba(99, 115, 171, 0.06)',
+                                        overflow: 'hidden',
+                                    }}>
+                                        <div style={{
+                                            height: '100%',
+                                            width: `${barWidth}%`,
+                                            borderRadius: 4,
+                                            background: `linear-gradient(90deg, ${color}60, ${color})`,
+                                            transition: 'width 0.6s ease',
+                                            boxShadow: `0 0 8px ${color}25`,
+                                        }} />
+                                    </div>
+                                    <div style={{
+                                        display: 'flex', justifyContent: 'space-between',
+                                        fontSize: '0.5rem', color: 'var(--text-muted)',
+                                        marginTop: 2, fontFamily: "'JetBrains Mono', monospace",
+                                    }}>
+                                        <span>fit: {s.fitnessScore.toFixed(1)}</span>
+                                        <span>conf: {(s.regimeConfidence * 100).toFixed(0)}%</span>
+                                    </div>
+                                </div>
+                            );
+                        })}
+                    </div>
+                </div>
+            </div>
+
+            {/* ── RADICAL INNOVATION: ASC Calibration Heatmap ────── */}
+            <div style={{
+                marginTop: 16, padding: '12px 16px',
+                borderRadius: 'var(--radius-sm)',
+                background: 'rgba(14, 17, 30, 0.5)',
+                border: '1px solid rgba(99, 115, 171, 0.08)',
+            }}>
+                <div style={{
+                    display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                    fontSize: '0.55rem', color: 'var(--text-muted)',
+                    fontWeight: 600, textTransform: 'uppercase',
+                    letterSpacing: '0.08em', marginBottom: 10,
+                }}>
+                    <span>🔬 Adaptive Stress Calibration</span>
+                    <div style={{ display: 'flex', gap: 8, alignItems: 'center', textTransform: 'none' }}>
+                        <span style={{
+                            padding: '2px 8px', borderRadius: 'var(--radius-sm)',
+                            background: `${ASC_REGIME_CLR[cal.currentRegime] ?? '#6366f1'}15`,
+                            color: ASC_REGIME_CLR[cal.currentRegime] ?? '#6366f1',
+                            fontWeight: 700, fontFamily: "'JetBrains Mono', monospace",
+                        }}>
+                            {ASC_REGIME_LABEL[cal.currentRegime] ?? cal.currentRegime}
+                        </span>
+                        <span style={{ fontFamily: "'JetBrains Mono', monospace", color: 'var(--text-muted)' }}>
+                            {cal.totalCalibrations} calibrations
+                        </span>
+                    </div>
+                </div>
+
+                {/* Weight heatmap row */}
+                <div style={{ display: 'flex', gap: 6, marginBottom: 10 }}>
+                    {SCENARIO_KEYS.map((key, i) => {
+                        const w = cal.weights[key] ?? 0;
+                        const intensity = Math.min(1, w / maxWeight);
+                        const color = SCENARIO_CLR[SCENARIO_NAMES[i]] ?? '#6366f1';
+                        return (
+                            <div
+                                key={key}
+                                style={{
+                                    flex: 1, padding: '8px 4px',
+                                    borderRadius: 'var(--radius-sm)',
+                                    background: `${color}${Math.round(intensity * 35 + 5).toString(16).padStart(2, '0')}`,
+                                    border: `1px solid ${color}${Math.round(intensity * 50 + 10).toString(16).padStart(2, '0')}`,
+                                    textAlign: 'center',
+                                    transition: 'background 0.5s ease, border 0.5s ease',
+                                }}
+                                title={`${SCENARIO_NAMES[i]}: weight ${(w * 100).toFixed(1)}%`}
+                            >
+                                <div style={{
+                                    fontSize: '0.5rem', color: color,
+                                    fontWeight: 700, marginBottom: 3,
+                                    fontFamily: "'JetBrains Mono', monospace",
+                                    whiteSpace: 'nowrap',
+                                    overflow: 'hidden',
+                                    textOverflow: 'ellipsis',
+                                }}>
+                                    {SCENARIO_NAMES[i]}
+                                </div>
+                                <div style={{
+                                    fontSize: '0.75rem', fontWeight: 800,
+                                    color: `${color}`,
+                                    fontFamily: "'JetBrains Mono', monospace",
+                                }}>
+                                    {(w * 100).toFixed(0)}%
+                                </div>
+                            </div>
+                        );
+                    })}
+                </div>
+
+                {/* Calibrated vs Raw RRS comparison */}
+                <div style={{
+                    display: 'flex', gap: 12, alignItems: 'center',
+                    fontSize: '0.6rem',
+                }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                        <span style={{ color: 'var(--text-muted)' }}>Raw RRS:</span>
+                        <span style={{
+                            fontWeight: 700, fontFamily: "'JetBrains Mono', monospace",
+                            color: rrsColor,
+                        }}>
+                            {rrs.toFixed(1)}
+                        </span>
+                    </div>
+                    <span style={{ color: 'rgba(99, 115, 171, 0.3)' }}>→</span>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                        <span style={{ color: 'var(--text-muted)' }}>Calibrated CRRS:</span>
+                        <span style={{
+                            fontWeight: 800, fontFamily: "'JetBrains Mono', monospace",
+                            fontSize: '0.75rem',
+                            color: cal.calibratedRRS >= 60 ? '#34d399' : cal.calibratedRRS >= 35 ? '#fbbf24' : '#f43f5e',
+                        }}>
+                            {cal.calibratedRRS.toFixed(1)}
+                        </span>
+                    </div>
+                    <div style={{ flex: 1 }} />
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                        <span style={{ color: 'var(--text-muted)' }}>Regime Conf:</span>
+                        <div style={{
+                            width: 40, height: 5, borderRadius: 3,
+                            background: 'rgba(99, 115, 171, 0.08)',
+                            overflow: 'hidden',
+                        }}>
+                            <div style={{
+                                height: '100%',
+                                width: `${cal.regimeConfidence * 100}%`,
+                                borderRadius: 3,
+                                background: cal.regimeConfidence >= 0.7 ? '#34d399' : '#fbbf24',
+                                transition: 'width 0.5s ease',
+                            }} />
+                        </div>
+                        <span style={{
+                            fontFamily: "'JetBrains Mono', monospace",
+                            fontWeight: 600,
+                            color: cal.regimeConfidence >= 0.7 ? '#34d399' : '#fbbf24',
+                        }}>
+                            {(cal.regimeConfidence * 100).toFixed(0)}%
+                        </span>
+                    </div>
+                </div>
+            </div>
+        </section>
+    );
+}
+
+// ═══════════════════════════════════════════════════════════════
 // MAIN PIPELINE PAGE
 // ═══════════════════════════════════════════════════════════════
 
@@ -3573,6 +4034,7 @@ export default function PipelinePage() {
         survivalRows: SurvivalRow[];
         decisions: DecisionEvent[];
         overmind: ReturnType<typeof generateDemoOvermindData>;
+        stressData: DemoStressData;
     } | null>(null);
 
     useEffect(() => {
@@ -3584,6 +4046,7 @@ export default function PipelinePage() {
             survivalRows: generateDemoSurvival(),
             decisions: generateDemoDecisions(),
             overmind: generateDemoOvermindData(),
+            stressData: generateDemoStressData(),
         });
     }, []);
 
@@ -3691,6 +4154,11 @@ export default function PipelinePage() {
                     mrtiSnapshot={isLive && liveData ? liveData.mrtiSnapshot : null}
                     propagation={isLive && liveData ? liveData.propagation : null}
                 />
+
+                {/* Row 1.9: Stress Matrix Resilience Monitor (Phase 32) */}
+                {demoData && (
+                    <StressMatrixPanel stressData={demoData.stressData} />
+                )}
 
                 {/* Row 2: Fitness + Validation */}
                 <GenerationFitnessPanel generations={generations} />

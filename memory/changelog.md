@@ -12,6 +12,9 @@ All notable changes to this project are documented here.
   - **Session Control API** (`session/route.ts`, ~155 lines): POST/GET/DELETE session lifecycle — validated config, live status, graceful stop with report
   - **Testnet Session Orchestrator** (`testnet-session-orchestrator.ts`, ~370 lines): **RADICAL INNOVATION** — 5-phase lifecycle (PROBE→SEED→EVOLVE→TRADE→REPORT), safety interlocks (max loss, duration, positions), session report generation
   - **Evolution Scheduler upgrade** (`evolution-scheduler.ts`): Phase 30 stress matrix + structured logging integration
+- **Dashboard MSSM Visualization (Phase 32 — 4-Expert Council)**
+  - **StressMatrixPanel** (`pipeline/page.tsx`, ~380 lines): 5-axis radar chart, RRS semi-circle gauge, per-scenario fitness bars, champion/weakest badges
+  - **ASC Calibration Heatmap** (RADICAL INNOVATION): Regime weight heatmap with Raw RRS → Calibrated CRRS comparison, regime confidence bar
 
 ---
 
