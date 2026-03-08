@@ -4,6 +4,23 @@ All notable changes to this project are documented here.
 
 ---
 
+## [v1.0.0-beta.1] — 2026-03-08
+
+### Added
+- **Production Deployment Preparation (Phase 29 — 4-Expert Council)**
+  - **Structured Logger** (`utils/logger.ts`, ~218 lines): 4 levels (DEBUG/INFO/WARN/ERROR), module tags, env-aware suppression, 14 pre-built loggers
+  - **Deployment Sentinel** (`config/deployment-sentinel.ts`, ~283 lines): **RADICAL INNOVATION** — 12-point deployment readiness checker (env validation, Supabase probe, Binance ping, security headers, build hash, testnet mode, TS strict, error boundary)
+  - **Sentinel API** (`/api/sentinel/route.ts`): GET endpoint exposing full readiness report
+  - **Build Hardening**: `build:prod` (test+build), `watchdog` (memory CI), `sentinel` (readiness probe) scripts
+
+### Changed
+- **Version Bump**: `0.1.0` → `1.0.0-beta.1`
+- **Env Validator Wiring**: `getEnv()` integrated into `binance-rest.ts` and `supabase.ts` (replaces raw `process.env`)
+- **Structured Logging Migration**: `cortex-live-engine.ts` (21 console→cortexLog), `binance-rest.ts` (4 console→binanceLog)
+- **Memory Watchdog**: Added `src/lib/config` and `src/lib/utils` to scanned directories
+
+---
+
 ## [v0.28.0] — 2026-03-08
 
 ### Added

@@ -19,6 +19,7 @@
 // ============================================================
 
 import { Cortex } from './cortex';
+import { cortexLog } from '@/lib/utils/logger';
 import { EvolutionScheduler } from './evolution-scheduler';
 import { AdaptiveDataFlowIntelligence, type DataFlowTelemetry } from './adaptive-data-flow';
 import {
@@ -153,14 +154,12 @@ export class CortexLiveEngine {
                 this.regimePropagation.registerSlot(slot.id, slot.pair);
             }
 
-            console.log(
-                `[CortexLive] ✅ Initialized — ${slots.length} slots seeded and subscribed`,
-            );
+            cortexLog.info(`Initialized — ${slots.length} slots seeded and subscribed`);
         } catch (error) {
             const msg = error instanceof Error ? error.message : 'Unknown error';
             this.phase = 'error';
             this.lastError = msg;
-            console.error('[CortexLive] Initialization failed:', msg);
+            cortexLog.error('Initialization failed', { error: msg });
             throw error;
         }
     }
@@ -175,7 +174,7 @@ export class CortexLiveEngine {
                 throw new Error('[CortexLive] Must call initialize() before start()');
             }
             if (this.phase === 'live') {
-                console.warn('[CortexLive] Already running');
+                cortexLog.warn('Already running');
                 return;
             }
         }
@@ -186,12 +185,12 @@ export class CortexLiveEngine {
         try {
             this.marketDataService.start();
             this.phase = 'live';
-            console.log('[CortexLive] 🟢 LIVE — WebSocket connected, data flowing');
+            cortexLog.info('🟢 LIVE — WebSocket connected, data flowing');
         } catch (error) {
             const msg = error instanceof Error ? error.message : 'Unknown error';
             this.phase = 'error';
             this.lastError = msg;
-            console.error('[CortexLive] Start failed:', msg);
+            cortexLog.error('Start failed', { error: msg });
             throw error;
         }
     }
@@ -202,7 +201,7 @@ export class CortexLiveEngine {
     stop(): void {
         this.marketDataService.stop();
         this.phase = 'stopped';
-        console.log('[CortexLive] 🔴 STOPPED');
+        cortexLog.info('🔴 STOPPED');
     }
 
     /**
@@ -301,11 +300,11 @@ export class CortexLiveEngine {
         this.autoTradeEnabled = enabled;
         if (enabled && !this.tradeExecutor) {
             this.tradeExecutor = new LiveTradeExecutor(this.cortex, config);
-            console.log('[CortexLive] 🔥 Auto-trade ENABLED — LiveTradeExecutor wired');
+            cortexLog.info('🔥 Auto-trade ENABLED — LiveTradeExecutor wired');
         } else if (!enabled && this.tradeExecutor) {
             this.tradeExecutor.destroy();
             this.tradeExecutor = null;
-            console.log('[CortexLive] ⏹️ Auto-trade DISABLED');
+            cortexLog.info('⏹️ Auto-trade DISABLED');
         }
     }
 
@@ -398,16 +397,16 @@ export class CortexLiveEngine {
                         // Phase 26: Also push to candle cache for HTF routing
                         this.cortex.updateCandleCache(pair, tf, candles);
 
-                        console.log(
-                            `[CortexLive] 📊 Seeded ${slotId}: ${candles.length} candles` +
-                            ` (${new Date(candles[0].timestamp).toISOString()} → ${new Date(candles[candles.length - 1].timestamp).toISOString()})`,
-                        );
+                        cortexLog.info(`📊 Seeded ${slotId}: ${candles.length} candles`, {
+                            from: new Date(candles[0].timestamp).toISOString(),
+                            to: new Date(candles[candles.length - 1].timestamp).toISOString(),
+                        });
                     } else {
-                        console.warn(`[CortexLive] ⚠️ No candles returned for ${slotId}`);
+                        cortexLog.warn(`No candles returned for ${slotId}`);
                     }
                 } catch (error) {
                     const msg = error instanceof Error ? error.message : 'Unknown error';
-                    console.error(`[CortexLive] Seed failed for ${slotId}:`, msg);
+                    cortexLog.error(`Seed failed for ${slotId}`, { error: msg });
                     // Continue with other slots — don't abort the whole boot
                 }
 
@@ -417,10 +416,9 @@ export class CortexLiveEngine {
 
         // Phase 26: Seed HTF candles for confluence gene evaluation
         if (htfRequirements.size > 0) {
-            console.log(
-                `[CortexLive] 🔗 Seeding HTF confluence data: ` +
-                `${[...htfRequirements.entries()].map(([p, tfs]) => `${p}→[${[...tfs].join(',')}]`).join(', ')}`,
-            );
+            cortexLog.info('🔗 Seeding HTF confluence data', {
+                requirements: [...htfRequirements.entries()].map(([p, tfs]) => `${p}→[${[...tfs].join(',')}]`).join(', '),
+            });
 
             for (const [pair, htfTimeframes] of htfRequirements) {
                 for (const htf of htfTimeframes) {
@@ -438,15 +436,13 @@ export class CortexLiveEngine {
                             const htfSlotId = `${pair}:${htf}`;
                             this.marketDataService.seedCandleHistory(htfSlotId, candles);
 
-                            console.log(
-                                `[CortexLive] 🔗 HTF Seeded ${pair}:${htf}: ${candles.length} candles`,
-                            );
+                            cortexLog.info(`🔗 HTF Seeded ${pair}:${htf}: ${candles.length} candles`);
                         } else {
-                            console.warn(`[CortexLive] ⚠️ No HTF candles for ${pair}:${htf}`);
+                            cortexLog.warn(`No HTF candles for ${pair}:${htf}`);
                         }
                     } catch (error) {
                         const msg = error instanceof Error ? error.message : 'Unknown error';
-                        console.error(`[CortexLive] HTF seed failed for ${pair}:${htf}:`, msg);
+                        cortexLog.error(`HTF seed failed for ${pair}:${htf}`, { error: msg });
                         // Non-critical: confluence will gracefully degrade with null results
                     }
 
@@ -532,11 +528,12 @@ export class CortexLiveEngine {
             this.marketDataService.subscribeAllTickers();
         }
 
-        console.log(
-            `[CortexLive] 📡 Subscribed: ${pairTimeframes.size} pairs, ` +
-            `${slots.length} slots + ${htfStreamCount} HTF streams, ` +
-            `tickers: ${this.config.subscribeAllTickers ? 'ON' : 'OFF'}`,
-        );
+        cortexLog.info('📡 Subscribed streams', {
+            pairs: pairTimeframes.size,
+            slots: slots.length,
+            htfStreams: htfStreamCount,
+            tickers: this.config.subscribeAllTickers ? 'ON' : 'OFF',
+        });
     }
 
     // ─── Phase 3: Wire Callbacks ────────────────────────────
@@ -613,20 +610,22 @@ export class CortexLiveEngine {
             if (this.autoTradeEnabled && this.tradeExecutor) {
                 // Check exit signals for existing positions
                 this.tradeExecutor.checkExitSignals(slotId, candles).catch((err) => {
-                    console.error(`[CortexLive] Exit signal check error for ${slotId}:`,
-                        err instanceof Error ? err.message : 'Unknown');
+                    cortexLog.error(`Exit signal check error for ${slotId}`, {
+                        error: err instanceof Error ? err.message : 'Unknown',
+                    });
                 });
 
                 // Evaluate for new entries
                 this.tradeExecutor.evaluateAndExecute(slotId, candles).then((executed) => {
                     if (executed) {
-                        console.log(`[CortexLive] 📈 Trade executed for ${slotId}`);
+                        cortexLog.info(`📈 Trade executed for ${slotId}`);
                         // Refresh snapshot to update dashboard
                         if (this.onSnapshotRefresh) this.onSnapshotRefresh();
                     }
                 }).catch((err) => {
-                    console.error(`[CortexLive] Trade execution error for ${slotId}:`,
-                        err instanceof Error ? err.message : 'Unknown');
+                    cortexLog.error(`Trade execution error for ${slotId}`, {
+                        error: err instanceof Error ? err.message : 'Unknown',
+                    });
                 });
             }
 
@@ -636,7 +635,7 @@ export class CortexLiveEngine {
             }
         } catch (error) {
             const msg = error instanceof Error ? error.message : 'Unknown error';
-            console.error(`[CortexLive] Candle close handler error for ${slotId}:`, msg);
+            cortexLog.error(`Candle close handler error for ${slotId}`, { error: msg });
         }
     }
 

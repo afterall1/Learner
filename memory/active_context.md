@@ -7,8 +7,9 @@
 ## 📅 Current State
 
 **Date**: 2026-03-08
-**Phase**: Phase 28 — Memory Architecture Integrity Audit + Watchdog Automation
+**Phase**: Phase 29 — Production Deployment Preparation
 **Build Status**: ✅ Passing (zero errors)
+**Version**: v1.0.0-beta.1
 **Dev Server**: `http://localhost:3000`
 
 ---
@@ -46,6 +47,7 @@
 | **Neural Impulse Bus** | Phase 22 — NIEB (neural-impulse-bus.ts): engine→brain neuron impulse event bus (250L) |
 | **Strategy Roster** | strategy-roster.ts (510L): population management across islands |
 | **Directive Applicator** | Phase 24 — Overmind directive→action bridge (directive-applicator.ts, 352L) |
+| **Production Infrastructure** | Phase 29 — Structured Logger (logger.ts, 218L), Deployment Sentinel (deployment-sentinel.ts, 283L, 12-point readiness), Env Validator (env-validator.ts, 173L) wired into binance-rest/supabase. `/api/sentinel` endpoint. v1.0.0-beta.1 |
 | **Dashboard** | Main: 9 panels + Cortex Neural Map | Pipeline: 9 panels + Overmind Hub + LivePulseTelemetry + EvolutionHeartbeat + Risk Shield (12 total) | Brain: Holographic Neural Cortex |
 | **Current Generation** | N/A (awaiting Binance API connection) |
 | **Best Fitness Score** | N/A |
@@ -307,7 +309,7 @@
 
 ## 📅 Next Session Priorities
 
-1. Production deployment preparation — Build optimization, environment configuration
+1. ~~Production deployment preparation — Build optimization, environment configuration~~ ✅ (Phase 29: v1.0.0-beta.1)
 2. Performance optimization — Backtester PFLM cache improvements, stress matrix integration into evolution pipeline
 3. Real Binance Testnet paper trading session — Verify LiveTradeExecutor with live kline data
 4. Dashboard MSSM visualization — Stress matrix results panel in pipeline page

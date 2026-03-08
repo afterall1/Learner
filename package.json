@@ -1,6 +1,6 @@
 {
   "name": "learner",
-  "version": "0.1.0",
+  "version": "1.0.0-beta.1",
   "private": true,
   "scripts": {
     "dev": "next dev",
@@ -9,7 +9,10 @@
     "lint": "eslint",
     "prepare": "node scripts/install-hooks.js",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "build:prod": "npm run test && npm run build",
+    "watchdog": "node memory/scripts/memory-watchdog.js --ci",
+    "sentinel": "curl -s http://localhost:3000/api/sentinel | node -e \"process.stdin.on('data',d=>{const r=JSON.parse(d);console.log(r.overallStatus==='healthy'?'✅ HEALTHY':'❌ '+r.overallStatus);r.checks.forEach(c=>console.log(' ',c.status==='pass'?'✅':c.status==='fail'?'❌':'⚠️',c.name,'-',c.message))})\""
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.98.0",

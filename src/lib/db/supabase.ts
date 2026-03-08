@@ -11,6 +11,7 @@
 // ============================================================
 
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
+import { getEnv } from '@/lib/config/env-validator';
 import type {
     Trade,
     StrategyDNA,
@@ -34,8 +35,17 @@ let supabaseClient: SupabaseClient | null = null;
 function getSupabase(): SupabaseClient | null {
     if (supabaseClient) return supabaseClient;
 
-    const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-    const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+    // Try validated env first, fallback to raw process.env
+    let url: string | undefined;
+    let key: string | undefined;
+    try {
+        const env = getEnv();
+        url = env.supabase.url;
+        key = env.supabase.anonKey;
+    } catch {
+        url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+        key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+    }
 
     if (!url || !key) {
         return null;

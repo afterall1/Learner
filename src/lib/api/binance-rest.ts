@@ -13,6 +13,8 @@
 // ============================================================
 
 import crypto from 'crypto';
+import { getEnv } from '@/lib/config/env-validator';
+import { binanceLog } from '@/lib/utils/logger';
 import {
     OHLCV,
     MarketTick,
@@ -96,7 +98,7 @@ class AdaptiveRateGovernor {
         const now = Date.now();
         if (now < this.pauseUntil) {
             const waitMs = this.pauseUntil - now;
-            console.warn(`[RateGovernor] Emergency pause: waiting ${waitMs}ms`);
+            binanceLog.warn(`Emergency pause: waiting ${waitMs}ms`);
             await new Promise<void>(r => setTimeout(r, waitMs));
         }
 
@@ -167,10 +169,11 @@ class AdaptiveRateGovernor {
             // EMERGENCY: almost at limit
             this.maxConcurrent = 1;
             this.pauseUntil = Date.now() + 5000; // 5s pause
-            console.error(
-                `[RateGovernor] EMERGENCY: weight=${this.usedWeight1m}/${this.maxWeight1m} ` +
-                `orders=${this.orderCount1m}/${this.maxOrderCount1m} → concurrency=1, pausing 5s`
-            );
+            binanceLog.error('EMERGENCY rate limit', {
+                weight: `${this.usedWeight1m}/${this.maxWeight1m}`,
+                orders: `${this.orderCount1m}/${this.maxOrderCount1m}`,
+                action: 'concurrency=1, pausing 5s',
+            });
         } else if (utilization > 0.75 || orderUtil > 0.67) {
             // CAUTIOUS
             this.maxConcurrent = 2;
@@ -183,10 +186,12 @@ class AdaptiveRateGovernor {
         }
 
         if (prevConcurrency !== this.maxConcurrent) {
-            console.log(
-                `[RateGovernor] Concurrency ${prevConcurrency}→${this.maxConcurrent} ` +
-                `(weight: ${(utilization * 100).toFixed(1)}%, orders: ${(orderUtil * 100).toFixed(1)}%)`
-            );
+            binanceLog.info('Concurrency adjusted', {
+                from: prevConcurrency,
+                to: this.maxConcurrent,
+                weightPct: `${(utilization * 100).toFixed(1)}%`,
+                orderPct: `${(orderUtil * 100).toFixed(1)}%`,
+            });
         }
     }
 
@@ -236,10 +241,28 @@ export class BinanceRestClient {
     private lastTimeSyncAt: number = 0;
 
     constructor(config: Partial<BinanceRestConfig> = {}) {
+        // Use validated env with fallback to raw process.env for backward compatibility
+        let envConfig: { apiKey: string; apiSecret: string; isTestnet: boolean };
+        try {
+            const env = getEnv();
+            envConfig = {
+                apiKey: env.binance.apiKey,
+                apiSecret: env.binance.apiSecret,
+                isTestnet: env.binance.isTestnet,
+            };
+        } catch {
+            // Fallback for cases where env-validator can't run (e.g., build time)
+            envConfig = {
+                apiKey: process.env.BINANCE_API_KEY ?? '',
+                apiSecret: process.env.BINANCE_API_SECRET ?? '',
+                isTestnet: process.env.BINANCE_TESTNET !== 'false',
+            };
+        }
+
         this.config = {
-            apiKey: config.apiKey ?? process.env.BINANCE_API_KEY ?? '',
-            apiSecret: config.apiSecret ?? process.env.BINANCE_API_SECRET ?? '',
-            isTestnet: config.isTestnet ?? (process.env.BINANCE_TESTNET !== 'false'),
+            apiKey: config.apiKey ?? envConfig.apiKey,
+            apiSecret: config.apiSecret ?? envConfig.apiSecret,
+            isTestnet: config.isTestnet ?? envConfig.isTestnet,
         };
 
         const urls = getBaseUrls(this.config.isTestnet);

@@ -45,6 +45,8 @@ const SOURCE_DIRS = [
     'src/lib/hooks',
     'src/lib/store',
     'src/lib/db',
+    'src/lib/config',
+    'src/lib/utils',
     'src/app',
     'src/app/brain',
     'src/app/pipeline',

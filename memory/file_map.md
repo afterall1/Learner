@@ -156,6 +156,17 @@
 
 ---
 
+## ⚙️ Production Infrastructure Layer (`src/lib/config/`, `src/lib/utils/`) [Phase 29]
+
+| File | Purpose | Importance |
+|------|---------|------------|
+| `config/env-validator.ts` | **Environment Validator** (~173 lines). Fail-fast boot config. Validates all required env vars (Binance, Supabase, Overmind), typed `ValidatedEnv` singleton via `getEnv()`. Key format validation, testnet safety, MAINNET warning. | 🔴 |
+| `config/deployment-sentinel.ts` | **Phase 29 — Deployment Sentinel** (~283 lines). **RADICAL INNOVATION**: 12-point deployment readiness checker. Env, Supabase probe, Binance ping, security headers, build hash, testnet mode, TS strict, error boundary. `DeploymentReadinessReport`. | 🔴 |
+| `config/heartbeat-monitor.ts` | **Heartbeat Monitor** — Health check infrastructure for `/api/health`. Tracks subsystem health, request metrics, latency P95. | 🟡 |
+| `utils/logger.ts` | **Phase 29 — Structured Logger** (~218 lines). 4 levels (DEBUG/INFO/WARN/ERROR), module tags, env-aware suppression. 14 pre-built loggers. | 🔴 |
+
+---
+
 ## ğŸ›¡ï¸ Risk Layer (`src/lib/risk/`)
 
 | File | Purpose | Importance |
