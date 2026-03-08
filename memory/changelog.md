@@ -4,6 +4,37 @@ All notable changes to this project are documented here.
 
 ---
 
+## [v0.28.0] — 2026-03-08
+
+### Added
+- **Memory Architecture Integrity Audit (Phase 28 — 4-Expert Council)**
+  - Forensic audit uncovered **15 completely undocumented source files** (~7,500+ lines invisible to memory system)
+  - Updated `file_map.md` — new Cognitive Intelligence Layer section (9 modules), 4 Advanced Gene entries, 2 Island Model entries
+  - Updated `overview.md` — all 15 files added to Module Map, `live-trade-executor.ts` path corrected (`api/` not `engine/`)
+  - Updated `active_context.md` — AI Brain Status expanded with 7 new capability rows
+  - `memory/scripts/memory-watchdog.js` — **RADICAL INNOVATION**: Automated orphan file detection
+    - Scans all source directories, cross-references against `file_map.md`
+    - Detects ORPHAN files (on disk, not in docs) and GHOST files (in docs, not on disk)
+    - Auto-generates `file_map.md` entry suggestions from file headers
+    - CI-compatible exit codes (0 = synced, 1 = drift detected)
+    - Commands: `--scan` (default), `--auto-fix`, `--ci`
+
+### Fixed
+- **File path error**: `live-trade-executor.ts` documented as `src/lib/engine/` but actually located at `src/lib/api/` — corrected across all memory documents
+- **Test file count**: Corrected from "12 files" to "11 files" in `file_map.md` footer
+- **Overmind file count**: Corrected from "15 files" to "16 files" (adding `directive-applicator.ts`)
+
+### Documentation
+- 15 orphan files now documented: `bayesian-signal-calibrator.ts`, `coevolution.ts`, `genome-topology.ts`, `surrogate-illumination.ts`, `quality-diversity.ts`, `orderflow-genes.ts`, `neural-impulse-bus.ts`, `metacognitive-monitor.ts`, `market-intelligence.ts`, `knowledge-directed-synthesis.ts`, `confluence-genes.ts`, `confluence-acsi.ts`, `confluence-tcdw.ts`, `strategy-roster.ts`, `directive-applicator.ts`
+
+### Build Status
+✅ Passing (zero errors)
+
+### Test Status
+✅ 211/211 tests passing (11 test files)
+
+---
+
 ## [v0.27.0] — 2026-03-08
 
 ### Added
@@ -46,7 +77,7 @@ All notable changes to this project are documented here.
 
 ### Added
 - **Live Paper Trading E2E Testnet Execution (Phase 26)**
-  - `src/lib/engine/live-trade-executor.ts` (~330 lines) — Signal-to-order pipeline
+  - `src/lib/api/live-trade-executor.ts` (~330 lines) — Signal-to-order pipeline
     - `evaluateAndExecute()`: strategy signal evaluation → risk validation → position sizing → SL/TP → order placement
     - Risk validation: calls RiskManager.validateTrade() before every order
     - Duplicate prevention: tracks active positions per symbol

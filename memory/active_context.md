@@ -7,7 +7,7 @@
 ## 📅 Current State
 
 **Date**: 2026-03-08
-**Phase**: Phase 27 — E2E Integration Testing + Market Scenario Stress Matrix (MSSM)
+**Phase**: Phase 28 — Memory Architecture Integrity Audit + Watchdog Automation
 **Build Status**: ✅ Passing (zero errors)
 **Dev Server**: `http://localhost:3000`
 
@@ -39,7 +39,13 @@
 | **Automated Tests** | Phase 27 — Vitest framework, 12 suites (211 tests), E2E Integration Tests (33), Property-Based Fuzzing + Chaos Monkey |
 | **Integration Tests** | Phase 27 — 8-category E2E suite: Full Backtest Pipeline, Batch PFLM, Evolution Cycle, Market Scenarios, Signal Logic, HTF Aggregation, Fitness Convergence, Edge Cases |
 | **Stress Matrix** | Phase 27 — MSSM: 5-regime stress testing (bull/bear/sideways/high-vol/regime-transition) with Regime Resilience Score (RRS) |
-| **Live Trade Execution** | Phase 26 — LiveTradeExecutor: signal→order pipeline, risk validation, position sizing, /api/trading/status telemetry endpoint |
+| **Live Trade Execution** | Phase 26 — LiveTradeExecutor (`src/lib/api/live-trade-executor.ts`): signal→order pipeline, risk validation, position sizing, /api/trading/status telemetry endpoint |
+| **Cognitive Intelligence** | Phase 18-20 — MAP-Elites (quality-diversity.ts), Coevolution (coevolution.ts), NEAT Topology (genome-topology.ts), SAIE (surrogate-illumination.ts), Bayesian Calibrator (bayesian-signal-calibrator.ts), Market Intelligence (market-intelligence.ts), Metacognitive Monitor (metacognitive-monitor.ts), KDSS (knowledge-directed-synthesis.ts) |
+| **Order Flow Intelligence** | Phase 9.5 — Order Flow genes (orderflow-genes.ts): CVD, large trades, liquidation cascades, funding rate, absorption |
+| **Confluence System** | confluence-genes.ts (907L), confluence-acsi.ts (296L), confluence-tcdw.ts (235L) |
+| **Neural Impulse Bus** | Phase 22 — NIEB (neural-impulse-bus.ts): engine→brain neuron impulse event bus (250L) |
+| **Strategy Roster** | strategy-roster.ts (510L): population management across islands |
+| **Directive Applicator** | Phase 24 — Overmind directive→action bridge (directive-applicator.ts, 352L) |
 | **Dashboard** | Main: 9 panels + Cortex Neural Map | Pipeline: 9 panels + Overmind Hub + LivePulseTelemetry + EvolutionHeartbeat + Risk Shield (12 total) | Brain: Holographic Neural Cortex |
 | **Current Generation** | N/A (awaiting Binance API connection) |
 | **Best Fitness Score** | N/A |

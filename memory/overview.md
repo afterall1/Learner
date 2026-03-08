@@ -93,7 +93,7 @@ src/
 │   ├── forensic-learning.ts  → [Phase 12.1] Bayesian beliefs + fitness modifiers
 │   ├── regime-intelligence.ts → [Phase 11] MRTI predictive engine (740 lines)
 │   ├── persistence-bridge.ts → [Phase 13] Dual-write bridge (IndexedDB + Supabase)
-│   ├── overmind/             → [Phase 15] Strategic Overmind (15 files)
+│   ├── overmind/             → [Phase 15] Strategic Overmind (16 files)
 │   │   ├── strategic-overmind.ts → 6-phase cycle orchestrator (805 lines)
 │   │   ├── opus-client.ts    → Opus 4.6 API client (singleton)
 │   │   ├── prompt-engine.ts  → LLM prompt construction
@@ -108,11 +108,26 @@ src/
 │   │   ├── counterfactual-engine.ts → CCR "what if" analysis
 │   │   ├── meta-cognition.ts → CCR self-reflection
 │   │   ├── predictive-orchestrator.ts → PSPP bridge (MRTI → Overmind)
-│   │   └── reasoning-journal.ts → Decision reasoning log
+│   │   ├── reasoning-journal.ts → Decision reasoning log
+│   │   └── directive-applicator.ts → [Phase 24] Overmind directive→action bridge (352 lines)
 │   ├── microstructure-genes.ts → [Phase 9] Volume Profile, Acceleration, Candle Anatomy
 │   ├── price-action-genes.ts  → [Phase 9] 10 candlestick formations, structural breaks
 │   ├── composite-functions.ts → [Phase 9] Mathematical indicator evolution (9 ops × 4 norms)
 │   ├── directional-change.ts  → [Phase 9] Event-based DC analysis (Kampouridis)
+│   ├── orderflow-genes.ts     → [Phase 9.5] Order Flow Intelligence — CVD, large trades, liquidations (526 lines)
+│   ├── confluence-genes.ts    → Multi-TF confluence gene system (907 lines)
+│   ├── confluence-acsi.ts     → ACSI confluence: adaptive composite signal integration (296 lines)
+│   ├── confluence-tcdw.ts     → TCDW confluence: time-correlated delta weighting (235 lines)
+│   ├── quality-diversity.ts   → [Phase 18] MAP-Elites behavioral grid 5×3 (437 lines)
+│   ├── coevolution.ts         → [Phase 18.1] Parasite-Host arms race GA (612 lines)
+│   ├── genome-topology.ts     → [Phase 18.2] NEAT structural evolution (593 lines)
+│   ├── surrogate-illumination.ts → [Phase 18.3] SAIE: surrogate-assisted MAP-Elites (795 lines)
+│   ├── bayesian-signal-calibrator.ts → [Phase 19A] Beta-Bernoulli signal reliability (441 lines)
+│   ├── market-intelligence.ts → [Phase 19B] Market Intelligence Cortex — F&G, funding, vol (397 lines)
+│   ├── metacognitive-monitor.ts → [Phase 19C] Self-awareness: Brier Score, belief drift, epistemic (460 lines)
+│   ├── knowledge-directed-synthesis.ts → [Phase 20] KDSS: Lamarckian strategy construction (686 lines)
+│   ├── strategy-roster.ts     → Strategy roster management (510 lines)
+│   ├── neural-impulse-bus.ts  → [Phase 22] NIEB: engine→brain neuron impulse bus (250 lines)
 │   ├── backtester.ts         → [Phase 10] Core backtest engine + IndicatorCache (PFLM)
 │   ├── market-simulator.ts   → [Phase 10] Realistic execution (slippage, commission, impact)
 │   ├── cortex-live-engine.ts → [Phase 20] Live market ↔ Cortex orchestrator (490 lines)
@@ -120,7 +135,6 @@ src/
 │   ├── adaptive-data-flow.ts → [Phase 20] ADFI gap detection + telemetry (420 lines)
 │   ├── regime-propagation.ts → [Phase 20] CIRPN cross-island regime propagation (380 lines)
 │   ├── evolution-health.ts   → [Phase 21] Evolution Health Analyzer — convergence detector (300 lines)
-│   ├── live-trade-executor.ts → [Phase 26] Signal→order pipeline (330 lines, risk validation, SL/TP)
 │   └── stress-matrix.ts     → [Phase 27] MSSM: 5-regime stress testing + RRS scoring (390 lines)
 ├── lib/api/
 │   ├── binance-rest.ts       → [Phase 6→19] Binance Futures REST client (839 lines, AdaptiveRateGovernor)
@@ -130,7 +144,8 @@ src/
 │   ├── user-data-stream.ts   → [Phase 19] User Data WebSocket (476 lines, ACCOUNT/ORDER/MARGIN events)
 │   ├── account-sync.ts       → [Phase 19] Periodic balance polling (212 lines)
 │   ├── order-lifecycle.ts    → [Phase 19.1] AOLE state machine (370 lines, EMERGENCY_CLOSE)
-│   └── execution-quality.ts  → [Phase 19.1] Rolling slippage/latency tracker (190 lines)
+│   ├── execution-quality.ts  → [Phase 19.1] Rolling slippage/latency tracker (190 lines)
+│   └── live-trade-executor.ts → [Phase 26] Signal→order pipeline (330 lines, risk validation, SL/TP)
 ├── lib/risk/
 │   └── manager.ts            → 8 hardcoded, non-negotiable risk safety rails
 ├── lib/store/
