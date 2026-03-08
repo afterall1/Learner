@@ -7,9 +7,9 @@
 ## 📅 Current State
 
 **Date**: 2026-03-08
-**Phase**: Phase 32 — Dashboard MSSM Visualization
+**Phase**: Phase 34 — Performance Optimization
 **Build Status**: ✅ Passing (zero errors)
-**Version**: v1.2.0-beta.1
+**Version**: v1.3.0-beta.1
 **Dev Server**: `http://localhost:3000`
 
 ---
@@ -23,7 +23,7 @@
 | **Advanced Genome** | Phase 9 — 5 advanced gene families: Microstructure, Price Action, Composite Functions, Multi-TF Confluence, Directional Changes |
 | **Brain State** | Demo Mode (pre-API integration) |
 | **Island Model** | Ready (Cortex + 5 starter slots configured) |
-| **Backtesting Engine** | Phase 10 — `backtester.ts` (PFLM IndicatorCache) + `market-simulator.ts` (Almgren-Chriss slippage) |
+| **Backtesting Engine** | Phase 34 — `backtester.ts` (PFLM IndicatorCache with O(1) LRU, index-based ATR access, regime detection cache) + `market-simulator.ts` (Almgren-Chriss slippage, `atrEndIndex` for zero-copy ATR) + `backtest-profiler.ts` (self-aware performance telemetry) |
 | **Regime Intelligence** | Phase 11 — MRTI: Markov Chain transition matrix + 4-signal early-warning detector + proactive strategy pre-warming |
 | **Trade Forensics** | Phase 12 — TradeBlackBox (8 event types, MFE/MAE) + ForensicAnalyzer (4-factor causal attribution) + 8 lesson types |
 | **Validation Pipeline** | 4-Gate (WFA + Monte Carlo + Overfitting + Regime Diversity) + Novelty Bonus |
@@ -290,6 +290,15 @@
 157. **StressMatrixPanel** (`pipeline/page.tsx`, +380 lines): 5-axis radar chart (Bull/Bear/Sideways/HighVol/Transition), RRS semi-circle SVG gauge, per-scenario fitness bars with gradient fills, strongest/weakest scenario badges, avg fitness + variance metrics
 158. **ASC Calibration Heatmap** (RADICAL INNOVATION): Regime weight heatmap (5 cells with intensity encoding), Raw RRS → Calibrated CRRS comparison, regime confidence progress bar, total calibrations counter
 
+### Session: 2026-03-08 — Testnet Mission Control Panel (Phase 33)
+159. **TestnetMissionControlPanel**: Full mission control for testnet sessions — PROBE dashboard (6-point check with TESTNET badge, drift indicator, 4-column account panel), client-side RAF elapsed timer, seed progress bar, active config echo bar, live trade log feed
+
+### Session: 2026-03-08 — Performance Optimization (Phase 34, 5-Expert Council)
+160. **O(1) LRU Cache**: Replaced `IndicatorCache` LRU tracking (`indexOf+splice` O(N) per hit) with Map `delete+set` O(1) pattern. Increased capacity 100→200 entries
+161. **Index-Based ATR Access**: Added `atrEndIndex` parameter to `calculateSlippage()` and `simulateExecution()` in `market-simulator.ts`, eliminated 3 `atrValues.slice(0, i+1)` copies from backtester main loop
+162. **Regime Detection Cache**: Regime detection now cached with 50-candle interval instead of per-trade recomputation. `detectSingleCandleRegime()` updated for index-based access
+163. **BacktestProfiler (RADICAL INNOVATION)**: `backtest-profiler.ts` (~330 lines) — Self-aware performance telemetry singleton. Session lifecycle (start/end), phase tracking (beginPhase/endPhase), per-strategy timing, 5-category recommendation engine (cache size, population, candle count, regime interval, batch strategy). Wired into `evolution-scheduler.ts` at 3 pipeline points
+
 ---
 
 ## 🚧 Incomplete Features / Technical Debt
@@ -320,10 +329,11 @@
 1. ~~Production deployment preparation — Build optimization, environment configuration~~ ✅ (Phase 29: v1.0.0-beta.1)
 2. ~~Real Binance Testnet paper trading session — Verify LiveTradeExecutor with live kline data~~ ✅ (Phase 31: Testnet Probe + Session Orchestrator)
 3. ~~Dashboard MSSM visualization — Stress matrix results panel in pipeline page~~ ✅ (Phase 32: StressMatrixPanel + ASC Heatmap)
-4. Manual testnet session — Call POST /api/trading/session and observe live trading
-5. Performance optimization — Backtester PFLM cache improvements, stress matrix integration into evolution pipeline
+4. ~~Manual testnet session — Call POST /api/trading/session and observe live trading~~ ✅ (Phase 33: TestnetMissionControlPanel)
+5. ~~Performance optimization — Backtester PFLM cache improvements, stress matrix integration into evolution pipeline~~ ✅ (Phase 34: 4 optimizations + BacktestProfiler)
 6. Live MSSM integration — Wire StressMatrixPanel to live CortexLiveEngine data instead of demo
+7. Memory sync — Update all memory docs to reflect Phase 33-34 changes
 
 ---
 
-*Last Synced: 2026-03-08 20:55 (UTC+3)*
+*Last Synced: 2026-03-08 21:47 (UTC+3)*

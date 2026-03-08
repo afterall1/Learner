@@ -2,7 +2,7 @@
 
 All notable changes to this project are documented here.
 
----
+---\r\n\r\n## [v1.3.0-beta.1] — 2026-03-08\r\n\r\n### Added\r\n- **Testnet Mission Control Panel (Phase 33)**\r\n  - `TestnetMissionControlPanel` in `pipeline/page.tsx`: Full testnet session dashboard — enhanced PROBE UI (TESTNET badge, drift indicator, 4-column account panel), RAF elapsed timer, seed progress bar, active config echo, live trade log feed\r\n- **Performance Optimization (Phase 34 — 5-Expert Council)**\r\n  - **O(1) LRU Cache**: Replaced `IndicatorCache` LRU tracking (`indexOf+splice` O(N)) with Map `delete+set` O(1). Capacity 100→200\r\n  - **Index-Based ATR**: `atrEndIndex` param in `calculateSlippage()` + `simulateExecution()` — eliminates 3 `atrValues.slice()` copies per loop\r\n  - **Regime Detection Cache**: 50-candle interval caching instead of per-trade recomputation\r\n  - **BacktestProfiler (RADICAL INNOVATION)**: `backtest-profiler.ts` (~330 lines) — self-aware performance telemetry with 5-category recommendation engine, wired into `evolution-scheduler.ts` at 3 pipeline points\r\n\r\n### Changed\r\n- `backtester.ts` — O(1) LRU, ATR index-based access, regime cache, capacity 100→200\r\n- `market-simulator.ts` — `atrEndIndex` optional param on `calculateSlippage()` + `simulateExecution()`\r\n- `evolution-scheduler.ts` — Profiler session lifecycle, phase timing, `getProfiler()` accessor\r\n\r\n### Build Status\r\n✅ Passing (zero errors)\r\n\r\n### Test Status\r\n✅ 211/211 tests passing (zero regressions)\r\n\r\n---
 
 ## [v1.2.0-beta.1] — 2026-03-08
 
