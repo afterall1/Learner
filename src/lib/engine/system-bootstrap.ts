@@ -55,6 +55,10 @@ const DEFAULT_BOOT_CONFIG: BootConfig = {
     autoTrade: false,
 };
 
+// Minimum time (ms) each phase must be visible on screen
+// This prevents micro-phases from flashing invisibly
+const MIN_PHASE_DISPLAY_MS = 400;
+
 // ─── Phase Progress Weights ──────────────────────────────────
 // Each phase contributes a fraction of the overall 0-100% bar.
 // HISTORICAL_SEED gets the largest share (it takes the longest).
@@ -63,7 +67,7 @@ const PHASE_WEIGHTS: Record<BootPhase, number> = {
     [BootPhase.IDLE]: 0,
     [BootPhase.ENV_CHECK]: 5,
     [BootPhase.PERSISTENCE]: 10,
-    [BootPhase.CORTEX_SPAWN]: 10,
+    [BootPhase.CORTEX_SPAWN]: 20,
     [BootPhase.HISTORICAL_SEED]: 50,
     [BootPhase.WS_CONNECT]: 10,
     [BootPhase.EVOLUTION_START]: 10,
@@ -149,31 +153,34 @@ export class SystemBootstrap {
         try {
             // Phase 0: Environment Validation
             await this.executePhase(BootPhase.ENV_CHECK, async () => {
-                this.progressMessage = 'Validating environment variables...';
+                this.progressMessage = 'Checking API keys & environment...';
                 this.notifyStateChange();
                 try {
                     this.validatedEnv = validateEnvironment();
                     this.envStatus = 'valid';
+                    this.progressMessage = '✅ Environment valid — ' +
+                        (this.validatedEnv.binance.isTestnet ? 'TESTNET' : 'MAINNET') + ' mode';
                     bootLog.info('✅ Environment validated', {
                         binance: this.validatedEnv.binance.isTestnet ? 'TESTNET' : 'MAINNET',
                         overmind: this.validatedEnv.overmind.enabled ? 'ON' : 'OFF',
                     });
                 } catch (envError) {
                     this.envStatus = 'invalid';
-                    // Env validation is CRITICAL for live trading but we can still run in demo mode
+                    this.progressMessage = '⚠️ No API keys — DEMO MODE activated';
                     const msg = envError instanceof Error ? envError.message : 'Unknown env error';
                     bootLog.warn('Environment validation failed — running in DEMO mode', { error: msg });
-                    // Don't re-throw — allow boot to continue in demo mode
                 }
+                this.notifyStateChange();
             });
 
             // Phase 1: Persistence Hydration
             await this.executePhase(BootPhase.PERSISTENCE, async () => {
-                this.progressMessage = 'Loading last session checkpoint...';
+                this.progressMessage = 'Scanning IndexedDB for checkpoint...';
                 this.notifyStateChange();
 
                 if (this.config.skipPersistence) {
                     this.persistenceStatus = 'fresh';
+                    this.progressMessage = '⏭️ Persistence skipped — fresh start';
                     bootLog.info('⏭️ Persistence skipped — fresh start');
                     return;
                 }
@@ -183,19 +190,22 @@ export class SystemBootstrap {
 
                     if (this.restoredCheckpoint) {
                         this.persistenceStatus = 'hydrated';
+                        this.progressMessage = '💾 Previous session checkpoint restored';
                         bootLog.info('💾 Session checkpoint restored', {
                             timestamp: new Date(this.restoredCheckpoint.timestamp).toISOString(),
                         });
                     } else {
                         this.persistenceStatus = 'fresh';
+                        this.progressMessage = '📭 No checkpoint found — fresh session';
                         bootLog.info('📭 No previous checkpoint — fresh session');
                     }
                 } catch (persistError) {
                     this.persistenceStatus = 'error';
+                    this.progressMessage = '⚠️ Persistence error — continuing without';
                     const msg = persistError instanceof Error ? persistError.message : 'Unknown persistence error';
                     bootLog.warn('Persistence hydration failed — continuing without', { error: msg });
-                    // Non-critical: continue without persistence
                 }
+                this.notifyStateChange();
             });
 
             // Phase 2: Cortex Spawn
@@ -230,9 +240,7 @@ export class SystemBootstrap {
 
             // Phase 3: Historical Seed
             await this.executePhase(BootPhase.HISTORICAL_SEED, async () => {
-                this.progressMessage = 'Seeding historical candle data...';
                 this.seedStatus = 'seeding';
-                this.notifyStateChange();
 
                 if (!this.cortex) {
                     throw new Error('Cortex not initialized — cannot seed');
@@ -241,70 +249,73 @@ export class SystemBootstrap {
                 // Only seed if we have valid env (Binance API available)
                 if (this.envStatus !== 'valid') {
                     this.seedStatus = 'complete';
+                    this.progressMessage = '⏭️ Seed skipped — no Binance API (demo mode)';
+                    this.notifyStateChange();
                     bootLog.info('⏭️ Historical seed skipped — no Binance API credentials');
                     return;
                 }
 
-                try {
-                    // Create the live engine (it handles seeding internally)
-                    this.liveEngine = new CortexLiveEngine(this.cortex);
+                this.progressMessage = 'Fetching 500 candles per trading slot...';
+                this.notifyStateChange();
 
-                    // Wire progress tracking
+                try {
+                    this.liveEngine = new CortexLiveEngine(this.cortex);
                     const slots = this.cortex.getActiveSlots();
                     this.slotProgress = { completed: 0, total: slots.length, currentSlot: '' };
 
-                    // Initialize performs seed + subscribe + wire
                     await this.liveEngine.initialize(slots);
 
-                    // Update progress from engine status
                     const engineStatus = this.liveEngine.getStatus();
                     this.slotProgress = { ...engineStatus.seedProgress };
                     this.seedStatus = 'complete';
+                    this.progressMessage = `📊 Seeded ${slots.length} slot(s) with historical data`;
+                    this.notifyStateChange();
 
-                    bootLog.info('📊 Historical data seeded', {
-                        slots: slots.length,
-                    });
+                    bootLog.info('📊 Historical data seeded', { slots: slots.length });
                 } catch (seedError) {
                     this.seedStatus = 'error';
-                    throw seedError; // CRITICAL — can't go live without data
+                    throw seedError;
                 }
             });
 
             // Phase 4: WebSocket Connect
             await this.executePhase(BootPhase.WS_CONNECT, async () => {
-                this.progressMessage = 'Connecting to Binance WebSocket...';
                 this.wsStatus = 'connecting';
-                this.notifyStateChange();
 
                 if (!this.liveEngine) {
-                    this.wsStatus = 'connected'; // No-op in demo mode
+                    this.wsStatus = 'connected';
+                    this.progressMessage = '⏭️ WebSocket skipped — demo mode';
+                    this.notifyStateChange();
                     bootLog.info('⏭️ WebSocket skipped — demo mode');
                     return;
                 }
 
+                this.progressMessage = 'Connecting to Binance kline + ticker streams...';
+                this.notifyStateChange();
+
                 try {
                     await this.liveEngine.start();
                     this.wsStatus = 'connected';
+                    this.progressMessage = '📡 WebSocket connected — live data flowing';
+                    this.notifyStateChange();
                     bootLog.info('📡 WebSocket connected — data flowing');
                 } catch (wsError) {
                     this.wsStatus = 'error';
-                    throw wsError; // CRITICAL — can't go live without data feed
+                    throw wsError;
                 }
             });
 
             // Phase 5: Evolution Start
             await this.executePhase(BootPhase.EVOLUTION_START, async () => {
-                this.progressMessage = 'Starting evolution engine...';
+                this.progressMessage = 'Activating GA engine + auto-checkpoint...';
                 this.notifyStateChange();
 
                 try {
-                    // Enable auto-trade if configured
                     if (this.config.autoTrade && this.liveEngine) {
                         this.liveEngine.setAutoTrade(true);
                         bootLog.info('🔥 Auto-trade ENABLED');
                     }
 
-                    // Start auto-checkpoint if IndexedDB is available
                     if (this.cortex) {
                         const cortex = this.cortex;
                         startAutoCheckpoint(() => {
@@ -338,18 +349,22 @@ export class SystemBootstrap {
                     }
 
                     this.evolutionStatus = 'active';
+                    this.progressMessage = '🧬 Evolution engine active — GA running';
+                    this.notifyStateChange();
                     bootLog.info('🧬 Evolution engine activated');
                 } catch (evoError) {
                     this.evolutionStatus = 'error';
+                    this.progressMessage = '⚠️ Evolution failed — manual mode';
+                    this.notifyStateChange();
                     const msg = evoError instanceof Error ? evoError.message : 'Unknown';
                     bootLog.warn('Evolution start failed — manual evolution required', { error: msg });
-                    // Non-critical: system can still display data without evolution
                 }
             });
 
             // Phase 6: READY
             await this.executePhase(BootPhase.READY, async () => {
-                this.progressMessage = 'System ready!';
+                const totalMs = Date.now() - this.bootStartTime;
+                this.progressMessage = `🟢 System ready — booted in ${totalMs}ms`;
                 this.notifyStateChange();
             });
 
@@ -504,11 +519,21 @@ export class SystemBootstrap {
     private async executePhase(phase: BootPhase, fn: () => Promise<void>): Promise<void> {
         this.phase = phase;
         this.notifyStateChange();
+
+        // Yield to the event loop so React can paint this phase BEFORE executing
+        await new Promise<void>(r => setTimeout(r, 0));
+
         const phaseStart = Date.now();
 
         try {
             await fn();
             this.phaseDurations[phase] = Date.now() - phaseStart;
+
+            // Enforce minimum display time so user can see each phase
+            const elapsed = Date.now() - phaseStart;
+            if (elapsed < MIN_PHASE_DISPLAY_MS) {
+                await new Promise<void>(r => setTimeout(r, MIN_PHASE_DISPLAY_MS - elapsed));
+            }
         } catch (error) {
             this.phaseDurations[phase] = Date.now() - phaseStart;
             throw error;

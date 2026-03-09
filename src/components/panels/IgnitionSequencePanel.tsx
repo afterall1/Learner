@@ -3,7 +3,7 @@
 // ============================================================
 // Learner: Ignition Sequence Panel — System Bootstrap UI
 // ============================================================
-// Phase 36 — System Startup Architecture
+// Phase 36.1 — Boot Telemetry Timeline
 //
 // Displays a 7-phase boot sequence with real-time progress:
 //   Phase 0: ENV_CHECK       → Shield icon
@@ -15,15 +15,18 @@
 //   Phase 6: READY           → CheckCircle2 icon
 //
 // Before boot: Shows "IGNITE SYSTEM" button
-// During boot: Shows animated phase progression
-// After boot: Collapses to compact status bar
+// During boot: Shows animated phase progression + live elapsed timer
+// After boot: Shows compact status bar + expandable Boot Telemetry Report
+//   - Phase Waterfall Chart (horizontal duration bars)
+//   - Per-Phase Result Badges
+//   - Boot History (last 5 boots)
 // ============================================================
 
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useState, useMemo } from 'react';
 import {
     Shield, Database, Brain, BarChart3, Wifi, Zap,
     CheckCircle2, Rocket, AlertCircle, Power,
-    Loader2, Clock,
+    Loader2, Clock, ChevronDown, ChevronUp, Activity,
 } from 'lucide-react';
 import { useBootStore } from '@/lib/store';
 import { BootPhase, Timeframe } from '@/types';
@@ -90,7 +93,7 @@ type PhaseStatus = 'pending' | 'active' | 'complete' | 'error' | 'skipped';
 function getPhaseStatus(
     phase: BootPhase,
     currentBootPhase: BootPhase,
-    subsystemStatuses: Record<string, string>,
+    _subsystemStatuses: Record<string, string>,
 ): PhaseStatus {
     const phaseOrder = PHASE_CONFIGS.map(c => c.phase);
     const currentIdx = phaseOrder.indexOf(currentBootPhase);
@@ -117,6 +120,49 @@ function formatDuration(ms: number): string {
     return `${(ms / 1000).toFixed(1)}s`;
 }
 
+// ─── Phase Result Badge for telemetry ────────────────────────
+
+function getPhaseResultBadge(
+    phase: BootPhase,
+    envStatus: string,
+    persistenceStatus: string,
+    cortexStatus: string,
+    seedStatus: string,
+    wsStatus: string,
+    evolutionStatus: string,
+): { label: string; variant: string } {
+    switch (phase) {
+        case BootPhase.ENV_CHECK:
+            return envStatus === 'valid'
+                ? { label: '✅ VALID', variant: 'success' }
+                : { label: '⚠️ DEMO', variant: 'warning' };
+        case BootPhase.PERSISTENCE:
+            if (persistenceStatus === 'hydrated') return { label: '💾 HYDRATED', variant: 'success' };
+            if (persistenceStatus === 'fresh') return { label: '📭 FRESH', variant: 'info' };
+            return { label: '⚠️ ERROR', variant: 'warning' };
+        case BootPhase.CORTEX_SPAWN:
+            return cortexStatus === 'spawned'
+                ? { label: '🧠 SPAWNED', variant: 'success' }
+                : { label: '❌ FAILED', variant: 'danger' };
+        case BootPhase.HISTORICAL_SEED:
+            if (seedStatus === 'complete') return { label: '📊 SEEDED', variant: 'success' };
+            if (seedStatus === 'seeding') return { label: '⏳ SEEDING', variant: 'info' };
+            return { label: '⏭️ SKIPPED', variant: 'neutral' };
+        case BootPhase.WS_CONNECT:
+            return wsStatus === 'connected'
+                ? { label: '📡 CONNECTED', variant: 'success' }
+                : { label: '⏭️ SKIPPED', variant: 'neutral' };
+        case BootPhase.EVOLUTION_START:
+            return evolutionStatus === 'active'
+                ? { label: '🧬 ACTIVE', variant: 'success' }
+                : { label: '⚠️ MANUAL', variant: 'warning' };
+        case BootPhase.READY:
+            return { label: '🟢 LIVE', variant: 'success' };
+        default:
+            return { label: '—', variant: 'neutral' };
+    }
+}
+
 // ─── Ignition Panel Component ────────────────────────────────
 
 export function IgnitionSequencePanel() {
@@ -124,11 +170,13 @@ export function IgnitionSequencePanel() {
         phase, progress, error, hasBooted,
         envStatus, persistenceStatus, cortexStatus,
         seedStatus, wsStatus, evolutionStatus,
-        bootDurationMs, phaseDurations,
+        bootDurationMs, phaseDurations, elapsedMs,
+        bootHistory,
         ignite, shutdown,
     } = useBootStore();
 
     const [isIgniting, setIsIgniting] = useState(false);
+    const [showTelemetry, setShowTelemetry] = useState(true);
 
     const subsystemStatuses: Record<string, string> = {
         env: envStatus,
@@ -155,40 +203,23 @@ export function IgnitionSequencePanel() {
     }, [ignite]);
 
     const handleShutdown = useCallback(async () => {
+        setShowTelemetry(true);
         await shutdown();
     }, [shutdown]);
 
-    // ─── Compact Status Bar (after boot) ──────────────────────
+    // Calculate max phase duration for waterfall chart scaling
+    const maxPhaseDuration = useMemo(() => {
+        const durations = Object.values(phaseDurations).filter((d): d is number => typeof d === 'number');
+        return Math.max(1, ...durations);
+    }, [phaseDurations]);
 
-    if (phase === BootPhase.READY && hasBooted) {
-        return (
-            <div className="ignition-compact glass-card glass-card-accent accent-emerald col-12">
-                <div className="ignition-compact-inner">
-                    <div className="ignition-compact-status">
-                        <div className="ignition-live-dot" />
-                        <span className="ignition-compact-label">SYSTEM LIVE</span>
-                        <span className="ignition-compact-detail">
-                            Boot: {formatDuration(bootDurationMs)}
-                        </span>
-                        {envStatus === 'invalid' && (
-                            <span className="card-badge badge-warning" style={{ marginLeft: 8 }}>
-                                DEMO MODE
-                            </span>
-                        )}
-                    </div>
-                    <button
-                        className="btn btn-ghost btn-sm"
-                        onClick={handleShutdown}
-                    >
-                        <Power size={14} />
-                        Shutdown
-                    </button>
-                </div>
-            </div>
-        );
-    }
+    // Previous boot for comparison
+    const previousBoot = useMemo(() => {
+        if (bootHistory.length < 2) return null;
+        return bootHistory[bootHistory.length - 2];
+    }, [bootHistory]);
 
-    // ─── IDLE State — Show Ignite Button ──────────────────────
+    // ─── Boot state classification ───────────────────────────
 
     const isIdle = phase === BootPhase.IDLE && !isIgniting;
     const isBooting = phase !== BootPhase.IDLE
@@ -196,28 +227,82 @@ export function IgnitionSequencePanel() {
         && phase !== BootPhase.ERROR
         && phase !== BootPhase.SHUTDOWN;
     const isError = phase === BootPhase.ERROR;
+    const isReady = phase === BootPhase.READY && hasBooted;
+
+    // ─── Render ──────────────────────────────────────────────
 
     return (
-        <div className="ignition-panel glass-card glass-card-accent accent-primary col-12 stagger-in stagger-1">
+        <div className={`ignition-panel glass-card glass-card-accent ${isReady ? 'accent-emerald' : 'accent-primary'} col-12 stagger-in stagger-1`}>
             <div className="card-header">
                 <div className="card-title">
                     <Rocket size={18} />
                     System Ignition
                 </div>
-                {isBooting && (
-                    <span className="card-badge badge-primary">
-                        {progress.overallPercent}%
-                    </span>
-                )}
-                {isError && (
-                    <span className="card-badge badge-danger">
-                        ERROR
-                    </span>
-                )}
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    {/* Live Elapsed Timer During Boot */}
+                    {(isBooting || isIgniting) && (
+                        <span className="ignition-elapsed-timer">
+                            <Clock size={14} />
+                            <span className="ignition-elapsed-value">
+                                {(elapsedMs / 1000).toFixed(1)}s
+                            </span>
+                        </span>
+                    )}
+                    {isBooting && (
+                        <span className="card-badge badge-primary">
+                            {progress.overallPercent}%
+                        </span>
+                    )}
+                    {isError && (
+                        <span className="card-badge badge-danger">
+                            ERROR
+                        </span>
+                    )}
+                    {isReady && (
+                        <span className="card-badge badge-success">
+                            LIVE
+                        </span>
+                    )}
+                </div>
             </div>
 
             <div className="card-body">
-                {/* Overall Progress Bar */}
+                {/* ─── Compact Status Bar (after boot) ────────────── */}
+                {isReady && (
+                    <div className="ignition-compact-inner">
+                        <div className="ignition-compact-status">
+                            <div className="ignition-live-dot" />
+                            <span className="ignition-compact-label">SYSTEM LIVE</span>
+                            <span className="ignition-compact-detail">
+                                Boot: {formatDuration(bootDurationMs)}
+                            </span>
+                            {envStatus === 'invalid' && (
+                                <span className="card-badge badge-warning" style={{ marginLeft: 8 }}>
+                                    DEMO MODE
+                                </span>
+                            )}
+                        </div>
+                        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                            <button
+                                className="btn btn-ghost btn-sm"
+                                onClick={() => setShowTelemetry(prev => !prev)}
+                                title="Toggle boot telemetry"
+                            >
+                                <Activity size={14} />
+                                {showTelemetry ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+                            </button>
+                            <button
+                                className="btn btn-ghost btn-sm"
+                                onClick={handleShutdown}
+                            >
+                                <Power size={14} />
+                                Shutdown
+                            </button>
+                        </div>
+                    </div>
+                )}
+
+                {/* ─── Overall Progress Bar ────────────────────────── */}
                 {(isBooting || isError) && (
                     <div className="ignition-progress-container">
                         <div className="ignition-progress-bar">
@@ -232,60 +317,62 @@ export function IgnitionSequencePanel() {
                     </div>
                 )}
 
-                {/* Phase Steps */}
-                <div className="ignition-phases">
-                    {PHASE_CONFIGS.map((config, index) => {
-                        const status = getPhaseStatus(
-                            config.phase,
-                            phase,
-                            subsystemStatuses,
-                        );
-                        const duration = phaseDurations[config.phase];
+                {/* ─── Phase Steps (during boot + idle) ───────────── */}
+                {(!isReady || !showTelemetry) && (isIdle || isBooting || isError || isIgniting) && (
+                    <div className="ignition-phases">
+                        {PHASE_CONFIGS.map((config, index) => {
+                            const status = getPhaseStatus(
+                                config.phase,
+                                phase,
+                                subsystemStatuses,
+                            );
+                            const duration = phaseDurations[config.phase];
 
-                        return (
-                            <div
-                                key={config.phase}
-                                className={`ignition-phase ignition-phase--${status}`}
-                            >
-                                <div className="ignition-phase-icon">
-                                    {status === 'active' ? (
-                                        <Loader2 size={16} className="ignition-spinner" />
-                                    ) : status === 'complete' ? (
-                                        <CheckCircle2 size={16} />
-                                    ) : status === 'error' ? (
-                                        <AlertCircle size={16} />
-                                    ) : (
-                                        config.icon
-                                    )}
-                                </div>
-
-                                <div className="ignition-phase-info">
-                                    <div className="ignition-phase-label">
-                                        {config.label}
+                            return (
+                                <div
+                                    key={config.phase}
+                                    className={`ignition-phase ignition-phase--${status}`}
+                                >
+                                    <div className="ignition-phase-icon">
+                                        {status === 'active' ? (
+                                            <Loader2 size={16} className="ignition-spinner" />
+                                        ) : status === 'complete' ? (
+                                            <CheckCircle2 size={16} />
+                                        ) : status === 'error' ? (
+                                            <AlertCircle size={16} />
+                                        ) : (
+                                            config.icon
+                                        )}
                                     </div>
-                                    {(isBooting || isError || hasBooted) && (
-                                        <div className="ignition-phase-desc">
-                                            {status === 'active'
-                                                ? config.description
-                                                : status === 'complete' && duration
-                                                    ? formatDuration(duration)
-                                                    : status === 'error'
-                                                        ? 'Failed'
-                                                        : ''}
+
+                                    <div className="ignition-phase-info">
+                                        <div className="ignition-phase-label">
+                                            {config.label}
                                         </div>
+                                        {(isBooting || isError || hasBooted) && (
+                                            <div className="ignition-phase-desc">
+                                                {status === 'active'
+                                                    ? config.description
+                                                    : status === 'complete' && duration
+                                                        ? formatDuration(duration)
+                                                        : status === 'error'
+                                                            ? 'Failed'
+                                                            : ''}
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    {/* Connector line between phases */}
+                                    {index < PHASE_CONFIGS.length - 1 && (
+                                        <div className={`ignition-phase-connector ignition-phase-connector--${status === 'complete' ? 'complete' : 'pending'}`} />
                                     )}
                                 </div>
+                            );
+                        })}
+                    </div>
+                )}
 
-                                {/* Connector line between phases */}
-                                {index < PHASE_CONFIGS.length - 1 && (
-                                    <div className={`ignition-phase-connector ignition-phase-connector--${status === 'complete' ? 'complete' : 'pending'}`} />
-                                )}
-                            </div>
-                        );
-                    })}
-                </div>
-
-                {/* Seed Progress Detail */}
+                {/* ─── Seed Progress Detail ────────────────────────── */}
                 {phase === BootPhase.HISTORICAL_SEED && progress.slotProgress.total > 0 && (
                     <div className="ignition-seed-detail">
                         <div className="ignition-seed-label">
@@ -297,7 +384,7 @@ export function IgnitionSequencePanel() {
                     </div>
                 )}
 
-                {/* Error Display */}
+                {/* ─── Error Display ───────────────────────────────── */}
                 {isError && error && (
                     <div className="ignition-error">
                         <AlertCircle size={16} />
@@ -305,7 +392,96 @@ export function IgnitionSequencePanel() {
                     </div>
                 )}
 
-                {/* Ignite Button */}
+                {/* ─── Boot Telemetry Report (after boot) ─────────── */}
+                {isReady && showTelemetry && (
+                    <div className="ignition-telemetry">
+                        <div className="ignition-telemetry-header">
+                            <span className="ignition-telemetry-title">Boot Telemetry</span>
+                            <span className="ignition-telemetry-total">
+                                {formatDuration(bootDurationMs)}
+                                {previousBoot && (
+                                    <span className={`ignition-telemetry-compare ${bootDurationMs < previousBoot.durationMs ? 'faster' : 'slower'
+                                        }`}>
+                                        {bootDurationMs < previousBoot.durationMs
+                                            ? `${((1 - bootDurationMs / previousBoot.durationMs) * 100).toFixed(0)}% faster`
+                                            : `${((bootDurationMs / previousBoot.durationMs - 1) * 100).toFixed(0)}% slower`
+                                        }
+                                    </span>
+                                )}
+                            </span>
+                        </div>
+
+                        {/* Phase Waterfall Chart */}
+                        <div className="ignition-waterfall">
+                            {PHASE_CONFIGS.map(config => {
+                                const duration = phaseDurations[config.phase] ?? 0;
+                                const pct = maxPhaseDuration > 0
+                                    ? Math.max(2, (duration / maxPhaseDuration) * 100)
+                                    : 2;
+                                const badge = getPhaseResultBadge(
+                                    config.phase,
+                                    envStatus, persistenceStatus, cortexStatus,
+                                    seedStatus, wsStatus, evolutionStatus,
+                                );
+
+                                return (
+                                    <div key={config.phase} className="ignition-waterfall-row">
+                                        <div className="ignition-waterfall-label">
+                                            {config.label}
+                                        </div>
+                                        <div className="ignition-waterfall-bar-container">
+                                            <div
+                                                className={`ignition-waterfall-bar ignition-waterfall-bar--${duration < 100 ? 'fast' : duration < 500 ? 'normal' : 'slow'
+                                                    }`}
+                                                style={{ width: `${pct}%` }}
+                                            />
+                                            <span className="ignition-waterfall-duration">
+                                                {formatDuration(duration)}
+                                            </span>
+                                        </div>
+                                        <div className={`ignition-result-badge ignition-result-badge--${badge.variant}`}>
+                                            {badge.label}
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                        </div>
+
+                        {/* Boot History */}
+                        {bootHistory.length > 1 && (
+                            <div className="ignition-history">
+                                <div className="ignition-history-title">Boot History</div>
+                                <div className="ignition-history-entries">
+                                    {bootHistory.slice().reverse().map((entry, i) => (
+                                        <div
+                                            key={entry.timestamp}
+                                            className={`ignition-history-entry ${i === 0 ? 'current' : ''}`}
+                                        >
+                                            <span className="ignition-history-time">
+                                                {new Date(entry.timestamp).toLocaleTimeString('tr-TR', {
+                                                    hour: '2-digit',
+                                                    minute: '2-digit',
+                                                    second: '2-digit',
+                                                })}
+                                            </span>
+                                            <span className={`ignition-history-badge ${entry.mode}`}>
+                                                {entry.mode.toUpperCase()}
+                                            </span>
+                                            <span className="ignition-history-duration">
+                                                {formatDuration(entry.durationMs)}
+                                            </span>
+                                            <span className={`ignition-history-status ${entry.success ? 'success' : 'fail'}`}>
+                                                {entry.success ? '✅' : '❌'}
+                                            </span>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                )}
+
+                {/* ─── Ignite Button ───────────────────────────────── */}
                 {(isIdle || isError) && (
                     <div className="ignition-action">
                         <button
@@ -319,7 +495,11 @@ export function IgnitionSequencePanel() {
                                 <Rocket size={20} />
                             )}
                             <span>
-                                {isError ? 'Retry Ignition' : 'Ignite System'}
+                                {isIgniting
+                                    ? 'Igniting...'
+                                    : isError
+                                        ? 'Retry Ignition'
+                                        : 'Ignite System'}
                             </span>
                         </button>
                     </div>

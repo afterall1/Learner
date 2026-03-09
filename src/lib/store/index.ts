@@ -682,6 +682,14 @@ export const useCortexLiveStore = create<CortexLiveStoreState>()((set, get) => (
 
 // ─── Boot Store (Phase 36 — System Ignition) ─────────────────
 
+interface BootHistoryEntry {
+    timestamp: number;
+    durationMs: number;
+    mode: 'live' | 'demo';
+    phaseDurations: Partial<Record<import('@/types').BootPhase, number>>;
+    success: boolean;
+}
+
 interface BootStoreState {
     phase: import('@/types').BootPhase;
     progress: import('@/types').BootProgress;
@@ -695,6 +703,8 @@ interface BootStoreState {
     bootDurationMs: number;
     phaseDurations: Partial<Record<import('@/types').BootPhase, number>>;
     hasBooted: boolean;
+    elapsedMs: number;
+    bootHistory: BootHistoryEntry[];
 
     // Actions
     ignite: (config?: Partial<import('@/types').BootConfig>) => Promise<void>;
@@ -720,8 +730,27 @@ export const useBootStore = create<BootStoreState>()((set, get) => ({
     bootDurationMs: 0,
     phaseDurations: {},
     hasBooted: false,
+    elapsedMs: 0,
+    bootHistory: [],
 
     ignite: async (config) => {
+        // Reset hasBooted so the full boot sequence is visible on re-ignition
+        set({
+            hasBooted: false,
+            error: null,
+            elapsedMs: 0,
+            phase: 'IDLE' as import('@/types').BootPhase,
+        });
+
+        // Start elapsed time tracking with requestAnimationFrame
+        const bootStart = Date.now();
+        let rafId: number | null = null;
+        const tickElapsed = () => {
+            set({ elapsedMs: Date.now() - bootStart });
+            rafId = requestAnimationFrame(tickElapsed);
+        };
+        rafId = requestAnimationFrame(tickElapsed);
+
         const { getSystemBootstrap } = await import('@/lib/engine/system-bootstrap');
         const bootstrap = getSystemBootstrap();
 
@@ -730,8 +759,26 @@ export const useBootStore = create<BootStoreState>()((set, get) => ({
             get().updateFromBootState(state);
         });
 
-        const finalState = await bootstrap.ignite(config);
-        get().updateFromBootState(finalState);
+        try {
+            const finalState = await bootstrap.ignite(config);
+            get().updateFromBootState(finalState);
+
+            // Record boot history
+            const entry: BootHistoryEntry = {
+                timestamp: Date.now(),
+                durationMs: finalState.bootDurationMs,
+                mode: finalState.envStatus === 'valid' ? 'live' : 'demo',
+                phaseDurations: { ...finalState.phaseDurations },
+                success: finalState.phase !== ('ERROR' as import('@/types').BootPhase),
+            };
+            set(prev => ({
+                bootHistory: [...prev.bootHistory.slice(-4), entry],
+            }));
+        } finally {
+            // Stop elapsed timer
+            if (rafId !== null) cancelAnimationFrame(rafId);
+            set({ elapsedMs: Date.now() - bootStart });
+        }
 
         // After boot: wire Cortex + LiveEngine into existing stores
         const cortex = bootstrap.getCortex();

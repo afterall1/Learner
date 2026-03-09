@@ -3490,3 +3490,279 @@ body::before {
   color: var(--text-muted);
   font-family: var(--font-mono);
 }
+
+/* ─── Elapsed Timer (during boot) ─────────────────────────── */
+.ignition-elapsed-timer {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  color: var(--primary);
+  text-shadow: 0 0 8px rgba(99, 102, 241, 0.4);
+}
+
+.ignition-elapsed-value {
+  font-weight: 700;
+  min-width: 40px;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ─── Boot Telemetry Report ───────────────────────────────── */
+.ignition-telemetry {
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid var(--glass-border);
+  animation: ignition-telemetry-in 0.4s ease-out;
+}
+
+@keyframes ignition-telemetry-in {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.ignition-telemetry-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 14px;
+}
+
+.ignition-telemetry-title {
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--text-secondary);
+}
+
+.ignition-telemetry-total {
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.ignition-telemetry-compare {
+  font-size: 0.7rem;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: var(--radius-full);
+}
+
+.ignition-telemetry-compare.faster {
+  color: var(--success);
+  background: rgba(52, 211, 153, 0.1);
+}
+
+.ignition-telemetry-compare.slower {
+  color: var(--warning);
+  background: rgba(251, 191, 36, 0.1);
+}
+
+/* ─── Waterfall Chart ─────────────────────────────────────── */
+.ignition-waterfall {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.ignition-waterfall-row {
+  display: grid;
+  grid-template-columns: 90px 1fr 100px;
+  align-items: center;
+  gap: 10px;
+  height: 26px;
+}
+
+.ignition-waterfall-label {
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  text-align: right;
+  white-space: nowrap;
+}
+
+.ignition-waterfall-bar-container {
+  position: relative;
+  height: 18px;
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: var(--radius-sm);
+  overflow: visible;
+  display: flex;
+  align-items: center;
+}
+
+.ignition-waterfall-bar {
+  height: 100%;
+  border-radius: var(--radius-sm);
+  transition: width 0.6s cubic-bezier(0.22, 1, 0.36, 1);
+  min-width: 4px;
+}
+
+.ignition-waterfall-bar--fast {
+  background: linear-gradient(90deg, rgba(52, 211, 153, 0.7), rgba(52, 211, 153, 0.4));
+  box-shadow: 0 0 8px rgba(52, 211, 153, 0.2);
+}
+
+.ignition-waterfall-bar--normal {
+  background: linear-gradient(90deg, rgba(99, 102, 241, 0.7), rgba(99, 102, 241, 0.4));
+  box-shadow: 0 0 8px rgba(99, 102, 241, 0.2);
+}
+
+.ignition-waterfall-bar--slow {
+  background: linear-gradient(90deg, rgba(251, 191, 36, 0.7), rgba(251, 191, 36, 0.4));
+  box-shadow: 0 0 8px rgba(251, 191, 36, 0.2);
+}
+
+.ignition-waterfall-duration {
+  font-family: var(--font-mono);
+  font-size: 0.65rem;
+  color: var(--text-muted);
+  margin-left: 6px;
+  white-space: nowrap;
+}
+
+/* ─── Phase Result Badges ─────────────────────────────────── */
+.ignition-result-badge {
+  font-size: 0.65rem;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: var(--radius-full);
+  text-align: center;
+  white-space: nowrap;
+}
+
+.ignition-result-badge--success {
+  color: var(--success);
+  background: rgba(52, 211, 153, 0.1);
+  border: 1px solid rgba(52, 211, 153, 0.2);
+}
+
+.ignition-result-badge--warning {
+  color: var(--warning);
+  background: rgba(251, 191, 36, 0.1);
+  border: 1px solid rgba(251, 191, 36, 0.2);
+}
+
+.ignition-result-badge--danger {
+  color: var(--danger);
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.2);
+}
+
+.ignition-result-badge--info {
+  color: var(--primary);
+  background: rgba(99, 102, 241, 0.1);
+  border: 1px solid rgba(99, 102, 241, 0.2);
+}
+
+.ignition-result-badge--neutral {
+  color: var(--text-muted);
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--glass-border);
+}
+
+/* ─── Boot History ────────────────────────────────────────── */
+.ignition-history {
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid var(--glass-border);
+}
+
+.ignition-history-title {
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--text-muted);
+  margin-bottom: 8px;
+}
+
+.ignition-history-entries {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.ignition-history-entry {
+  display: grid;
+  grid-template-columns: 80px 50px 60px 24px;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 8px;
+  border-radius: var(--radius-sm);
+  font-size: 0.7rem;
+  font-family: var(--font-mono);
+  color: var(--text-muted);
+  transition: background 0.2s ease;
+}
+
+.ignition-history-entry.current {
+  background: rgba(99, 102, 241, 0.08);
+  color: var(--text-primary);
+}
+
+.ignition-history-entry:hover {
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.ignition-history-time {
+  color: var(--text-secondary);
+}
+
+.ignition-history-badge {
+  font-size: 0.6rem;
+  font-weight: 700;
+  padding: 1px 6px;
+  border-radius: var(--radius-full);
+  text-align: center;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.ignition-history-badge.live {
+  color: var(--success);
+  background: rgba(52, 211, 153, 0.1);
+}
+
+.ignition-history-badge.demo {
+  color: var(--warning);
+  background: rgba(251, 191, 36, 0.1);
+}
+
+.ignition-history-duration {
+  text-align: right;
+  color: var(--text-secondary);
+  font-weight: 600;
+}
+
+.ignition-history-status {
+  text-align: center;
+}
+
+.ignition-history-status.success {
+  color: var(--success);
+}
+
+.ignition-history-status.fail {
+  color: var(--danger);
+}
+
+/* ─── Badge Success Variant ──────────────────────────────── */
+.badge-success {
+  background: rgba(52, 211, 153, 0.15);
+  color: var(--success);
+  border: 1px solid rgba(52, 211, 153, 0.3);
+}
