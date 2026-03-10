@@ -680,6 +680,76 @@ export const useCortexLiveStore = create<CortexLiveStoreState>()((set, get) => (
     },
 }));
 
+// ─── Session Orchestrator Store (Phase 40 — Testnet Live Trading) ────
+
+import type { SessionState, SessionConfig, SessionReport, SessionPhase } from '@/lib/engine/testnet-session-orchestrator';
+
+interface SessionStoreState {
+    phase: SessionPhase;
+    sessionState: SessionState | null;
+    isStarting: boolean;
+    isStopping: boolean;
+    lastReport: SessionReport | null;
+
+    startSession: (config?: Partial<SessionConfig>) => Promise<void>;
+    stopSession: (reason?: string) => Promise<void>;
+    refreshState: () => void;
+}
+
+export const useSessionStore = create<SessionStoreState>()((set, get) => ({
+    phase: 'IDLE',
+    sessionState: null,
+    isStarting: false,
+    isStopping: false,
+    lastReport: null,
+
+    startSession: async (config?) => {
+        set({ isStarting: true });
+        try {
+            const { getSessionOrchestrator } = await import('@/lib/engine/testnet-session-orchestrator');
+            const orchestrator = getSessionOrchestrator();
+            const state = await orchestrator.startSession(config);
+            set({
+                phase: state.phase,
+                sessionState: state,
+                isStarting: false,
+            });
+        } catch (error) {
+            const msg = error instanceof Error ? error.message : 'Unknown error';
+            console.error('[SessionStore] Start failed:', msg);
+            set({ isStarting: false, phase: 'ERROR' });
+        }
+    },
+
+    stopSession: async (reason?) => {
+        set({ isStopping: true });
+        try {
+            const { getSessionOrchestrator } = await import('@/lib/engine/testnet-session-orchestrator');
+            const orchestrator = getSessionOrchestrator();
+            const report = await orchestrator.stopSession(reason);
+            const state = orchestrator.getSessionState();
+            set({
+                phase: 'STOPPED',
+                sessionState: state,
+                lastReport: report,
+                isStopping: false,
+            });
+        } catch (error) {
+            const msg = error instanceof Error ? error.message : 'Unknown error';
+            console.error('[SessionStore] Stop failed:', msg);
+            set({ isStopping: false });
+        }
+    },
+
+    refreshState: () => {
+        import('@/lib/engine/testnet-session-orchestrator').then(({ getSessionOrchestrator }) => {
+            const orchestrator = getSessionOrchestrator();
+            const state = orchestrator.getSessionState();
+            set({ phase: state.phase, sessionState: state });
+        }).catch(() => {/* Non-critical */});
+    },
+}));
+
 // ─── Boot Store (Phase 36 + 38 — System Ignition + Resilience Sentinel) ───
 
 interface BootHistoryEntry {

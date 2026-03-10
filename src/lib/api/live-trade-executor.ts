@@ -25,6 +25,7 @@ import { ExchangeInfoCache, ExchangeCircuitBreaker } from './exchange-circuit-br
 import { ExecutionQualityTracker } from './execution-quality';
 import { getHeartbeatMonitor } from '../config/heartbeat-monitor';
 import { evaluateStrategy } from '../engine/signal-engine';
+import { getSignalStream } from '../engine/session-signal-stream';
 import { Cortex } from '../engine/cortex';
 import {
     TradeSignalAction,
@@ -171,17 +172,20 @@ export class LiveTradeExecutor {
 
             // 1. Check if slot already has an active position
             if (this.activePositions.has(slotId)) {
+                getSignalStream().recordSkip(slotId, 'ALREADY_POSITIONED', null, null, null);
                 return false; // Already positioned for this slot
             }
 
             // 2. Check global position limit
             if (this.activePositions.size >= this.config.maxConcurrentPositions) {
+                getSignalStream().recordSkip(slotId, 'MAX_POSITIONS', null, null, null);
                 return false;
             }
 
             // 3. Check cooldown
             const cooldownExpiry = this.slotCooldowns.get(slotId);
             if (cooldownExpiry && Date.now() < cooldownExpiry) {
+                getSignalStream().recordSkip(slotId, 'COOLDOWN_ACTIVE', null, null, null);
                 return false;
             }
 
@@ -191,19 +195,28 @@ export class LiveTradeExecutor {
 
             const snapshot = island.getSnapshot();
             const champion = snapshot.activeStrategy;
-            if (!champion) return false;
+            if (!champion) {
+                getSignalStream().recordSkip(slotId, 'NO_CHAMPION', null, null, null);
+                return false;
+            }
 
             // 5. Evaluate strategy signal
             const currentDirection = null; // No open position for this slot
             const signal = evaluateStrategy(champion, candles, currentDirection);
 
+            // Phase 40 SEI: Record signal evaluation
+            const currentPrice = candles[candles.length - 1]?.close ?? 0;
+            getSignalStream().recordEvaluation(slotId, signal.action, signal.confidence, champion.name, currentPrice);
+
             if (signal.action !== TradeSignalAction.LONG &&
                 signal.action !== TradeSignalAction.SHORT) {
+                getSignalStream().recordSkip(slotId, 'HOLD_SIGNAL', champion.name, signal.action, signal.confidence);
                 return false; // No entry signal
             }
 
             // 6. Check confidence threshold
             if (signal.confidence < this.config.minConfidence) {
+                getSignalStream().recordSkip(slotId, 'LOW_CONFIDENCE', champion.name, signal.action, signal.confidence);
                 return false;
             }
 
@@ -216,8 +229,7 @@ export class LiveTradeExecutor {
             const side: OrderSide = direction === TradeDirection.LONG
                 ? OrderSide.BUY : OrderSide.SELL;
 
-            // Get current price for position sizing
-            const currentPrice = candles[candles.length - 1]?.close;
+            // Get current price for position sizing (already declared above for SEI)
             if (!currentPrice || currentPrice <= 0) return false;
 
             // Calculate position size
@@ -263,6 +275,12 @@ export class LiveTradeExecutor {
 
             // Execute atomically
             const orderGroup = await this.orderEngine.executeAtomicOrder(orderConfig);
+
+            // Phase 40 SEI: Record execution
+            getSignalStream().recordExecution(
+                slotId, direction, orderConfig.quantity, leverage,
+                champion.name, currentPrice, signal.confidence,
+            );
 
             // Track active position
             const terminalStates = ['FAILED', 'EMERGENCY_CLOSED'];
@@ -315,6 +333,7 @@ export class LiveTradeExecutor {
             const msg = error instanceof Error ? error.message : 'Unknown error';
             console.error(`[LiveTradeExecutor] Error for ${slotId}:`, msg);
             getHeartbeatMonitor().reportError('binance-rest', `Trade execution error: ${msg}`);
+            getSignalStream().recordError(slotId, msg);
             return false;
         }
     }
@@ -340,6 +359,7 @@ export class LiveTradeExecutor {
                     `Confidence: ${(signal.confidence * 100).toFixed(0)}% | ` +
                     `Strategy: ${champion.name} | Reason: ${signal.reason}`,
                 );
+                getSignalStream().recordSkip(slotId, 'DRY_RUN', champion.name, signal.action, signal.confidence);
                 return true;
             }
         }

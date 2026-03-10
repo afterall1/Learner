@@ -1,7 +1,7 @@
 {
   "version": 1,
-  "generated": "2026-03-08T18:52:03.323Z",
-  "totalFiles": 97,
+  "generated": "2026-03-10T21:52:24.074Z",
+  "totalFiles": 103,
   "totalSkills": 16,
   "fileToSkills": {
     "src/app/api/binance/exchange-info/route.ts": {
@@ -40,6 +40,27 @@
       ],
       "secondary": [
         "regime-intelligence",
+        "trade-forensics"
+      ],
+      "conventions": [
+        "learner-conventions"
+      ]
+    },
+    "src/components/panels/IgnitionSequencePanel.tsx": {
+      "primary": [],
+      "secondary": [
+        "regime-intelligence",
+        "trade-forensics"
+      ],
+      "conventions": [
+        "learner-conventions"
+      ]
+    },
+    "src/components/panels/TestnetSessionPanel.tsx": {
+      "primary": [],
+      "secondary": [
+        "regime-intelligence",
+        "strategic-overmind",
         "trade-forensics"
       ],
       "conventions": [
@@ -188,6 +209,26 @@
       ]
     },
     "src/lib/engine/bayesian-signal-calibrator.ts": {
+      "primary": [],
+      "secondary": [
+        "regime-intelligence",
+        "trade-forensics"
+      ],
+      "conventions": [
+        "learner-conventions"
+      ]
+    },
+    "src/lib/engine/boot-resilience-scorecard.ts": {
+      "primary": [],
+      "secondary": [
+        "regime-intelligence",
+        "trade-forensics"
+      ],
+      "conventions": [
+        "learner-conventions"
+      ]
+    },
+    "src/lib/engine/boot-resilience-sentinel.ts": {
       "primary": [],
       "secondary": [
         "regime-intelligence",
@@ -792,6 +833,17 @@
         "learner-conventions"
       ]
     },
+    "src/lib/engine/system-bootstrap.ts": {
+      "primary": [],
+      "secondary": [
+        "hybrid-persistence",
+        "regime-intelligence",
+        "trade-forensics"
+      ],
+      "conventions": [
+        "learner-conventions"
+      ]
+    },
     "src/lib/engine/testnet-session-orchestrator.ts": {
       "primary": [],
       "secondary": [
@@ -883,6 +935,16 @@
       ]
     },
     "src/lib/engine/__tests__/property-fuzzer.test.ts": {
+      "primary": [],
+      "secondary": [
+        "regime-intelligence",
+        "trade-forensics"
+      ],
+      "conventions": [
+        "learner-conventions"
+      ]
+    },
+    "src/lib/engine/__tests__/sentinel.test.ts": {
       "primary": [],
       "secondary": [
         "regime-intelligence",
@@ -1058,6 +1120,7 @@
       "dependentFiles": [
         "src/lib/config/env-validator.ts",
         "src/lib/engine/island.ts",
+        "src/lib/engine/system-bootstrap.ts",
         "src/lib/store/index.ts",
         "src/types/index.ts"
       ]
@@ -1097,6 +1160,8 @@
         "src/app/api/trading/session/route.ts",
         "src/app/page.tsx",
         "src/app/pipeline/page.tsx",
+        "src/components/panels/IgnitionSequencePanel.tsx",
+        "src/components/panels/TestnetSessionPanel.tsx",
         "src/lib/api/account-sync.ts",
         "src/lib/api/binance-rest.ts",
         "src/lib/api/binance-ws.ts",
@@ -1111,6 +1176,8 @@
         "src/lib/engine/adaptive-stress.ts",
         "src/lib/engine/backtester.ts",
         "src/lib/engine/bayesian-signal-calibrator.ts",
+        "src/lib/engine/boot-resilience-scorecard.ts",
+        "src/lib/engine/boot-resilience-sentinel.ts",
         "src/lib/engine/brain.ts",
         "src/lib/engine/capital-allocator.ts",
         "src/lib/engine/coevolution.ts",
@@ -1158,6 +1225,7 @@
         "src/lib/engine/strategy-dna.ts",
         "src/lib/engine/stress-matrix.ts",
         "src/lib/engine/surrogate-illumination.ts",
+        "src/lib/engine/system-bootstrap.ts",
         "src/lib/engine/testnet-session-orchestrator.ts",
         "src/lib/engine/trade-forensics.ts",
         "src/lib/engine/walk-forward.ts",
@@ -1168,6 +1236,7 @@
         "src/lib/engine/__tests__/integration-e2e.test.ts",
         "src/lib/engine/__tests__/migration-engine.test.ts",
         "src/lib/engine/__tests__/property-fuzzer.test.ts",
+        "src/lib/engine/__tests__/sentinel.test.ts",
         "src/lib/engine/__tests__/signal-engine.test.ts",
         "src/lib/engine/__tests__/validation-pipeline.test.ts",
         "src/lib/hooks/useBrainLiveData.ts",
@@ -1206,6 +1275,7 @@
         "src/app/pipeline/page.tsx"
       ],
       "dependentFiles": [
+        "src/components/panels/TestnetSessionPanel.tsx",
         "src/lib/engine/cortex.ts",
         "src/lib/engine/evolution-health.ts",
         "src/lib/engine/overmind/directive-applicator.ts",
@@ -1229,6 +1299,8 @@
         "src/app/api/trading/session/route.ts",
         "src/app/page.tsx",
         "src/app/pipeline/page.tsx",
+        "src/components/panels/IgnitionSequencePanel.tsx",
+        "src/components/panels/TestnetSessionPanel.tsx",
         "src/lib/api/account-sync.ts",
         "src/lib/api/binance-rest.ts",
         "src/lib/api/binance-ws.ts",
@@ -1243,6 +1315,8 @@
         "src/lib/engine/adaptive-stress.ts",
         "src/lib/engine/backtester.ts",
         "src/lib/engine/bayesian-signal-calibrator.ts",
+        "src/lib/engine/boot-resilience-scorecard.ts",
+        "src/lib/engine/boot-resilience-sentinel.ts",
         "src/lib/engine/brain.ts",
         "src/lib/engine/capital-allocator.ts",
         "src/lib/engine/coevolution.ts",
@@ -1294,6 +1368,7 @@
         "src/lib/engine/strategy-roster.ts",
         "src/lib/engine/stress-matrix.ts",
         "src/lib/engine/surrogate-illumination.ts",
+        "src/lib/engine/system-bootstrap.ts",
         "src/lib/engine/testnet-session-orchestrator.ts",
         "src/lib/engine/walk-forward.ts",
         "src/lib/engine/__tests__/advanced-genes.test.ts",
@@ -1302,6 +1377,7 @@
         "src/lib/engine/__tests__/integration-e2e.test.ts",
         "src/lib/engine/__tests__/migration-engine.test.ts",
         "src/lib/engine/__tests__/property-fuzzer.test.ts",
+        "src/lib/engine/__tests__/sentinel.test.ts",
         "src/lib/engine/__tests__/signal-engine.test.ts",
         "src/lib/engine/__tests__/validation-pipeline.test.ts",
         "src/lib/hooks/useBrainLiveData.ts",

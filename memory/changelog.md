@@ -4,6 +4,31 @@ All notable changes to this project are documented here.
 
 ---
 
+## [v1.7.0] — 2026-03-11
+
+### Added
+- **Testnet Session Panel (Phase 40 — 7-Expert Council)**
+  - `useSessionStore` (70L in `store/index.ts`) — Zustand wrapper for `TestnetSessionOrchestrator` with `startSession`/`stopSession`/`refreshState` actions
+  - `TestnetSessionPanel.tsx` (500L) — NEW: Full session control panel — config form (pairs, TF, capital, duration, dry run), 5-phase progress bar, live stats tiles, safety confirmation dialog, post-session report display
+  - Dashboard integration — Panel added to `pipeline/page.tsx` between StressMatrixPanel and GenerationFitnessPanel
+  - Session CSS (+390L in `globals.css`) — Config grid, phase progress, stat tiles, trading badge, signal stream feed
+
+- **Session Execution Intelligence (RADICAL INNOVATION)**
+  - `session-signal-stream.ts` (230L) — Observable AI decision stream: 5 event types (SIGNAL_EVALUATED, TRADE_EXECUTED, TRADE_SKIPPED, EXIT_TRIGGERED, ERROR_OCCURRED), 7 skip reasons, pub/sub, execution rate stats
+  - `live-trade-executor.ts` — SEI wiring at 7 decision points (evaluations, executions, skips, errors)
+  - `SignalStreamDisplay` component — Real-time AI decision feed with color-coded events and stats header
+
+### Changed
+- `live-trade-executor.ts` (~430→447L) — Signal stream recording at every decision point
+- `store/index.ts` (~1045→1115L) — `useSessionStore` Zustand store added
+- `pipeline/page.tsx` (~5233→5238L) — TestnetSessionPanel import + render
+- `globals.css` (~4144→4564L) — Session panel + signal stream CSS
+
+### Build Status
+✅ Passing (zero errors)
+
+---
+
 ## [v1.6.0-beta.2] — 2026-03-10
 
 ### Fixed
