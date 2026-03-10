@@ -1,6 +1,6 @@
 {
   "version": "1.0.0",
-  "generatedAt": "2026-03-08T20:52:12.476Z",
+  "generatedAt": "2026-03-10T16:25:23.500Z",
   "projectVersion": "v0.28.0",
   "sourceHashes": {
     "src/types/index.ts": "1d185441ec4204e7",
@@ -27,18 +27,18 @@
     "src/lib/engine/migration.ts": "be26a436baafcb32",
     "src/lib/engine/capital-allocator.ts": "18938886803a9624",
     "src/lib/risk/manager.ts": "80b7ca76d7bcb040",
-    "src/lib/store/index.ts": "318e517130463fae",
+    "src/lib/store/index.ts": "1b4b60a4270ceb97",
     "src/app/page.tsx": "f496d587d0a12c07",
     "src/app/pipeline/page.tsx": "bef7ce25b6337548",
-    "src/app/globals.css": "da178f53935a63f4",
+    "src/app/globals.css": "8826f7aa0274bdcc",
     "src/app/layout.tsx": "b7c900afea5bfe7e"
   },
   "memoryHashes": {
-    "memory/overview.md": "bd7a3f79652a3050",
-    "memory/active_context.md": "abeae29531404f31",
-    "memory/architecture/system_design.md": "8ef4173d0532305f",
-    "memory/file_map.md": "9cdab40c17f77b40",
-    "memory/changelog.md": "a87d4aacd8e72abe",
+    "memory/overview.md": "0737d0b1051ddabb",
+    "memory/active_context.md": "d043de538cbed9b6",
+    "memory/architecture/system_design.md": "f28d9d0c4e7ceba9",
+    "memory/file_map.md": "84cfc9dd475b0ac3",
+    "memory/changelog.md": "878edfa137ae1a9b",
     "memory/_SYNC_CHECKLIST.md": "db74a75eb0511be8"
   },
   "lineCounts": {
@@ -66,10 +66,10 @@
     "src/lib/engine/migration.ts": 304,
     "src/lib/engine/capital-allocator.ts": 233,
     "src/lib/risk/manager.ts": 315,
-    "src/lib/store/index.ts": 841,
+    "src/lib/store/index.ts": 888,
     "src/app/page.tsx": 1379,
     "src/app/pipeline/page.tsx": 5233,
-    "src/app/globals.css": 3492,
+    "src/app/globals.css": 3768,
     "src/app/layout.tsx": 28
   },
   "crossRefStatus": {

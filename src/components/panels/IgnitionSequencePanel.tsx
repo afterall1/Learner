@@ -3,7 +3,7 @@
 // ============================================================
 // Learner: Ignition Sequence Panel — System Bootstrap UI
 // ============================================================
-// Phase 36.1 — Boot Telemetry Timeline
+// Phase 36.1 + 38 — Boot Telemetry Timeline + Resilience Sentinel
 //
 // Displays a 7-phase boot sequence with real-time progress:
 //   Phase 0: ENV_CHECK       → Shield icon
@@ -22,11 +22,12 @@
 //   - Boot History (last 5 boots)
 // ============================================================
 
-import React, { useCallback, useState, useMemo } from 'react';
+import React, { useCallback, useState, useMemo, useEffect } from 'react';
 import {
     Shield, Database, Brain, BarChart3, Wifi, Zap,
     CheckCircle2, Rocket, AlertCircle, Power,
     Loader2, Clock, ChevronDown, ChevronUp, Activity,
+    Search, HeartPulse, ShieldAlert, RefreshCw,
 } from 'lucide-react';
 import { useBootStore } from '@/lib/store';
 import { BootPhase, Timeframe } from '@/types';
@@ -172,11 +173,17 @@ export function IgnitionSequencePanel() {
         seedStatus, wsStatus, evolutionStatus,
         bootDurationMs, phaseDurations, elapsedMs,
         bootHistory,
-        ignite, shutdown,
+        // Phase 38: Sentinel state
+        probeResult, probeRunning,
+        bootHealthScore, bootHealthGrade,
+        sentinelRecoveryTier, sentinelRecovering,
+        circuitBreakerTripped,
+        resilientIgnite, runProbe, shutdown,
     } = useBootStore();
 
     const [isIgniting, setIsIgniting] = useState(false);
     const [showTelemetry, setShowTelemetry] = useState(true);
+    const [showProbe, setShowProbe] = useState(true);
 
     const subsystemStatuses: Record<string, string> = {
         env: envStatus,
@@ -187,10 +194,18 @@ export function IgnitionSequencePanel() {
         evolution: evolutionStatus,
     };
 
+    // Auto-probe on mount when idle
+    useEffect(() => {
+        if (phase === BootPhase.IDLE && !hasBooted && !probeResult && !probeRunning) {
+            runProbe();
+        }
+    }, [phase, hasBooted, probeResult, probeRunning, runProbe]);
+
     const handleIgnite = useCallback(async () => {
         setIsIgniting(true);
         try {
-            await ignite({
+            // Phase 38: Use resilient boot with auto-recovery
+            await resilientIgnite({
                 pairs: ['BTCUSDT', 'ETHUSDT'],
                 timeframe: Timeframe.H1,
                 totalCapital: 10000,
@@ -200,7 +215,7 @@ export function IgnitionSequencePanel() {
         } finally {
             setIsIgniting(false);
         }
-    }, [ignite]);
+    }, [resilientIgnite]);
 
     const handleShutdown = useCallback(async () => {
         setShowTelemetry(true);
@@ -481,6 +496,123 @@ export function IgnitionSequencePanel() {
                     </div>
                 )}
 
+                {/* ─── Phase 38: Pre-Boot Diagnostic ──────────────── */}
+                {(isIdle || isError) && (
+                    <div className="ignition-probe">
+                        <div className="ignition-probe-header">
+                            <div className="ignition-probe-title">
+                                <Search size={14} />
+                                <span>Pre-Boot Diagnostic</span>
+                            </div>
+                            <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                                {bootHealthScore > 0 && (
+                                    <span className={`ignition-health-badge ignition-health-badge--${
+                                        bootHealthScore >= 90 ? 'excellent' :
+                                        bootHealthScore >= 70 ? 'good' :
+                                        bootHealthScore >= 50 ? 'fair' : 'poor'
+                                    }`}>
+                                        <HeartPulse size={12} />
+                                        {bootHealthScore} ({bootHealthGrade})
+                                    </span>
+                                )}
+                                <button
+                                    className="btn btn-ghost btn-sm"
+                                    onClick={() => { runProbe(); }}
+                                    disabled={probeRunning}
+                                    title="Re-run probe"
+                                >
+                                    <RefreshCw size={12} className={probeRunning ? 'ignition-spinner' : ''} />
+                                </button>
+                                <button
+                                    className="btn btn-ghost btn-sm"
+                                    onClick={() => setShowProbe(prev => !prev)}
+                                >
+                                    {showProbe ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
+                                </button>
+                            </div>
+                        </div>
+
+                        {showProbe && probeRunning && (
+                            <div className="ignition-probe-loading">
+                                <Loader2 size={16} className="ignition-spinner" />
+                                <span>Running testnet connectivity probe...</span>
+                            </div>
+                        )}
+
+                        {showProbe && probeResult && !probeRunning && (
+                            <div className="ignition-probe-checks">
+                                {probeResult.checks.map((check) => (
+                                    <div key={check.name} className={`ignition-probe-check ignition-probe-check--${check.status}`}>
+                                        <div className="ignition-probe-check-icon">
+                                            {check.status === 'pass'
+                                                ? <CheckCircle2 size={14} />
+                                                : check.status === 'warn'
+                                                    ? <AlertCircle size={14} />
+                                                    : <ShieldAlert size={14} />
+                                            }
+                                        </div>
+                                        <div className="ignition-probe-check-info">
+                                            <span className="ignition-probe-check-name">
+                                                {check.name.replace(/_/g, ' ')}
+                                            </span>
+                                            <span className="ignition-probe-check-detail">
+                                                {check.details}
+                                            </span>
+                                        </div>
+                                        {check.latencyMs > 0 && (
+                                            <span className="ignition-probe-check-latency">
+                                                {check.latencyMs}ms
+                                            </span>
+                                        )}
+                                    </div>
+                                ))}
+
+                                {/* Account Summary */}
+                                {probeResult.account && (
+                                    <div className="ignition-probe-account">
+                                        <span>Wallet: ${probeResult.account.walletBalance.toFixed(2)}</span>
+                                        <span>Available: ${probeResult.account.availableBalance.toFixed(2)}</span>
+                                        {probeResult.account.openPositions > 0 && (
+                                            <span>Positions: {probeResult.account.openPositions}</span>
+                                        )}
+                                    </div>
+                                )}
+
+                                {/* Probe Summary */}
+                                <div className={`ignition-probe-summary ignition-probe-summary--${
+                                    probeResult.ready ? 'ready' : 'issues'
+                                }`}>
+                                    {probeResult.ready
+                                        ? '✅ All checks passed — Ready to IGNITE'
+                                        : `⚠️ ${probeResult.checks.filter(c => c.status === 'fail').length} issue(s) detected — Boot will use DEMO mode`
+                                    }
+                                    <span className="ignition-probe-latency">
+                                        Probe: {probeResult.totalLatencyMs}ms
+                                    </span>
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                )}
+
+                {/* ─── Phase 38: Sentinel Recovery Status ─────────── */}
+                {sentinelRecovering && (
+                    <div className="ignition-sentinel-recovery">
+                        <ShieldAlert size={16} />
+                        <span>
+                            Auto-Recovery: Tier <strong>{sentinelRecoveryTier}</strong>
+                        </span>
+                        <Loader2 size={14} className="ignition-spinner" />
+                    </div>
+                )}
+
+                {circuitBreakerTripped && (
+                    <div className="ignition-circuit-breaker">
+                        <ShieldAlert size={16} />
+                        <span>Circuit Breaker Tripped — All recovery tiers exhausted</span>
+                    </div>
+                )}
+
                 {/* ─── Ignite Button ───────────────────────────────── */}
                 {(isIdle || isError) && (
                     <div className="ignition-action">
@@ -496,7 +628,9 @@ export function IgnitionSequencePanel() {
                             )}
                             <span>
                                 {isIgniting
-                                    ? 'Igniting...'
+                                    ? sentinelRecovering
+                                        ? `Recovery: ${sentinelRecoveryTier}...`
+                                        : 'Igniting...'
                                     : isError
                                         ? 'Retry Ignition'
                                         : 'Ignite System'}

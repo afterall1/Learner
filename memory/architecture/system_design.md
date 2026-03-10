@@ -55,16 +55,18 @@ graph TD
     end
 
     subgraph "Layer 4: State & Persistence"
-        STORE[store/index.ts]
+        STORE[store/index.ts — 7 stores]
         PERSIST[store/persistence.ts]
         SUPABASE[db/supabase.ts]
         BRIDGE[persistence-bridge.ts]
+        BOOT[system-bootstrap.ts]
     end
 
     subgraph "Layer 5: Presentation"
         PAGE[app/page.tsx]
         BRAIN_VIS[app/brain/page.tsx]
         PIPELINE[app/pipeline/page.tsx]
+        IGNITION[IgnitionSequencePanel.tsx]
         CSS[app/globals.css]
         LAYOUT[app/layout.tsx]
     end
@@ -375,8 +377,10 @@ Entry Signal Triggered → Risk Manager validates trade (GLOBAL)
 ### 7. Dashboard Data Flow
 
 ```
+SystemBootstrap → useBootStore → IgnitionSequencePanel
 Cortex → CortexSnapshot → useCortexStore → Multi-island dashboard (future)
-AIBrain → BrainSnapshot  → useBrainStore  → Current 9-panel dashboard
+AIBrain → BrainSnapshot  → useBrainStore  → Current 10-panel dashboard
+                                              ├── IgnitionSequencePanel
                                               ├── PortfolioOverview
                                               ├── ActiveStrategyPanel
                                               ├── RiskGauge
@@ -557,4 +561,51 @@ Fed to entry/exit decision alongside standard indicator signals
 
 ---
 
-*Last Updated: 2026-03-06 17:06 (UTC+3)*
+### 11. System Bootstrap Flow (Phase 36)
+
+```
+User clicks IGNITE SYSTEM button
+         ↓
+useBootStore.ignite() → SystemBootstrap.boot()
+         ↓
+   Phase 1: ENV_CHECK
+         ├── Validate env vars (Binance, Supabase)
+         ├── setTimeout(0) → yield to event loop
+         └── 400ms minimum display
+         ↓
+   Phase 2: PERSISTENCE
+         ├── Initialize IndexedDB + Supabase
+         ├── Load latest checkpoint
+         └── 400ms minimum display
+         ↓
+   Phase 3: CORTEX_SPAWN
+         ├── Initialize Cortex engine
+         ├── Create islands from trading slots
+         └── Wire RiskManager
+         ↓
+   Phase 4: HISTORICAL_SEED
+         ├── Fetch 500 candles per slot
+         ├── Seed islands with data
+         └── Calibrate MRTI
+         ↓
+   Phase 5: WS_CONNECT
+         ├── Kline WebSocket connections
+         ├── Ticker streams
+         └── User data stream
+         ↓
+   Phase 6: EVOLUTION_START
+         ├── Begin autonomous evolution
+         ├── Wire scheduler
+         └── Enable paper trading
+         ↓
+   Phase 7: READY
+         ├── System fully operational
+         ├── Start auto-checkpoint (5m interval)
+         └── Record boot history entry
+         ↓
+   IgnitionSequencePanel: Waterfall chart + result badges + history
+```
+
+---
+
+*Last Updated: 2026-03-10 17:00 (UTC+3)*

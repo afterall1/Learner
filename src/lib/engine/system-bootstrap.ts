@@ -34,7 +34,7 @@ import {
     type MarketTick,
 } from '@/types';
 import { createTradingSlot, type TradingSlot } from '@/types/trading-slot';
-import { validateEnvironment, type ValidatedEnv } from '@/lib/config/env-validator';
+import type { ValidatedEnv } from '@/lib/config/env-validator';
 import {
     loadEngineCheckpoint,
     saveEngineCheckpoint,
@@ -151,19 +151,85 @@ export class SystemBootstrap {
         });
 
         try {
-            // Phase 0: Environment Validation
+            // Phase 0: Environment Validation (via server-side probe)
             await this.executePhase(BootPhase.ENV_CHECK, async () => {
                 this.progressMessage = 'Checking API keys & environment...';
                 this.notifyStateChange();
                 try {
-                    this.validatedEnv = validateEnvironment();
-                    this.envStatus = 'valid';
-                    this.progressMessage = '✅ Environment valid — ' +
-                        (this.validatedEnv.binance.isTestnet ? 'TESTNET' : 'MAINNET') + ' mode';
-                    bootLog.info('✅ Environment validated', {
-                        binance: this.validatedEnv.binance.isTestnet ? 'TESTNET' : 'MAINNET',
-                        overmind: this.validatedEnv.overmind.enabled ? 'ON' : 'OFF',
-                    });
+                    // Phase 38.1 RADICAL INNOVATION: Probe Result Cache Reuse
+                    // If Pre-Boot Diagnostic already ran a probe recently (< 60s),
+                    // reuse that result instead of making a redundant ~2s API call.
+                    const PROBE_CACHE_MAX_AGE_MS = 60_000; // 60 seconds
+                    const cached = this.config.cachedProbeResult;
+                    const cacheAge = cached ? Date.now() - cached.timestamp : Infinity;
+                    const cacheValid = cached && cacheAge < PROBE_CACHE_MAX_AGE_MS;
+
+                    let probeData: {
+                        ready: boolean;
+                        isTestnet: boolean;
+                        checks: Array<{ name: string; status: string; details?: string; latencyMs?: number }>;
+                    };
+
+                    if (cacheValid && cached) {
+                        // 🚀 FAST PATH: Reuse cached probe (0ms instead of ~2s)
+                        probeData = cached;
+                        bootLog.info('⚡ ENV_CHECK: Using cached probe result', {
+                            cacheAgeMs: Math.round(cacheAge),
+                            checksCount: cached.checks?.length ?? 0,
+                        });
+                    } else {
+                        // SLOW PATH: No cache or stale — call server-side probe API
+                        // process.env.BINANCE_* are server-only (no NEXT_PUBLIC_ prefix),
+                        // so client-side validateEnvironment() would see them as empty.
+                        const response = await fetch('/api/trading/testnet-probe');
+                        if (!response.ok) {
+                            throw new Error(`Probe API returned ${response.status}`);
+                        }
+                        probeData = await response.json();
+                        bootLog.info('🔍 ENV_CHECK: Live probe completed', {
+                            checksCount: probeData.checks?.length ?? 0,
+                        });
+                    }
+
+                    if (probeData.ready || probeData.checks?.some((c: { name: string; status: string }) => c.name === 'credentials' && c.status === 'pass')) {
+                        // Bridge probe result into ValidatedEnv shape
+                        this.validatedEnv = {
+                            binance: {
+                                apiKey: '***configured***',
+                                apiSecret: '***configured***',
+                                isTestnet: probeData.isTestnet ?? true,
+                            },
+                            supabase: {
+                                url: '***configured***',
+                                anonKey: '***configured***',
+                            },
+                            overmind: {
+                                enabled: false,
+                                apiKey: '',
+                                maxTokensPerHour: 0,
+                            },
+                            nodeEnv: 'development',
+                            isProduction: false,
+                        };
+                        this.envStatus = 'valid';
+                        this.progressMessage = '✅ Environment valid — ' +
+                            (this.validatedEnv.binance.isTestnet ? 'TESTNET' : 'MAINNET') + ' mode' +
+                            (cacheValid ? ' (cached)' : '');
+                        bootLog.info('✅ Environment validated' + (cacheValid ? ' (from cache)' : ' via probe'), {
+                            binance: this.validatedEnv.binance.isTestnet ? 'TESTNET' : 'MAINNET',
+                            checks: probeData.checks?.length ?? 0,
+                            cacheUsed: !!cacheValid,
+                        });
+                    } else {
+                        // Probe ran but credentials check failed
+                        this.envStatus = 'invalid';
+                        this.progressMessage = '⚠️ No API keys — DEMO MODE activated';
+                        const failedChecks = probeData.checks
+                            ?.filter((c: { status: string }) => c.status === 'fail')
+                            ?.map((c: { name: string }) => c.name)
+                            ?.join(', ') ?? 'unknown';
+                        bootLog.warn('Environment validation failed via probe — DEMO mode', { failedChecks });
+                    }
                 } catch (envError) {
                     this.envStatus = 'invalid';
                     this.progressMessage = '⚠️ No API keys — DEMO MODE activated';

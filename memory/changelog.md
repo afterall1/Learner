@@ -4,6 +4,53 @@ All notable changes to this project are documented here.
 
 ---
 
+## [v1.6.0-beta.1] — 2026-03-10
+
+### Added
+- **Binance Testnet Live Boot Test (Phase 38 — 7-Expert Council)**
+  - **Boot Resilience Sentinel (RADICAL INNOVATION)**: `boot-resilience-sentinel.ts` (~497 lines) — Self-healing boot layer: 4-tier auto-recovery (FULL → REDUCED_PAIRS → FRESH_START → DEMO_FALLBACK), Boot Health Score (0-100, weighted composite, A+/A/B/C/D/F grade), Adaptive Timeout Circuit Breaker (P95 + 2σ phase timing), Boot Fingerprint (5-minute probe cache deduplication)
+  - **Pre-Boot Diagnostic UI**: `IgnitionSequencePanel.tsx` (473→599 lines) — Auto-probe on mount, 6-check display (credentials, testnet mode, REST, time sync, account, exchange info) with pass/fail/warn badges, account summary, Boot Health Score gauge, probe summary with total latency
+  - **Sentinel Recovery Indicators**: Animated recovery tier display during auto-recovery, Circuit Breaker alert when all tiers exhausted
+
+### Changed
+- `store/index.ts` (888→911 lines) — 7 sentinel state fields, `resilientIgnite()` (4-tier wired), `runProbe()` action
+- `IgnitionSequencePanel.tsx` — Ignite button now uses `resilientIgnite` instead of `ignite`, auto-probe on mount
+- `globals.css` (+216 lines) — probe panel, check rows, health badges (4 levels), sentinel recovery pulse, circuit breaker alert
+
+### Build Status
+✅ Passing (zero errors)
+
+---
+
+## [v1.5.1-beta.1] — 2026-03-10
+
+### Added
+- **Memory Sync + MTIE Radical Innovation (Phase 37 — 5-Expert Council)**
+  - Updated 5 memory docs: `overview.md`, `active_context.md`, `file_map.md`, `system_design.md`, `changelog.md`
+  - Corrected 17 stale line counts across `file_map.md`
+  - Documented Phase 36.1 (Ignition Panel Telemetry) session in `active_context.md`
+  - Added 5 missing scripts, 2 missing API routes to documentation
+  - **ADR-013**: System Bootstrap Orchestrator architecture decision
+  - **Memory Temporal Integrity Engine (MTIE — RADICAL INNOVATION)**: `memory-temporal-integrity.js` — timestamp-aware staleness detection, importance-weighted freshness scoring, 5-phase temporal analysis
+
+### Changed
+- Phase 36.1 — **Ignition Panel Telemetry** changes retroactively documented:
+  - `system-bootstrap.ts` — Event loop yielding via `setTimeout(0)`, 400ms minimum display per phase, enhanced demo-mode progress messages (555→519 lines)
+  - `IgnitionSequencePanel.tsx` — Complete rewrite: waterfall chart, result badges, boot history, RAF elapsed timer (280→473 lines)
+  - `store/index.ts` — `hasBooted` reset for re-ignition, `bootHistory` array (last 5 boots), RAF timer
+  - `globals.css` — +275 lines (waterfall chart, badges, history styles)
+
+### Architecture
+- ADR-013: System Bootstrap Orchestrator — 7-phase ignition sequence, coordinated dependency-order startup, event loop yielding, boot telemetry
+
+### Build Status
+✅ Passing (zero errors)
+
+### Test Status
+✅ All tests passing (zero regressions)
+
+---
+
 ## [v1.5.0-beta.1] — 2026-03-08
 
 ### Added

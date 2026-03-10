@@ -6,10 +6,10 @@
 
 ## 📅 Current State
 
-**Date**: 2026-03-08
-**Phase**: Phase 36 — System Bootstrap Orchestrator
+**Date**: 2026-03-10
+**Phase**: Phase 38 — Binance Testnet Live Boot Test + Boot Resilience Sentinel
 **Build Status**: ✅ Passing (zero errors)
-**Version**: v1.5.0-beta.1
+**Version**: v1.6.0-beta.1
 **Dev Server**: `http://localhost:3000`
 
 ---
@@ -48,9 +48,8 @@
 | **Strategy Roster** | strategy-roster.ts (510L): population management across islands |
 | **Directive Applicator** | Phase 24 — Overmind directive→action bridge (directive-applicator.ts, 352L) |
 | **Production Infrastructure** | Phase 29 — Structured Logger (logger.ts, 218L), Deployment Sentinel (deployment-sentinel.ts, 283L, 12-point readiness), Env Validator (env-validator.ts, 173L) wired into binance-rest/supabase. `/api/sentinel` endpoint. v1.0.0-beta.1 |
-| **System Bootstrap** | Phase 36 — `system-bootstrap.ts` (~555L) 7-phase ignition sequence (ENV_CHECK→PERSISTENCE→CORTEX_SPAWN→HISTORICAL_SEED→WS_CONNECT→EVOLUTION_START→READY), `useBootStore` (Zustand), `IgnitionSequencePanel` dashboard component |
-| **Dashboard** | Main: 10 panels (9 original + IgnitionSequencePanel) + Cortex Neural Map | Pipeline: 9 panels + Overmind Hub + LivePulseTelemetry + EvolutionHeartbeat + Risk Shield + StressMatrixPanel (14 total, +STTA Sparkline +Vulnerability Heatmap) | Brain: Holographic Neural Cortex |
-| **Testnet Trading** | Phase 31 — Testnet Probe API (6-point check), Session Control API (POST/GET/DELETE), Testnet Session Orchestrator (5-phase: PROBE→SEED→EVOLVE→TRADE→REPORT) |
+| **System Bootstrap** | Phase 36→38 — `system-bootstrap.ts` (~519L) 7-phase ignition sequence (ENV_CHECK→PERSISTENCE→CORTEX_SPAWN→HISTORICAL_SEED→WS_CONNECT→EVOLUTION_START→READY), event loop yielding + 400ms min display. `useBootStore` (Zustand, `bootHistory`, RAF timer, sentinel state, `runProbe()`, `resilientIgnite()`), `IgnitionSequencePanel` (~599L) with waterfall chart + result badges + boot history + **Pre-Boot Diagnostic** (6-check probe display) + Boot Health Score badge. `boot-resilience-sentinel.ts` (~497L) — 4-tier auto-recovery, Boot Health Score (0-100), P95+2σ circuit breaker, boot fingerprinting |
+| **Testnet Trading** | Phase 31→38 — Testnet Probe API (6-point check), Session Control API (POST/GET/DELETE), Testnet Session Orchestrator (5-phase: PROBE→SEED→EVOLVE→TRADE→REPORT), **Boot Resilience Sentinel** (4-tier auto-recovery: FULL→REDUCED_PAIRS→FRESH_START→DEMO_FALLBACK) |
 | **Current Generation** | N/A (awaiting Binance API connection) |
 | **Best Fitness Score** | N/A |
 | **Active Strategy** | Demo: "Nova Tiger" (Score: 67) |
@@ -313,6 +312,23 @@
 171. **Ignition CSS**: `globals.css` (+340 lines) — Glassmorphism panel with animated gradient border, phase state styling (pending/active/complete/error), shimmer progress bar, ignition button with shine effect, spinner, compact live status bar
 172. **Boot Logger**: Added `bootLog` pre-built logger instance to `logger.ts`
 
+### Session: 2026-03-09 — Ignition Panel Telemetry (Phase 36.1)
+173. **Boot Feedback Fix**: `executePhase()` now yields to event loop via `setTimeout(0)` before executing, enforces 400ms minimum display time per phase, enhanced progress messages with demo-mode awareness
+174. **IgnitionSequencePanel Rewrite**: Complete rewrite (~473 lines) — live elapsed timer (RAF), Phase Waterfall Chart with gradient bars (green/amber/red by speed), per-phase Result Badges (✅ VALID, ⚠️ DEMO, 💾 HYDRATED, 🧠 SPAWNED), Boot History (timestamps + mode + duration comparisons), expandable telemetry section
+175. **useBootStore Enhancements**: Resets `hasBooted: false` at ignite start (re-ignition support), live `requestAnimationFrame` elapsed timer during boot, `bootHistory` array (last 5 boots)
+176. **Boot Telemetry CSS**: `globals.css` +275 lines — elapsed timer, waterfall chart bars, result badges, boot history, badge-success variant
+
+### Session: 2026-03-10 — Memory Sync + MTIE Radical Innovation (Phase 37)
+177. **Memory Sync**: Updated `overview.md` (Phase 37, corrected 10+ line counts, added Phases 29-36.1, expanded module map + dashboard + scripts + API routes). Updated `active_context.md` (Phase 36.1 session, corrected AI Brain Status). Updated `file_map.md` (17 corrections, 5 missing scripts). Updated `system_design.md` (7 stores, boot flow). Updated `changelog.md` (v1.5.1, version order fix). Created ADR-013 (System Bootstrap)
+178. **Memory Temporal Integrity Engine (MTIE — RADICAL INNOVATION)**: `memory-temporal-integrity.js` — timestamp-aware staleness detection, importance-weighted freshness scoring
+
+### Session: 2026-03-10 — Binance Testnet Live Boot Test (Phase 38, 7-Expert Council)
+179. **Boot Resilience Sentinel (RADICAL INNOVATION)**: `boot-resilience-sentinel.ts` (~497 lines) — Self-healing boot layer with 4 innovations: (1) Auto-Recovery Engine (4-tier: FULL → REDUCED_PAIRS → FRESH_START → DEMO_FALLBACK), (2) Boot Health Score (0-100, weighted: 40% phase speed, 30% probe health, 20% history rate, 10% latency, A+/A/B/C/D/F grade), (3) Adaptive Timeout Circuit Breaker (P95 + 2σ phase timing profiler with max 20 samples), (4) Boot Fingerprint (config hash → 5-minute probe cache deduplication)
+180. **Store Integration**: `useBootStore` (+125 lines) — 7 sentinel state fields (probeResult, probeRunning, bootHealthScore, bootHealthGrade, sentinelRecoveryTier, sentinelRecovering, circuitBreakerTripped), `resilientIgnite()` action (4-tier auto-recovery wired to sentinel), `runProbe()` action
+181. **Pre-Boot Diagnostic UI**: `IgnitionSequencePanel.tsx` (473→599 lines) — Auto-probe on mount, 6-check display (pass/fail/warn icons + details + latency), account summary (wallet/available/positions), Boot Health Score badge (excellent/good/fair/poor color), probe summary (ready vs issues detected + probe latency)
+182. **Sentinel UI**: Sentinel Recovery indicator (animated pulsing border during auto-recovery), Circuit Breaker alert (red alert when all tiers exhausted), Ignite button shows recovery tier during resilientIgnite
+183. **Phase 38 CSS**: `globals.css` (+216 lines) — probe panel, check rows, account summary, health badges (4 levels), sentinel recovery pulse animation, circuit breaker alert
+
 ---
 
 ## 🚧 Incomplete Features / Technical Debt
@@ -340,12 +356,12 @@
 
 ## 📅 Next Session Priorities
 
-1. Memory sync — Update all memory docs to reflect Phase 36 changes
-2. Binance Testnet live boot test — Press IGNITE SYSTEM button with real API keys
-3. Extended boot telemetry — Per-phase duration chart, boot history tracking
-4. Auto-recovery — Detect failed boot and offer one-click retry with last-known-good config
-5. Production deployment — Final pre-deployment readiness checks
+1. Binance Testnet live boot test — Press IGNITE SYSTEM button with real testnet API keys in `.env.local`
+2. Browser testing — Verify Pre-Boot Diagnostic UI, probe checks, health score display
+3. Auto-recovery verification — Test sentinel 4-tier fallback with bad keys, network kill scenarios
+4. Production deployment — Final pre-deployment readiness checks
+5. Strategy live deployment — Paper trading with evolved strategies on testnet
 
 ---
 
-*Last Synced: 2026-03-08 23:40 (UTC+3)*
+*Last Synced: 2026-03-10 19:44 (UTC+3)*

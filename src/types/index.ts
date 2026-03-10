@@ -2167,6 +2167,13 @@ export interface BootConfig {
   skipPersistence: boolean;
   /** Enable auto-trade after boot. Default: false */
   autoTrade: boolean;
+  /** Phase 38.1: Cached probe result from Pre-Boot Diagnostic (skip redundant ENV_CHECK API call if < 60s old) */
+  cachedProbeResult?: {
+    ready: boolean;
+    isTestnet: boolean;
+    checks: Array<{ name: string; status: string; details: string; latencyMs: number }>;
+    timestamp: number;
+  };
 }
 
 /**

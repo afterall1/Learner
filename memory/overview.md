@@ -4,7 +4,7 @@
 **Name**: Learner
 **Type**: Self-evolving AI-powered algorithmic trading system
 **Target**: Binance Futures (USDT-M perpetual contracts)
-**Status**: Active Development — Phase 27 (E2E Integration Testing + Market Scenario Stress Matrix)
+**Status**: Active Development — Phase 37 (Memory Sync + MTIE Radical Innovation)
 **Created**: 2026-03-05
 
 ---
@@ -15,7 +15,7 @@
 |-------|-----------|---------||
 | **Framework** | Next.js 15 (App Router) | SSR, routing, build system |
 | **Language** | TypeScript (Strict) | Type safety across all modules |
-| **State** | Zustand (6 stores) | Real-time reactive state |
+| **State** | Zustand (7 stores) | Real-time reactive state |
 | **Local DB** | IndexedDB (`idb`) | Local cache + offline fallback |
 | **Cloud DB** | Supabase (PostgreSQL) | PC-independent durable storage |
 | **Charts** | Recharts | Performance & evolution visualization |
@@ -69,13 +69,19 @@ The system is built on a **Genetic Algorithm** paradigm (not Reinforcement Learn
 - **Live Paper Trading Execution (Phase 26)**: LiveTradeExecutor signal→order pipeline, risk validation, position sizing, SL/TP, /api/trading/status telemetry endpoint, auto-trade toggle
 - **E2E Integration Testing (Phase 27)**: 33-test integration suite covering full backtest pipeline, batch PFLM, evolution cycle, market scenarios, HTF aggregation, fitness convergence, edge cases. Total: 211/211 tests, 12 files.
 - **Market Scenario Stress Matrix (Phase 27, MSSM Radical Innovation)**: 5-regime cross-scenario backtesting with Regime Resilience Score (RRS). Unique `regime_transition` scenario (bull→sideways→crash). `runStressMatrix()` + `batchStressMatrix()` for population-level analysis.
+- **Production Infrastructure (Phase 29)**: Structured Logger, Deployment Sentinel (12-point readiness), Env Validator, `/api/sentinel` endpoint
+- **Testnet Trading (Phase 31)**: Testnet Probe API (6-point check), Session Control API, Testnet Session Orchestrator (5-phase lifecycle)
+- **Performance Optimization (Phase 34)**: O(1) LRU Cache, index-based ATR, regime detection cache, BacktestProfiler (self-aware telemetry)
+- **Live MSSM + STTA (Phase 35)**: StressTemporalTracker (RRS/CRRS trend analysis), live MSSM hook, dual-mode StressMatrixPanel
+- **System Bootstrap Orchestrator (Phase 36)**: `system-bootstrap.ts` 7-phase ignition sequence (ENV_CHECK→PERSISTENCE→CORTEX_SPAWN→HISTORICAL_SEED→WS_CONNECT→EVOLUTION_START→READY), `useBootStore`, `IgnitionSequencePanel` with boot telemetry waterfall chart
+- **Ignition Panel Telemetry (Phase 36.1)**: Event loop yielding, 400ms minimum display per phase, waterfall chart, result badges, boot history, RAF elapsed timer
 
 ### Module Map
 
 ```
 src/
 ├── types/
-│   ├── index.ts              → 2030+ line type system (DNA, Trade, Evolution, Risk, Island, HyperDNA, Advanced Genes, Order Execution, AOLE)
+│   ├── index.ts              → 1956-line type system (DNA, Trade, Evolution, Risk, Island, HyperDNA, Advanced Genes, Order Execution, AOLE, Boot)
 │   └── trading-slot.ts       → TradingSlot pair+timeframe identifier system
 ├── lib/engine/
 │   ├── strategy-dna.ts       → Genome generation, crossover, mutation + advanced gene operators
@@ -128,14 +134,20 @@ src/
 │   ├── knowledge-directed-synthesis.ts → [Phase 20] KDSS: Lamarckian strategy construction (686 lines)
 │   ├── strategy-roster.ts     → Strategy roster management (510 lines)
 │   ├── neural-impulse-bus.ts  → [Phase 22] NIEB: engine→brain neuron impulse bus (250 lines)
-│   ├── backtester.ts         → [Phase 10] Core backtest engine + IndicatorCache (PFLM)
-│   ├── market-simulator.ts   → [Phase 10] Realistic execution (slippage, commission, impact)
-│   ├── cortex-live-engine.ts → [Phase 20] Live market ↔ Cortex orchestrator (490 lines)
-│   ├── evolution-scheduler.ts → [Phase 20] Autonomous evolution trigger (200 lines)
+│   ├── backtester.ts         → [Phase 10→34] Core backtest engine + IndicatorCache (PFLM, O(1) LRU)
+│   ├── market-simulator.ts   → [Phase 10→34] Realistic execution (slippage, commission, impact, atrEndIndex)
+│   ├── backtest-profiler.ts  → [Phase 34] Self-aware performance telemetry (430 lines)
+│   ├── cortex-live-engine.ts → [Phase 20] Live market ↔ Cortex orchestrator (650 lines)
+│   ├── evolution-scheduler.ts → [Phase 20→34] Autonomous evolution trigger (385 lines)
 │   ├── adaptive-data-flow.ts → [Phase 20] ADFI gap detection + telemetry (420 lines)
-│   ├── regime-propagation.ts → [Phase 20] CIRPN cross-island regime propagation (380 lines)
-│   ├── evolution-health.ts   → [Phase 21] Evolution Health Analyzer — convergence detector (300 lines)
-│   └── stress-matrix.ts     → [Phase 27] MSSM: 5-regime stress testing + RRS scoring (390 lines)
+│   ├── regime-propagation.ts → [Phase 20] CIRPN cross-island regime propagation (560 lines)
+│   ├── evolution-health.ts   → [Phase 21] Evolution Health Analyzer — convergence detector (380 lines)
+│   ├── stress-matrix.ts     → [Phase 27→30] MSSM: 5-regime stress testing + RRS scoring (420 lines)
+│   ├── adaptive-stress.ts   → [Phase 30] ASC: regime-weighted scenario scoring (318 lines)
+│   ├── stress-temporal-tracker.ts → [Phase 35] STTA: RRS/CRRS trend temporal analysis (390 lines)
+│   ├── testnet-session-orchestrator.ts → [Phase 31] TSO: 5-phase testnet lifecycle (411 lines)
+│   ├── system-bootstrap.ts  → [Phase 36] 7-phase ignition sequence orchestrator (519 lines)
+│   └── paper-trade-executor.ts → Paper trade simulation
 ├── lib/api/
 │   ├── binance-rest.ts       → [Phase 6→19] Binance Futures REST client (839 lines, AdaptiveRateGovernor)
 │   ├── binance-ws.ts         → [Phase 6] Binance WebSocket market data streams
@@ -145,24 +157,28 @@ src/
 │   ├── account-sync.ts       → [Phase 19] Periodic balance polling (212 lines)
 │   ├── order-lifecycle.ts    → [Phase 19.1] AOLE state machine (370 lines, EMERGENCY_CLOSE)
 │   ├── execution-quality.ts  → [Phase 19.1] Rolling slippage/latency tracker (190 lines)
-│   └── live-trade-executor.ts → [Phase 26] Signal→order pipeline (330 lines, risk validation, SL/TP)
+│   └── live-trade-executor.ts → [Phase 26] Signal→order pipeline (430 lines, risk validation, SL/TP)
 ├── lib/risk/
 │   └── manager.ts            → 8 hardcoded, non-negotiable risk safety rails
 ├── lib/store/
-│   ├── index.ts              → 6 Zustand stores (Brain, Cortex, Portfolio, Trade, Market, Config)
-│   └── persistence.ts        → [Phase 13] IndexedDB provider (584 lines)
+│   ├── index.ts              → 7 Zustand stores (Brain, Cortex, Portfolio, Trade, Market, Config, Boot) (779 lines)
+│   └── persistence.ts        → [Phase 13] IndexedDB provider (585 lines)
 ├── lib/db/
 │   └── supabase.ts           → [Phase 14] Supabase cloud provider (381 lines)
+├── components/panels/
+│   └── IgnitionSequencePanel.tsx → [Phase 36] Boot UI: waterfall chart, result badges, history (473 lines)
 └── app/
     ├── layout.tsx             → Root layout with Inter + JetBrains Mono fonts
-    ├── globals.css            → Premium dark glassmorphism + holographic design system (2580+ lines)
-    ├── page.tsx               → Main dashboard: 9 panels + Cortex Neural Map (1300+ lines)
+    ├── globals.css            → Premium dark glassmorphism + holographic + boot design system (3158 lines)
+    ├── page.tsx               → Main dashboard: 10 panels + Cortex Neural Map (1285 lines)
+    ├── error.tsx              → Root Error Boundary with crash details and retry
     ├── brain/
-    │   └── page.tsx           → [Phase 18] Holographic Neural Cortex visualization (675 lines)
+    │   └── page.tsx           → [Phase 18] Holographic Neural Cortex visualization (704 lines)
     └── pipeline/
-        └── page.tsx           → Pipeline + Archaeology + Overmind + LivePulse + Heartbeat + RiskShield (~3730 lines)
+        └── page.tsx           → Pipeline + Archaeology + Overmind + LivePulse + Heartbeat + RiskShield + StressMatrix (4923 lines)
 ├── lib/hooks/
-│   └── usePipelineLiveData.ts → [Phase 21] Data bridge hook (~580 lines, dual-mode, risk derivation)
+│   ├── usePipelineLiveData.ts → [Phase 21→35] Data bridge hook (813 lines, dual-mode, risk+stress derivation)
+│   └── useBrainLiveData.ts   → Neural Brain live data hook (~500 lines)
 ├── __tests__/              → [Phase 22+25] Vitest test files (178 tests, 10 files)
 │   ├── risk/__tests__/manager.test.ts       → RiskManager 8 rails + mutation boundary (37 tests)
 │   ├── engine/__tests__/cortex-risk.test.ts → Cortex risk integration (3 tests)
@@ -173,7 +189,8 @@ src/
 │   ├── engine/__tests__/evaluator.test.ts → [Phase 25] Performance metrics + fitness (10 tests)
 │   ├── engine/__tests__/signal-engine.test.ts → [Phase 25] Indicators + rules + pipeline (14 tests)
 │   ├── engine/__tests__/confluence-genes.test.ts → [Phase 25] Confluence genes (24 tests)
-│   └── engine/__tests__/property-fuzzer.test.ts → [Phase 25] Property-Based Fuzzing + Chaos Monkey (30 tests)
+│   ├── engine/__tests__/property-fuzzer.test.ts → [Phase 25] Property-Based Fuzzing + Chaos Monkey (30 tests)
+│   └── engine/__tests__/integration-e2e.test.ts → [Phase 27] E2E: 8-category integration tests (33 tests)
 ```
 
 ### Scripts
@@ -184,7 +201,13 @@ scripts/
 ├── git-guardian.js            → 3-gate pre-commit hook (secret detection, file size, JSON validation)
 ├── commit-msg-validator.js    → Convention enforcement for commit messages
 ├── install-hooks.js           → Cross-platform Git hook auto-installer
-└── memory-health.js           → Memory Health Dashboard (freshness, coverage, ADR gaps)
+├── memory-health.js           → Memory Health Dashboard (freshness, coverage, ADR gaps)
+├── memory-autopatcher.js      → Memory Drift Auto-Patcher (undocumented file detection + patch generation)
+├── memory-coherence.js        → Memory Coherence Validator (4-phase semantic cross-reference)
+├── memory-integrity-auditor.js → 7-phase Memory Integrity Auditor (orphans, phantoms, test desync)
+├── test-coverage-guardian.js  → Test Coverage Guardian (function-level coverage analysis)
+├── test-memory-validator.js   → Test↔Memory Cross-Validator (bidirectional integrity)
+└── memory-temporal-integrity.js → [Phase 37] MTIE: timestamp-aware staleness detection (Radical Innovation)
 ```
 
 ### Test Infrastructure
@@ -200,7 +223,8 @@ src/lib/engine/__tests__/evaluator.test.ts         → 10 tests (performance met
 src/lib/engine/__tests__/signal-engine.test.ts     → 14 tests (indicators + rules + pipeline)
 src/lib/engine/__tests__/confluence-genes.test.ts  → 24 tests (confluence gene operations)
 src/lib/engine/__tests__/property-fuzzer.test.ts   → 30 tests (7-category metamorphic fuzzing + Chaos Monkey)
-─────────────────────────────────────────────────────  TOTAL: 178 tests (10 files)
+src/lib/engine/__tests__/integration-e2e.test.ts   → 33 tests (8-category E2E integration)
+─────────────────────────────────────────────────────  TOTAL: 211 tests (12 files)
 ```
 
 ### API Routes
@@ -213,6 +237,15 @@ src/app/api/binance/
 ├── position/route.ts          → GET position risk [Phase 19]
 ├── account/route.ts           → GET account balances [Phase 19]
 └── depth/route.ts             → GET order book depth [Phase 19]
+
+src/app/api/trading/
+├── testnet-probe/route.ts     → GET testnet pre-flight check (6-point) [Phase 31]
+├── session/route.ts           → POST/GET/DELETE session lifecycle [Phase 31]
+└── status/route.ts            → GET trading telemetry + auto-trade state [Phase 26]
+
+src/app/api/
+├── health/route.ts            → GET health check endpoint
+└── sentinel/route.ts          → GET deployment readiness report [Phase 29]
 ```
 
 ---
@@ -237,20 +270,21 @@ src/app/api/binance/
 
 ---
 
-## 📊 Dashboard Architecture (3 Pages, 18 Panels)
+## 📊 Dashboard Architecture (3 Pages, 25 Panels)
 
-### Main Dashboard (`/`) — 9 Panels
-1. Portfolio Overview — Balance, P&L metrics, animated counter
-2. Active Strategy — DNA strand visualization, fitness score
-3. Risk Monitor — SVG gauge, drawdown/position bars, Emergency Stop, critical pulse
-4. Performance Charts — Equity curve / Drawdown toggle
-5. Evolution Timeline — Generation scores bar chart
-6. AI Brain Monitor — Real-time color-coded log feed
-7. **Cortex Neural Map** — Live island visualization, migration flows, HyperDNA meta-gen
-8. Trade History — Expandable table with AI reasoning
-9. Market Overview — Binance Futures pair prices
+### Main Dashboard (`/`) — 10 Panels
+1. **Ignition Sequence Panel** — 7-phase boot progress, waterfall chart, result badges, boot history
+2. Portfolio Overview — Balance, P&L metrics, animated counter
+3. Active Strategy — DNA strand visualization, fitness score
+4. Risk Monitor — SVG gauge, drawdown/position bars, Emergency Stop, critical pulse
+5. Performance Charts — Equity curve / Drawdown toggle
+6. Evolution Timeline — Generation scores bar chart
+7. AI Brain Monitor — Real-time color-coded log feed
+8. **Cortex Neural Map** — Live island visualization, migration flows, HyperDNA meta-gen
+9. Trade History — Expandable table with AI reasoning
+10. Market Overview — Binance Futures pair prices
 
-### Pipeline Dashboard (`/pipeline`) — 12 Panels
+### Pipeline Dashboard (`/pipeline`) — 14 Panels
 1. **Pipeline Flow** — 7-stage animated horizontal flow with live stats per stage
 2. **Generation Fitness** — Dual-axis area chart (best/avg fitness) with validation markers
 3. **4-Gate Validation** — Animated sequential gate reveal with PASS/FAIL verdicts
@@ -263,10 +297,14 @@ src/app/api/binance/
 10. **Live Pulse Telemetry** ☆ — ADFI pipeline health + CIRPN cross-island propagation (LIVE mode only)
 11. **Evolution Heartbeat** ☆ — Convergence detector with gene dominance chart + autopilot log (LIVE mode only)
 12. **Risk Shield** ● — Risk Fortress: Global Risk Score ring, 8-rail matrix, Daily PnL, risk log
+13. **Stress Matrix** ◆ — 5-axis radar, RRS gauge, ASC heatmap, STTA sparkline, vulnerability grid
+14. **Testnet Mission Control** ◇ — Probe dashboard, session lifecycle, live trade log
 
 > ★ = Strategy Archaeology panels (Explainable AI)
 > ☆ = Radical Innovation panels (Phase 21)
 > ● = Risk Fortress panel (Phase 22)
+> ◆ = Stress Matrix panel (Phase 32+35)
+> ◇ = Testnet Mission Control panel (Phase 33)
 
 ---
 
@@ -294,6 +332,6 @@ src/app/api/binance/
 
 ---
 
-*Last Updated: 2026-03-07 22:54 (UTC+3)*
+*Last Updated: 2026-03-10 17:00 (UTC+3)*
 *Build Status: ✅ Passing (zero errors)*
-*Test Status: ✅ 45/45 passing (824ms)*
+*Test Status: ✅ 211/211 passing (12 files)*

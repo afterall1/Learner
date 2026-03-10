@@ -1,4 +1,4 @@
-﻿/* ============================================================
+/* ============================================================
    Learner: Premium Design System â€” Dark Glassmorphism Theme
    ============================================================ */
 
@@ -3766,3 +3766,219 @@ body::before {
   color: var(--success);
   border: 1px solid rgba(52, 211, 153, 0.3);
 }
+
+/* ─── Phase 38: Pre-Boot Diagnostic ──────────────────────── */
+.ignition-probe {
+  margin-top: 16px;
+  padding: 12px 14px;
+  background: rgba(14, 17, 30, 0.5);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-md);
+  animation: ignition-telemetry-in 0.4s ease-out;
+}
+
+.ignition-probe-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.ignition-probe-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-secondary);
+}
+
+.ignition-probe-loading {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 0;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  font-style: italic;
+}
+
+.ignition-probe-checks {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.ignition-probe-check {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 6px 8px;
+  border-radius: var(--radius-sm);
+  transition: background 0.2s ease;
+}
+
+.ignition-probe-check:hover {
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.ignition-probe-check-icon {
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+.ignition-probe-check--pass .ignition-probe-check-icon { color: var(--success); }
+.ignition-probe-check--warn .ignition-probe-check-icon { color: var(--warning); }
+.ignition-probe-check--fail .ignition-probe-check-icon { color: var(--danger); }
+
+.ignition-probe-check-info {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+  flex: 1;
+}
+
+.ignition-probe-check-name {
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  text-transform: capitalize;
+}
+
+.ignition-probe-check-detail {
+  font-size: 0.65rem;
+  color: var(--text-muted);
+  line-height: 1.3;
+  word-break: break-word;
+}
+
+.ignition-probe-check-latency {
+  flex-shrink: 0;
+  font-family: var(--font-mono);
+  font-size: 0.65rem;
+  color: var(--text-muted);
+  opacity: 0.7;
+}
+
+.ignition-probe-account {
+  display: flex;
+  gap: 14px;
+  padding: 8px 10px;
+  margin-top: 4px;
+  background: rgba(99, 102, 241, 0.06);
+  border: 1px solid rgba(99, 102, 241, 0.12);
+  border-radius: var(--radius-sm);
+  font-size: 0.7rem;
+  font-family: var(--font-mono);
+  color: var(--text-secondary);
+  font-weight: 600;
+}
+
+.ignition-probe-summary {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 10px;
+  margin-top: 8px;
+  border-radius: var(--radius-sm);
+  font-size: 0.7rem;
+  font-weight: 600;
+}
+
+.ignition-probe-summary--ready {
+  background: rgba(52, 211, 153, 0.08);
+  border: 1px solid rgba(52, 211, 153, 0.2);
+  color: var(--success);
+}
+
+.ignition-probe-summary--issues {
+  background: rgba(251, 191, 36, 0.08);
+  border: 1px solid rgba(251, 191, 36, 0.2);
+  color: var(--warning);
+}
+
+.ignition-probe-latency {
+  font-family: var(--font-mono);
+  font-size: 0.65rem;
+  color: var(--text-muted);
+  font-weight: 500;
+}
+
+/* ─── Phase 38: Health Badge ─────────────────────────────── */
+.ignition-health-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: var(--radius-full);
+  font-size: 0.65rem;
+  font-weight: 700;
+  font-family: var(--font-mono);
+}
+
+.ignition-health-badge--excellent {
+  color: var(--success);
+  background: rgba(52, 211, 153, 0.1);
+  border: 1px solid rgba(52, 211, 153, 0.2);
+}
+
+.ignition-health-badge--good {
+  color: var(--primary);
+  background: rgba(99, 102, 241, 0.1);
+  border: 1px solid rgba(99, 102, 241, 0.2);
+}
+
+.ignition-health-badge--fair {
+  color: var(--warning);
+  background: rgba(251, 191, 36, 0.1);
+  border: 1px solid rgba(251, 191, 36, 0.2);
+}
+
+.ignition-health-badge--poor {
+  color: var(--danger);
+  background: rgba(244, 63, 94, 0.1);
+  border: 1px solid rgba(244, 63, 94, 0.2);
+}
+
+/* ─── Phase 38: Sentinel Recovery Indicator ──────────────── */
+.ignition-sentinel-recovery {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  margin-top: 12px;
+  background: rgba(251, 191, 36, 0.08);
+  border: 1px solid rgba(251, 191, 36, 0.25);
+  border-radius: var(--radius-sm);
+  font-size: 0.75rem;
+  color: var(--warning);
+  animation: ignition-recovery-pulse 2s ease-in-out infinite;
+}
+
+@keyframes ignition-recovery-pulse {
+  0%, 100% { border-color: rgba(251, 191, 36, 0.15); }
+  50% { border-color: rgba(251, 191, 36, 0.45); }
+}
+
+.ignition-sentinel-recovery strong {
+  font-family: var(--font-mono);
+  font-weight: 800;
+}
+
+/* ─── Phase 38: Circuit Breaker Alert ────────────────────── */
+.ignition-circuit-breaker {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  margin-top: 12px;
+  background: rgba(244, 63, 94, 0.1);
+  border: 1px solid rgba(244, 63, 94, 0.3);
+  border-radius: var(--radius-sm);
+  font-size: 0.75rem;
+  color: var(--danger);
+  font-weight: 600;
+}
