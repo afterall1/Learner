@@ -7,9 +7,9 @@
 ## 📅 Current State
 
 **Date**: 2026-03-10
-**Phase**: Phase 38 — Binance Testnet Live Boot Test + Boot Resilience Sentinel
+**Phase**: Phase 38.1 — Binance Testnet Live Boot Test + Probe Cache Reuse
 **Build Status**: ✅ Passing (zero errors)
-**Version**: v1.6.0-beta.1
+**Version**: v1.6.0-beta.2
 **Dev Server**: `http://localhost:3000`
 
 ---
@@ -48,7 +48,7 @@
 | **Strategy Roster** | strategy-roster.ts (510L): population management across islands |
 | **Directive Applicator** | Phase 24 — Overmind directive→action bridge (directive-applicator.ts, 352L) |
 | **Production Infrastructure** | Phase 29 — Structured Logger (logger.ts, 218L), Deployment Sentinel (deployment-sentinel.ts, 283L, 12-point readiness), Env Validator (env-validator.ts, 173L) wired into binance-rest/supabase. `/api/sentinel` endpoint. v1.0.0-beta.1 |
-| **System Bootstrap** | Phase 36→38 — `system-bootstrap.ts` (~519L) 7-phase ignition sequence (ENV_CHECK→PERSISTENCE→CORTEX_SPAWN→HISTORICAL_SEED→WS_CONNECT→EVOLUTION_START→READY), event loop yielding + 400ms min display. `useBootStore` (Zustand, `bootHistory`, RAF timer, sentinel state, `runProbe()`, `resilientIgnite()`), `IgnitionSequencePanel` (~599L) with waterfall chart + result badges + boot history + **Pre-Boot Diagnostic** (6-check probe display) + Boot Health Score badge. `boot-resilience-sentinel.ts` (~497L) — 4-tier auto-recovery, Boot Health Score (0-100), P95+2σ circuit breaker, boot fingerprinting |
+| **System Bootstrap** | Phase 36→38.1 — `system-bootstrap.ts` (~662L) 7-phase ignition sequence (ENV_CHECK→PERSISTENCE→CORTEX_SPAWN→HISTORICAL_SEED→WS_CONNECT→EVOLUTION_START→READY), event loop yielding + 400ms min display. **Phase 38.1 FIX**: ENV_CHECK now uses server-side `/api/trading/testnet-probe` instead of client-side `validateEnvironment()` (process.env empty in browser). **RADICAL INNOVATION: Probe Result Cache Reuse** — reuses Pre-Boot Diagnostic probe if <60s old (ENV_CHECK: 2.1s→6ms, 99.7% improvement). `useBootStore` (Zustand, 1045L), `IgnitionSequencePanel` (~599L), `boot-resilience-sentinel.ts` (~497L) |
 | **Testnet Trading** | Phase 31→38 — Testnet Probe API (6-point check), Session Control API (POST/GET/DELETE), Testnet Session Orchestrator (5-phase: PROBE→SEED→EVOLVE→TRADE→REPORT), **Boot Resilience Sentinel** (4-tier auto-recovery: FULL→REDUCED_PAIRS→FRESH_START→DEMO_FALLBACK) |
 | **Current Generation** | N/A (awaiting Binance API connection) |
 | **Best Fitness Score** | N/A |
@@ -329,6 +329,10 @@
 182. **Sentinel UI**: Sentinel Recovery indicator (animated pulsing border during auto-recovery), Circuit Breaker alert (red alert when all tiers exhausted), Ignite button shows recovery tier during resilientIgnite
 183. **Phase 38 CSS**: `globals.css` (+216 lines) — probe panel, check rows, account summary, health badges (4 levels), sentinel recovery pulse animation, circuit breaker alert
 
+### Session: 2026-03-10 — Binance Testnet Live Boot Test (Phase 38.1, Browser Execution + Radical Innovation)
+184. **Critical Bug Fix — ENV_CHECK Client-Side**: `system-bootstrap.ts` ENV_CHECK was calling `validateEnvironment()` which reads `process.env.BINANCE_API_KEY` — server-only var, empty in browser → DEMO MODE. **FIX**: Now calls `/api/trading/testnet-probe` (server-side). System boots to **LIVE TESTNET** (7.8s → all 7 phases green). `store/index.ts` injects `probeResult` into both `ignite` and `resilientIgnite` paths.
+185. **Probe Result Cache Reuse (RADICAL INNOVATION)**: `BootConfig.cachedProbeResult` field in `types/index.ts`. `system-bootstrap.ts` ENV_CHECK: fast path (cache <60s, 0ms) / slow path (API call, ~2s). **Result**: ENV_CHECK 2.1s → 6ms (99.7% improvement). Total boot: 7.8s → 6.6s.
+
 ---
 
 ## 🚧 Incomplete Features / Technical Debt
@@ -356,12 +360,11 @@
 
 ## 📅 Next Session Priorities
 
-1. Binance Testnet live boot test — Press IGNITE SYSTEM button with real testnet API keys in `.env.local`
-2. Browser testing — Verify Pre-Boot Diagnostic UI, probe checks, health score display
-3. Auto-recovery verification — Test sentinel 4-tier fallback with bad keys, network kill scenarios
-4. Production deployment — Final pre-deployment readiness checks
-5. Strategy live deployment — Paper trading with evolved strategies on testnet
+1. Auto-recovery verification — Test sentinel 4-tier fallback with bad keys, network kill scenarios
+2. Production deployment — Final pre-deployment readiness checks
+3. Strategy live deployment — Paper trading with evolved strategies on testnet
+4. Server time drift fix — Investigate 4855ms time drift warning in probe
 
 ---
 
-*Last Synced: 2026-03-10 19:44 (UTC+3)*
+*Last Synced: 2026-03-10 23:33 (UTC+3)*

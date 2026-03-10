@@ -925,6 +925,20 @@ export const useBootStore = create<BootStoreState>()((set, get) => ({
                 bootHistory: [...prev.bootHistory.slice(-4), entry],
             }));
 
+            // Phase 39: Record to persistent Boot Resilience Scorecard
+            try {
+                const { getBootScorecard } = await import('@/lib/engine/boot-resilience-scorecard');
+                const scorecard = getBootScorecard();
+                scorecard.recordBoot(
+                    finalState,
+                    sentinel.getState().currentRecoveryTier,
+                    sentinel.getState().healthScore?.grade ?? null,
+                );
+            } catch (scorecardError) {
+                // Non-critical — don't break boot flow
+                console.warn('[Scorecard] Failed to record boot:', scorecardError);
+            }
+
             // Wire Cortex + LiveEngine into stores (same as ignite)
             const { getSystemBootstrap } = await import('@/lib/engine/system-bootstrap');
             const bootstrap = getSystemBootstrap();

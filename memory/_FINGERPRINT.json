@@ -1,9 +1,9 @@
 {
   "version": "1.0.0",
-  "generatedAt": "2026-03-10T16:25:23.500Z",
+  "generatedAt": "2026-03-10T20:45:34.286Z",
   "projectVersion": "v0.28.0",
   "sourceHashes": {
-    "src/types/index.ts": "1d185441ec4204e7",
+    "src/types/index.ts": "31defc671a3853cb",
     "src/types/trading-slot.ts": "61c7ed64286070fb",
     "src/lib/engine/strategy-dna.ts": "dde58c63b46d982b",
     "src/lib/engine/evaluator.ts": "1d194d45d012f434",
@@ -27,22 +27,22 @@
     "src/lib/engine/migration.ts": "be26a436baafcb32",
     "src/lib/engine/capital-allocator.ts": "18938886803a9624",
     "src/lib/risk/manager.ts": "80b7ca76d7bcb040",
-    "src/lib/store/index.ts": "1b4b60a4270ceb97",
+    "src/lib/store/index.ts": "ede53c61610d0f84",
     "src/app/page.tsx": "f496d587d0a12c07",
     "src/app/pipeline/page.tsx": "bef7ce25b6337548",
-    "src/app/globals.css": "8826f7aa0274bdcc",
+    "src/app/globals.css": "57a88717ecb0049b",
     "src/app/layout.tsx": "b7c900afea5bfe7e"
   },
   "memoryHashes": {
     "memory/overview.md": "0737d0b1051ddabb",
-    "memory/active_context.md": "d043de538cbed9b6",
+    "memory/active_context.md": "5518ac39e2d4bc67",
     "memory/architecture/system_design.md": "f28d9d0c4e7ceba9",
-    "memory/file_map.md": "84cfc9dd475b0ac3",
-    "memory/changelog.md": "878edfa137ae1a9b",
+    "memory/file_map.md": "20ade8968b82badb",
+    "memory/changelog.md": "09e417a712469a4d",
     "memory/_SYNC_CHECKLIST.md": "db74a75eb0511be8"
   },
   "lineCounts": {
-    "src/types/index.ts": 2197,
+    "src/types/index.ts": 2204,
     "src/types/trading-slot.ts": 97,
     "src/lib/engine/strategy-dna.ts": 642,
     "src/lib/engine/evaluator.ts": 309,
@@ -66,10 +66,10 @@
     "src/lib/engine/migration.ts": 304,
     "src/lib/engine/capital-allocator.ts": 233,
     "src/lib/risk/manager.ts": 315,
-    "src/lib/store/index.ts": 888,
+    "src/lib/store/index.ts": 1045,
     "src/app/page.tsx": 1379,
     "src/app/pipeline/page.tsx": 5233,
-    "src/app/globals.css": 3768,
+    "src/app/globals.css": 3984,
     "src/app/layout.tsx": 28
   },
   "crossRefStatus": {

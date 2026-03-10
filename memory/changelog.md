@@ -4,6 +4,31 @@ All notable changes to this project are documented here.
 
 ---
 
+## [v1.6.0-beta.2] — 2026-03-10
+
+### Fixed
+- **ENV_CHECK Client-Side Bug (Phase 38.1)**
+  - `system-bootstrap.ts` ENV_CHECK was calling `validateEnvironment()` which reads `process.env.BINANCE_API_KEY` — server-only env var, empty in browser → system always fell to DEMO MODE
+  - **FIX**: ENV_CHECK now calls server-side `/api/trading/testnet-probe` instead
+  - System now correctly boots to **LIVE TESTNET** mode (7 phases green)
+
+### Added
+- **Probe Result Cache Reuse (RADICAL INNOVATION)**
+  - `BootConfig.cachedProbeResult` field in `types/index.ts` — optional typed probe cache
+  - `system-bootstrap.ts` — Fast path (cache <60s: ~0ms) / Slow path (API call: ~2s)
+  - `store/index.ts` — Both `ignite` and `resilientIgnite` inject `probeResult` from store
+  - **Performance**: ENV_CHECK 2.1s → 6ms (99.7% improvement), total boot 7.8s → 6.6s
+
+### Changed
+- `system-bootstrap.ts` (519→662 lines) — Probe cache fast/slow path, ValidatedEnv bridging
+- `store/index.ts` (911→1045 lines) — Probe injection in both ignite paths
+- `types/index.ts` (2197→2203 lines) — BootConfig.cachedProbeResult
+
+### Build Status
+✅ Passing (zero errors)
+
+---
+
 ## [v1.6.0-beta.1] — 2026-03-10
 
 ### Added

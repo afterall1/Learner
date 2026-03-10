@@ -166,6 +166,81 @@ function getPhaseResultBadge(
 
 // ─── Ignition Panel Component ────────────────────────────────
 
+// ─── Phase 39: Boot Resilience Scorecard Display ─────────────
+
+function ScorecardDisplay() {
+    const [report, setReport] = React.useState<{
+        reliability: { totalBoots: number; successRate: number; avgDurationMs: number; bestDurationMs: number; consecutiveSuccesses: number };
+        regressionsDetected: string[];
+        overallTrend: 'IMPROVING' | 'STABLE' | 'DEGRADING';
+        historyCount: number;
+    } | null>(null);
+
+    React.useEffect(() => {
+        let cancelled = false;
+        (async () => {
+            try {
+                const { getBootScorecard } = await import('@/lib/engine/boot-resilience-scorecard');
+                const scorecard = getBootScorecard();
+                const r = scorecard.getReport();
+                if (!cancelled) setReport(r);
+            } catch {
+                // Non-critical
+            }
+        })();
+        return () => { cancelled = true; };
+    }, []);
+
+    if (!report || report.historyCount === 0) return null;
+
+    const { reliability, regressionsDetected, overallTrend } = report;
+    const trendIcon = overallTrend === 'IMPROVING' ? '📈' : overallTrend === 'DEGRADING' ? '📉' : '➡️';
+    const trendColor = overallTrend === 'IMPROVING' ? 'var(--success)' : overallTrend === 'DEGRADING' ? 'var(--danger)' : 'var(--text-muted)';
+
+    return (
+        <div className="scorecard-section">
+            <div className="scorecard-header">
+                <span className="scorecard-title">
+                    <HeartPulse size={14} />
+                    Boot Resilience
+                </span>
+                <span className="scorecard-trend" style={{ color: trendColor }}>
+                    {trendIcon} {overallTrend}
+                </span>
+            </div>
+            <div className="scorecard-stats">
+                <div className="scorecard-stat">
+                    <span className="scorecard-stat-value">{reliability.successRate}%</span>
+                    <span className="scorecard-stat-label">Success</span>
+                </div>
+                <div className="scorecard-stat">
+                    <span className="scorecard-stat-value">{formatDuration(reliability.avgDurationMs)}</span>
+                    <span className="scorecard-stat-label">Avg Boot</span>
+                </div>
+                <div className="scorecard-stat">
+                    <span className="scorecard-stat-value">{formatDuration(reliability.bestDurationMs)}</span>
+                    <span className="scorecard-stat-label">Best</span>
+                </div>
+                <div className="scorecard-stat">
+                    <span className="scorecard-stat-value">{reliability.consecutiveSuccesses}</span>
+                    <span className="scorecard-stat-label">Streak</span>
+                </div>
+                <div className="scorecard-stat">
+                    <span className="scorecard-stat-value">{report.historyCount}</span>
+                    <span className="scorecard-stat-label">Boots</span>
+                </div>
+            </div>
+            {regressionsDetected.length > 0 && (
+                <div className="scorecard-regressions">
+                    <ShieldAlert size={14} />
+                    <span>Regression: {regressionsDetected.join(', ')}</span>
+                </div>
+            )}
+        </div>
+    );
+}
+
+
 export function IgnitionSequencePanel() {
     const {
         phase, progress, error, hasBooted,
@@ -332,6 +407,41 @@ export function IgnitionSequencePanel() {
                     </div>
                 )}
 
+                {/* ─── Sentinel Recovery Banner ──────────────────── */}
+                {sentinelRecovering && sentinelRecoveryTier && (
+                    <div className="sentinel-recovery-banner">
+                        <div className="sentinel-recovery-icon">
+                            <RefreshCw size={16} className="ignition-spinner" />
+                        </div>
+                        <div className="sentinel-recovery-info">
+                            <span className="sentinel-recovery-title">
+                                ⚡ Auto-Recovery Active
+                            </span>
+                            <span className="sentinel-recovery-detail">
+                                Tier {sentinelRecoveryTier === 'REDUCED_PAIRS' ? '2/4: Reduced Pairs (BTCUSDT only)'
+                                    : sentinelRecoveryTier === 'FRESH_START' ? '3/4: Fresh Start (no persistence)'
+                                    : sentinelRecoveryTier === 'DEMO_FALLBACK' ? '4/4: Demo Fallback'
+                                    : '1/4: Full Config'}
+                            </span>
+                        </div>
+                    </div>
+                )}
+
+                {/* ─── Circuit Breaker Alert ───────────────────────── */}
+                {circuitBreakerTripped && (
+                    <div className="sentinel-circuit-breaker-alert">
+                        <ShieldAlert size={18} />
+                        <div className="sentinel-circuit-breaker-info">
+                            <span className="sentinel-circuit-breaker-title">
+                                Circuit Breaker TRIPPED
+                            </span>
+                            <span className="sentinel-circuit-breaker-detail">
+                                All 4 recovery tiers exhausted. Check API keys and network connectivity.
+                            </span>
+                        </div>
+                    </div>
+                )}
+
                 {/* ─── Phase Steps (during boot + idle) ───────────── */}
                 {(!isReady || !showTelemetry) && (isIdle || isBooting || isError || isIgniting) && (
                     <div className="ignition-phases">
@@ -386,6 +496,8 @@ export function IgnitionSequencePanel() {
                         })}
                     </div>
                 )}
+
+                {/* ─── Sentinel Recovery Tier Badge (in header during recovery) ── */}
 
                 {/* ─── Seed Progress Detail ────────────────────────── */}
                 {phase === BootPhase.HISTORICAL_SEED && progress.slotProgress.total > 0 && (
@@ -494,6 +606,11 @@ export function IgnitionSequencePanel() {
                             </div>
                         )}
                     </div>
+                )}
+
+                {/* ─── Phase 39: Boot Resilience Scorecard ─────────── */}
+                {isReady && showTelemetry && (
+                    <ScorecardDisplay />
                 )}
 
                 {/* ─── Phase 38: Pre-Boot Diagnostic ──────────────── */}
