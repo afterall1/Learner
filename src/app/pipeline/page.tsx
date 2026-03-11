@@ -1,5 +1,6 @@
 'use client';
 import { TestnetSessionPanel } from '@/components/panels/TestnetSessionPanel';
+import { LiveTradeJournalPanel } from '@/components/panels/LiveTradeJournalPanel';
 
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import Link from 'next/link';
@@ -5193,6 +5194,7 @@ export default function PipelinePage() {
 
                 {/* Row 1.95: Testnet Trading Session (Phase 40) */}
                 <TestnetSessionPanel />
+                <LiveTradeJournalPanel />
 
                 {/* Row 2: Fitness + Validation */}
                 <GenerationFitnessPanel generations={generations} />

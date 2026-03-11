@@ -1,7 +1,7 @@
 {
   "version": "1.0.0",
-  "generatedAt": "2026-03-10T21:52:56.721Z",
-  "projectVersion": "v1.7.0",
+  "generatedAt": "2026-03-10T22:42:45.495Z",
+  "projectVersion": "v1.8.0",
   "sourceHashes": {
     "src/types/index.ts": "31defc671a3853cb",
     "src/types/trading-slot.ts": "61c7ed64286070fb",
@@ -29,16 +29,16 @@
     "src/lib/risk/manager.ts": "80b7ca76d7bcb040",
     "src/lib/store/index.ts": "565e27956875b5f2",
     "src/app/page.tsx": "f496d587d0a12c07",
-    "src/app/pipeline/page.tsx": "14b0ea207ebc3e8b",
-    "src/app/globals.css": "9c9724d5210bffbe",
+    "src/app/pipeline/page.tsx": "d2bfe6483b1080f2",
+    "src/app/globals.css": "10dff921008e396e",
     "src/app/layout.tsx": "b7c900afea5bfe7e"
   },
   "memoryHashes": {
     "memory/overview.md": "0737d0b1051ddabb",
-    "memory/active_context.md": "e7e1df464fdda01a",
+    "memory/active_context.md": "cd9591e40c36269f",
     "memory/architecture/system_design.md": "f28d9d0c4e7ceba9",
     "memory/file_map.md": "882219f97b05af28",
-    "memory/changelog.md": "3f2f628b005c507f",
+    "memory/changelog.md": "0bd448d19a2c252f",
     "memory/_SYNC_CHECKLIST.md": "db74a75eb0511be8"
   },
   "lineCounts": {
@@ -68,8 +68,8 @@
     "src/lib/risk/manager.ts": 315,
     "src/lib/store/index.ts": 1129,
     "src/app/page.tsx": 1379,
-    "src/app/pipeline/page.tsx": 5237,
-    "src/app/globals.css": 4564,
+    "src/app/pipeline/page.tsx": 5239,
+    "src/app/globals.css": 5015,
     "src/app/layout.tsx": 28
   },
   "crossRefStatus": {

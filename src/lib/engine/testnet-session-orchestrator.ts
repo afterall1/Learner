@@ -26,7 +26,6 @@
 // ============================================================
 
 import { useCortexStore, useCortexLiveStore } from '@/lib/store';
-import { BinanceRestClient } from '@/lib/api/binance-rest';
 import { createTradingSlot } from '@/types/trading-slot';
 import { Timeframe } from '@/types';
 import { createLogger } from '@/lib/utils/logger';
@@ -105,7 +104,7 @@ export interface SessionState {
 
 const DEFAULT_SESSION_CONFIG: SessionConfig = {
     pairs: ['BTCUSDT'],
-    timeframe: Timeframe.H1,
+    timeframe: Timeframe.M5,
     capitalPerSlot: 1000,
     dryRun: false,
     maxDurationMinutes: 60,
@@ -129,6 +128,8 @@ export class TestnetSessionOrchestrator {
     private report: SessionReport | null = null;
     private candlesProcessed = 0;
     private evolutionCycles = 0;
+    /** True if session reused an engine booted via Ignite (don't kill on stop) */
+    private engineWasPreBooted = false;
 
     /**
      * Start a new testnet trading session.
@@ -158,46 +159,107 @@ export class TestnetSessionOrchestrator {
         try {
             // ─── Phase 1: PROBE ─────────────────────────────
             await this.runPhase('PROBE', async () => {
-                const client = new BinanceRestClient();
-                try {
-                    const hasCreds = client.hasCredentials();
-                    const isTestnet = client.isTestnet();
+                // Phase 44 FIX: Use server-side API route instead of client-side BinanceRestClient
+                // (process.env is empty in browser — Next.js only exposes NEXT_PUBLIC_* vars)
+                // Phase 44.1: Retry with backoff for intermittent server time drift
+                const MAX_PROBE_ATTEMPTS = 3;
+                const PROBE_BACKOFF_MS = 2000;
+                let lastError: Error | null = null;
 
-                    if (!hasCreds) throw new Error('Missing Binance API credentials');
-                    if (!isTestnet) throw new Error('BINANCE_TESTNET is not true — refusing to trade on mainnet');
+                for (let attempt = 1; attempt <= MAX_PROBE_ATTEMPTS; attempt++) {
+                    try {
+                        const response = await fetch('/api/trading/testnet-probe');
+                        if (!response.ok) {
+                            throw new Error(`Probe API returned ${response.status}`);
+                        }
 
-                    // Test REST connectivity
-                    await client.getLatestPrice('BTCUSDT');
+                        const probeResult = await response.json();
 
-                    // Test account access
-                    const account = await client.getAccountInfo();
-                    const balance = account.availableBalance;
+                        if (!probeResult.isTestnet) {
+                            throw new Error('BINANCE_TESTNET is not true — refusing to trade on mainnet');
+                        }
 
-                    if (balance <= 0) {
-                        tsoLog.warn('Zero testnet balance — request funds from faucet');
+                        // Only credentials + testnet_mode are hard failures
+                        // account_access may fail intermittently due to server time drift
+                        const criticalFailures = (probeResult.checks ?? []).filter(
+                            (c: { name: string; status: string }) =>
+                                c.status === 'fail' &&
+                                (c.name === 'credentials' || c.name === 'testnet_mode'),
+                        );
+
+                        if (criticalFailures.length > 0) {
+                            const failNames = criticalFailures.map((c: { name: string }) => c.name).join(', ');
+                            throw new Error(`Critical probe failures: ${failNames}`);
+                        }
+
+                        // Log non-critical failures as warnings
+                        const nonCriticalFailures = (probeResult.checks ?? []).filter(
+                            (c: { name: string; status: string }) =>
+                                c.status === 'fail' &&
+                                c.name !== 'credentials' &&
+                                c.name !== 'testnet_mode',
+                        );
+
+                        if (nonCriticalFailures.length > 0) {
+                            const warnNames = nonCriticalFailures.map(
+                                (c: { name: string; details: string }) => `${c.name}: ${c.details}`,
+                            ).join('; ');
+                            tsoLog.warn(`⚠️ Probe non-critical issues (attempt ${attempt}): ${warnNames}`);
+                        }
+
+                        // Extract balance from account
+                        const balance = probeResult.account?.availableBalance ?? 0;
+                        if (balance <= 0) {
+                            tsoLog.warn('Zero testnet balance — request funds from faucet');
+                        }
+
+                        this.phaseLog = {
+                            ready: probeResult.ready || criticalFailures.length === 0,
+                            checks: probeResult.checks?.length ?? 0,
+                            passed: (probeResult.checks ?? []).filter(
+                                (c: { status: string }) => c.status === 'pass',
+                            ).length,
+                        };
+
+                        tsoLog.info(`✅ Probe passed (attempt ${attempt}/${MAX_PROBE_ATTEMPTS})`, {
+                            balance: balance.toFixed(2),
+                            testnet: probeResult.isTestnet,
+                            latency: probeResult.totalLatencyMs,
+                        });
+
+                        return; // Success — exit retry loop
+                    } catch (error) {
+                        lastError = error instanceof Error ? error : new Error(String(error));
+                        tsoLog.warn(`⚠️ Probe attempt ${attempt}/${MAX_PROBE_ATTEMPTS} failed: ${lastError.message}`);
+
+                        if (attempt < MAX_PROBE_ATTEMPTS) {
+                            await new Promise((r) => setTimeout(r, PROBE_BACKOFF_MS * attempt));
+                        }
                     }
-
-                    this.phaseLog = { ready: true, checks: 6, passed: 6 };
-
-                    tsoLog.info('✅ Probe passed', {
-                        balance: balance.toFixed(2),
-                        testnet: isTestnet,
-                    });
-                } finally {
-                    client.destroy();
                 }
+
+                // All attempts failed
+                throw lastError ?? new Error('Probe failed after all retry attempts');
             });
 
-            // ─── Phase 2: SEED ──────────────────────────────
+            // ─── Phase 2: SEED (Ignite-Aware) ──────────────
             await this.runPhase('SEED', async () => {
+                const liveStore = useCortexLiveStore.getState();
+
+                // Check if engine was already booted via Ignite
+                if (liveStore.engine && liveStore.engineStatus === 'live') {
+                    this.engineWasPreBooted = true;
+                    tsoLog.info('✅ Engine already running (Ignite boot detected) — skipping re-seed');
+                    return;
+                }
+
+                // Cold start — initialize engine from scratch
                 const slots = this.config!.pairs.map(pair =>
                     createTradingSlot(pair, this.config!.timeframe),
                 );
 
                 const totalCapital = this.config!.capitalPerSlot * slots.length;
-                const liveStore = useCortexLiveStore.getState();
 
-                // Initialize engine (creates Cortex + CortexLiveEngine + seeds data)
                 await liveStore.initializeEngine(slots, totalCapital);
 
                 const status = liveStore.engineStatus;
@@ -205,56 +267,87 @@ export class TestnetSessionOrchestrator {
                     throw new Error(`Engine initialization failed: ${liveStore.lastError}`);
                 }
 
-                tsoLog.info('✅ Seed complete', {
+                tsoLog.info('✅ Seed complete (cold start)', {
                     slots: slots.length,
                     totalCapital,
                 });
             });
 
-            // ─── Phase 3: EVOLVE ────────────────────────────
+            // ─── Phase 3: EVOLVE (Forced Champion) ──────────
             await this.runPhase('EVOLVE', async () => {
                 const liveStore = useCortexLiveStore.getState();
 
-                // Start the engine (connects WS streams)
-                await liveStore.startEngine();
-
-                if (liveStore.engineStatus === 'error') {
-                    throw new Error(`Engine start failed: ${liveStore.lastError}`);
+                // Start engine if not already live (cold start path)
+                if (liveStore.engineStatus !== 'live') {
+                    await liveStore.startEngine();
+                    if (liveStore.engineStatus === 'error') {
+                        throw new Error(`Engine start failed: ${liveStore.lastError}`);
+                    }
                 }
 
-                // Wait for first evolution cycle (max 30s)
-                const waitStart = Date.now();
-                const maxWait = 30_000;
-                let evolved = false;
+                const cortex = useCortexStore.getState().cortex;
+                if (!cortex) {
+                    throw new Error('Cortex not available after engine start');
+                }
 
-                while (Date.now() - waitStart < maxWait) {
-                    const cortex = useCortexStore.getState().cortex;
-                    if (cortex) {
-                        const snapshot = cortex.getSnapshot();
-                        if (snapshot.totalTradesAllIslands > 0 || snapshot.globalBestFitness > 0) {
-                            evolved = true;
-                            break;
-                        }
+                // Wait for first evolution cycle (max 15s passive wait)
+                const waitStart = Date.now();
+                const passiveWait = 15_000;
+                let hasChampion = false;
+
+                while (Date.now() - waitStart < passiveWait) {
+                    const snapshot = cortex.getSnapshot();
+                    if (snapshot.globalBestFitness > 0) {
+                        hasChampion = true;
+                        break;
                     }
                     await new Promise(r => setTimeout(r, 1000));
                 }
 
-                if (!evolved) {
-                    tsoLog.warn('Initial evolution timeout — proceeding with default strategies');
+                // Force evolution from historical seed if no champion yet
+                if (!hasChampion) {
+                    tsoLog.info('🧬 No champion found — forcing evolution from historical data...');
+
+                    const islands = cortex.getSnapshot().islands;
+                    for (const islandSnapshot of islands) {
+                        const island = cortex.getIsland(islandSnapshot.slotId);
+                        if (island) {
+                            try {
+                                island.evolve();
+                                this.evolutionCycles++;
+                                tsoLog.info(`🧬 Forced evolution on ${islandSnapshot.slotId}`, {
+                                    bestFitness: island.getSnapshot().bestFitnessAllTime,
+                                });
+                            } catch (err) {
+                                tsoLog.warn(`Evolution failed for ${islandSnapshot.slotId}`, {
+                                    error: err instanceof Error ? err.message : 'Unknown',
+                                });
+                            }
+                        }
+                    }
+
+                    // Verify champion exists after forced evolution
+                    const postSnapshot = cortex.getSnapshot();
+                    hasChampion = postSnapshot.globalBestFitness > 0;
                 }
 
-                tsoLog.info('✅ Evolution phase complete', { evolved });
+                tsoLog.info('✅ Evolution phase complete', {
+                    hasChampion,
+                    bestFitness: cortex.getSnapshot().globalBestFitness,
+                });
             });
 
             // ─── Phase 4: TRADE ─────────────────────────────
             await this.runPhase('TRADE', async () => {
                 const liveStore = useCortexLiveStore.getState();
 
-                // Enable auto-trade
+                // ALWAYS enable auto-trade — the executor handles dryRun internally
+                // (LiveTradeExecutor.evaluateAndExecute checks config.dryRun at line 169)
+                liveStore.setAutoTrade(true);
+
                 if (this.config!.dryRun) {
-                    tsoLog.info('🔸 DRY RUN mode — signals evaluated but no testnet orders placed');
+                    tsoLog.info('🔸 Auto-trade ENABLED in DRY RUN mode — signals evaluated, no orders placed');
                 } else {
-                    liveStore.setAutoTrade(true);
                     tsoLog.info('🔥 Auto-trade ENABLED — live testnet orders active');
                 }
 
@@ -326,8 +419,14 @@ export class TestnetSessionOrchestrator {
             });
         });
 
-        // Stop engine
-        liveStore.stopEngine();
+        // Only stop engine if this session started it (cold start)
+        // If engine was pre-booted via Ignite, leave it running
+        if (!this.engineWasPreBooted) {
+            liveStore.stopEngine();
+            tsoLog.info('Engine stopped (cold start session)');
+        } else {
+            tsoLog.info('Engine preserved (Ignite pre-boot)');
+        }
 
         this.phase = 'STOPPED';
         return this.report;

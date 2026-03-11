@@ -287,7 +287,49 @@
 
 ---
 
-## ğŸ¤– Workflows (`.agent/workflows/`)
+## 🔥 Live Engine Layer (`src/lib/engine/`) [Phase 20+]
+
+| File | Purpose | Importance |
+|------|---------|------------|
+| `cortex-live-engine.ts` | Live trading engine: manages CortexLiveStore, handleCandleClose, setAutoTrade, WebSocket integration, ADFI+CIRPN | 🔴 |
+| `evolution-scheduler.ts` | Background evolution scheduler for live engine: periodic generation cycles | 🟡 |
+| `adaptive-data-flow.ts` | ADFI: Adaptive Data Flow Intelligence — dynamic data routing based on market conditions | 🟡 |
+| `regime-propagation.ts` | CIRPN: Cross-Island Regime Propagation Network — regime change broadcasting | 🟡 |
+
+---
+
+## 🚀 System Bootstrap Layer (`src/lib/engine/`) [Phase 36-38]
+
+| File | Purpose | Importance |
+|------|---------|------------|
+| `system-bootstrap.ts` | 7-phase ignition sequence (ENV_CHECK→PERSISTENCE→CORTEX_SPAWN→HISTORICAL_SEED→WS_CONNECT→EVOLUTION_START→READY), probe cache reuse | 🔴 |
+| `boot-resilience-sentinel.ts` | Self-healing boot: 4-tier auto-recovery, Boot Health Score, Adaptive Timeout Circuit Breaker, Boot Fingerprint | 🔴 |
+
+---
+
+## 📡 Testnet Trading Layer (`src/lib/engine/`, `src/components/panels/`) [Phase 31-44]
+
+| File | Purpose | Importance |
+|------|---------|------------|
+| `testnet-session-orchestrator.ts` | 5-phase session lifecycle (PROBE→SEED→EVOLVE→TRADE→REPORT). Phase 41: Ignite-aware SEED, forced evolution, autoTrade always-on. Phase 44: server-side probe via /api/trading/testnet-probe, 3-attempt retry with backoff | 🔴 |
+| `session-signal-stream.ts` | SEI: Observable AI decision stream (5 event types, 7 skip reasons, pub/sub, ring buffer) | 🟡 |
+| `TestnetSessionPanel.tsx` | Session control panel: config form, 5-phase progress, live stats, TRD (6-check diagnostic), signal stream display | 🔴 |
+| `IgnitionSequencePanel.tsx` | 7-phase boot UI: probe diagnostic, IGNITE button, Boot Telemetry Timeline (waterfall, badges, history) | 🔴 |
+
+---
+
+## 💰 Trade Execution Layer (`src/lib/api/`, `src/lib/engine/`, `src/components/panels/`) [Phase 26-44]
+
+| File | Purpose | Importance |
+|------|---------|------------|
+| `live-trade-executor.ts` | Signal→order pipeline: evaluateAndExecute, risk validation, position sizing, SEI wiring. Phase 43: AFTM (aggressive first-trade mode), minConfidence 0.15 | 🔴 |
+| `trade-lifecycle-observer.ts` | Event-driven position state tracker: recordOpen/Close/Emergency/DryRunSignal, P&L calc, pub/sub | 🟡 |
+| `LiveTradeJournalPanel.tsx` | 3-section real-time trade blotter: Open Positions, Trade History, Execution Summary, Trade Decision Replay | 🟡 |
+| `stress-matrix.ts` | MSSM: Market Scenario Stress Matrix — 5-regime stress testing | 🟡 |
+
+---
+
+## 🤖 Workflows (`.agent/workflows/`)
 
 | File | Purpose | Importance |
 |------|---------|------------|

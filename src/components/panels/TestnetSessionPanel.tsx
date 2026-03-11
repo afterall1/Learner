@@ -18,7 +18,8 @@ import {
     Loader2, Zap, Radio, ShieldAlert, TrendingUp,
     Clock, Target, Activity,
 } from 'lucide-react';
-import { useSessionStore } from '@/lib/store';
+import { useSessionStore, useCortexLiveStore } from '@/lib/store';
+import { useCortexStore } from '@/lib/store';
 import { Timeframe } from '@/types';
 import type { SessionPhase, SessionConfig } from '@/lib/engine/testnet-session-orchestrator';
 import type { SignalEvent } from '@/lib/engine/session-signal-stream';
@@ -453,6 +454,120 @@ function SignalStreamDisplay() {
     );
 }
 
+// ─── Trade Readiness Diagnostic (Radical Innovation) ──────
+
+interface ReadinessCheck {
+    id: string;
+    label: string;
+    emoji: string;
+    ok: boolean;
+    detail: string;
+}
+
+function TradeReadinessDiagnostic() {
+    const liveStore = useCortexLiveStore();
+    const cortexStore = useCortexStore();
+    const { phase } = useSessionStore();
+
+    const [checks, setChecks] = useState<ReadinessCheck[]>([]);
+
+    useEffect(() => {
+        const engine = liveStore.engine;
+        const cortex = cortexStore.cortex;
+        const engineRunning = !!engine && liveStore.engineStatus === 'live';
+        const snapshot = cortex?.getSnapshot();
+
+        // Count total candles across all islands
+        let totalCandles = 0;
+        let hasChampion = false;
+        if (snapshot) {
+            for (const island of snapshot.islands) {
+                if (island.activeStrategy) hasChampion = true;
+                totalCandles += island.totalGenerations > 0 ? 500 : 0; // seeded = ~500 candles
+            }
+        }
+
+        const bestFitness = snapshot?.globalBestFitness ?? 0;
+        const autoTradeOn = engine?.isAutoTradeEnabled() ?? false;
+        const isInTradePhase = phase === 'TRADE';
+
+        const newChecks: ReadinessCheck[] = [
+            {
+                id: 'engine',
+                label: 'Engine Online',
+                emoji: '🔌',
+                ok: engineRunning,
+                detail: engineRunning ? `Status: ${liveStore.engineStatus}` : 'Press Ignite first',
+            },
+            {
+                id: 'candles',
+                label: 'Candle Data',
+                emoji: '📊',
+                ok: totalCandles >= 100,
+                detail: totalCandles >= 100 ? `~${totalCandles} candles seeded` : 'Historical seed needed',
+            },
+            {
+                id: 'champion',
+                label: 'Champion Ready',
+                emoji: '🧬',
+                ok: hasChampion,
+                detail: hasChampion ? 'Active strategy selected' : 'Evolution needed',
+            },
+            {
+                id: 'fitness',
+                label: 'Fitness > 0',
+                emoji: '🏋️',
+                ok: bestFitness > 0,
+                detail: bestFitness > 0 ? `Best: ${bestFitness.toFixed(1)}` : 'No fitness yet',
+            },
+            {
+                id: 'autotrade',
+                label: 'AutoTrade On',
+                emoji: '🔥',
+                ok: autoTradeOn,
+                detail: autoTradeOn ? 'Signal→Order pipeline active' : isInTradePhase ? 'Enabling...' : 'Start Session first',
+            },
+            {
+                id: 'risk',
+                label: 'Risk Clear',
+                emoji: '🛡️',
+                ok: engineRunning && autoTradeOn,
+                detail: engineRunning && autoTradeOn ? 'Risk manager validating' : 'Awaiting pipeline',
+            },
+        ];
+
+        setChecks(newChecks);
+    }, [liveStore.engine, liveStore.engineStatus, cortexStore.cortex, phase]);
+
+    const passCount = checks.filter(c => c.ok).length;
+    const allPass = passCount === checks.length;
+
+    if (checks.length === 0) return null;
+
+    return (
+        <div className="trd">
+            <div className="trd-header">
+                <span className="trd-title">🎯 Trade Readiness</span>
+                <span className={`trd-score ${allPass ? 'trd-all-pass' : ''}`}>
+                    {passCount}/{checks.length}
+                </span>
+            </div>
+            <div className="trd-checks">
+                {checks.map(check => (
+                    <div key={check.id} className={`trd-check ${check.ok ? 'trd-pass' : 'trd-fail'}`}>
+                        <span className="trd-check-status">
+                            {check.ok ? <CheckCircle size={12} /> : <XCircle size={12} />}
+                        </span>
+                        <span className="trd-check-emoji">{check.emoji}</span>
+                        <span className="trd-check-label">{check.label}</span>
+                        <span className="trd-check-detail">{check.detail}</span>
+                    </div>
+                ))}
+            </div>
+        </div>
+    );
+}
+
 // ─── Main Panel ─────────────────────────────────────────────
 
 export function TestnetSessionPanel() {
@@ -510,6 +625,8 @@ export function TestnetSessionPanel() {
 
                 {/* Report */}
                 {showReport && <SessionReportDisplay />}
+                {/* Trade Readiness Diagnostic */}
+                <TradeReadinessDiagnostic />
             </div>
         </section>
     );

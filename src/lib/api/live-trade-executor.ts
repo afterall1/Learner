@@ -26,6 +26,7 @@ import { ExecutionQualityTracker } from './execution-quality';
 import { getHeartbeatMonitor } from '../config/heartbeat-monitor';
 import { evaluateStrategy } from '../engine/signal-engine';
 import { getSignalStream } from '../engine/session-signal-stream';
+import { getTradeObserver } from '../engine/trade-lifecycle-observer';
 import { Cortex } from '../engine/cortex';
 import {
     TradeSignalAction,
@@ -63,7 +64,7 @@ export interface LiveTradeConfig {
 
 const DEFAULT_LIVE_TRADE_CONFIG: LiveTradeConfig = {
     maxConcurrentPositions: 3,
-    minConfidence: 0.3,
+    minConfidence: 0.15,
     postTradeCooldownMs: 5 * 60 * 1000, // 5 minutes
     positionSizeFraction: 0.02, // 2% of slot capital
     maxLeverage: 5,
@@ -97,6 +98,12 @@ export class LiveTradeExecutor {
 
     private activePositions = new Map<string, ActivePosition>(); // slotId → position
     private slotCooldowns = new Map<string, number>(); // slotId → cooldown expiry timestamp
+    /** Phase 43 AFTM: Track when executor was created for aggressive first-trade mode */
+    private readonly createdAt = Date.now();
+    /** Phase 43 AFTM: Duration of aggressive mode (15 minutes) */
+    private readonly AFTM_DURATION_MS = 15 * 60 * 1000;
+    /** Phase 43 AFTM: Ultra-low confidence during first 15 min */
+    private readonly AFTM_CONFIDENCE = 0.05;
 
     constructor(
         cortex: Cortex,
@@ -130,10 +137,11 @@ export class LiveTradeExecutor {
                         `[LiveTradeExecutor] 🚨 EMERGENCY CLOSE: ${group.groupId} ` +
                         `${group.config.symbol} — ${reason}`,
                     );
-                    // Remove from active positions
+                    // Remove from active positions + notify observer
                     for (const [slotId, pos] of this.activePositions.entries()) {
                         if (pos.groupId === group.groupId) {
                             this.activePositions.delete(slotId);
+                            getTradeObserver().recordEmergency(slotId, reason);
                             break;
                         }
                     }
@@ -214,8 +222,19 @@ export class LiveTradeExecutor {
                 return false; // No entry signal
             }
 
-            // 6. Check confidence threshold
-            if (signal.confidence < this.config.minConfidence) {
+            // 6. Check confidence threshold (Phase 43: AFTM — aggressive in first 15 min)
+            const isAFTM = (Date.now() - this.createdAt) < this.AFTM_DURATION_MS;
+            const effectiveConfidence = isAFTM ? this.AFTM_CONFIDENCE : this.config.minConfidence;
+
+            if (isAFTM) {
+                console.log(
+                    `[LiveTradeExecutor] 🚀 AFTM active — confidence threshold: ${(effectiveConfidence * 100).toFixed(0)}% ` +
+                    `(normal: ${(this.config.minConfidence * 100).toFixed(0)}%) | ` +
+                    `Remaining: ${Math.round((this.AFTM_DURATION_MS - (Date.now() - this.createdAt)) / 1000)}s`,
+                );
+            }
+
+            if (signal.confidence < effectiveConfidence) {
                 getSignalStream().recordSkip(slotId, 'LOW_CONFIDENCE', champion.name, signal.action, signal.confidence);
                 return false;
             }
@@ -296,6 +315,22 @@ export class LiveTradeExecutor {
                     entryTime: Date.now(),
                     orderGroup,
                 });
+
+                // Phase 42: Notify trade observer
+                getTradeObserver().recordOpen({
+                    slotId,
+                    direction: direction === TradeDirection.LONG ? 'LONG' : 'SHORT',
+                    strategyName: champion.name,
+                    strategyId: champion.id,
+                    confidence: signal.confidence,
+                    entryPrice: currentPrice,
+                    quantity: orderConfig.quantity,
+                    leverage,
+                    slPrice: orderConfig.stopLossPrice,
+                    tpPrice: orderConfig.takeProfitPrice ?? 0,
+                    orderGroupId: orderGroup.groupId,
+                    isPaper: this.client.isTestnet(),
+                });
             }
 
             // Record trade to Cortex
@@ -354,12 +389,23 @@ export class LiveTradeExecutor {
             signal.action === TradeSignalAction.SHORT) {
             if (signal.confidence >= this.config.minConfidence) {
                 const direction = signal.action === TradeSignalAction.LONG ? 'LONG' : 'SHORT';
+                const currentPrice = candles[candles.length - 1]?.close ?? 0;
                 console.log(
                     `[LiveTradeExecutor] 🔸 DRY RUN: Would ${direction} ${slotId} | ` +
                     `Confidence: ${(signal.confidence * 100).toFixed(0)}% | ` +
                     `Strategy: ${champion.name} | Reason: ${signal.reason}`,
                 );
                 getSignalStream().recordSkip(slotId, 'DRY_RUN', champion.name, signal.action, signal.confidence);
+
+                // Phase 42: Record dry run to trade observer
+                getTradeObserver().recordDryRunSignal({
+                    slotId,
+                    direction: direction as 'LONG' | 'SHORT',
+                    strategyName: champion.name,
+                    confidence: signal.confidence,
+                    price: currentPrice,
+                });
+
                 return true;
             }
         }
@@ -408,6 +454,10 @@ export class LiveTradeExecutor {
                 // Set cooldown
                 this.slotCooldowns.set(slotId,
                     Date.now() + this.config.postTradeCooldownMs);
+
+                // Phase 42: Notify trade observer
+                const latestPrice = candles[candles.length - 1]?.close ?? position.entryPrice;
+                getTradeObserver().recordClose(slotId, latestPrice, signal.reason);
 
                 console.log(`[LiveTradeExecutor] ✅ Position closed: ${slotId}`);
             } catch (error) {

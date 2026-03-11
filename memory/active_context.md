@@ -7,9 +7,9 @@
 ## 📅 Current State
 
 **Date**: 2026-03-11
-**Phase**: Phase 40 — Testnet Session Panel + Session Execution Intelligence
+**Phase**: Phase 43 — M5 Timeframe + Aggressive Confidence + Trade Journal
 **Build Status**: ✅ Passing (zero errors)
-**Version**: v1.7.0
+**Version**: v1.8.0
 **Dev Server**: `http://localhost:3000`
 
 ---
@@ -49,7 +49,8 @@
 | **Directive Applicator** | Phase 24 — Overmind directive→action bridge (directive-applicator.ts, 352L) |
 | **Production Infrastructure** | Phase 29 — Structured Logger (logger.ts, 218L), Deployment Sentinel (deployment-sentinel.ts, 283L, 12-point readiness), Env Validator (env-validator.ts, 173L) wired into binance-rest/supabase. `/api/sentinel` endpoint. v1.0.0-beta.1 |
 | **System Bootstrap** | Phase 36→38.1 — `system-bootstrap.ts` (~662L) 7-phase ignition sequence (ENV_CHECK→PERSISTENCE→CORTEX_SPAWN→HISTORICAL_SEED→WS_CONNECT→EVOLUTION_START→READY), event loop yielding + 400ms min display. **Phase 38.1 FIX**: ENV_CHECK now uses server-side `/api/trading/testnet-probe` instead of client-side `validateEnvironment()` (process.env empty in browser). **RADICAL INNOVATION: Probe Result Cache Reuse** — reuses Pre-Boot Diagnostic probe if <60s old (ENV_CHECK: 2.1s→6ms, 99.7% improvement). `useBootStore` (Zustand, 1045L), `IgnitionSequencePanel` (~599L), `boot-resilience-sentinel.ts` (~497L) |
-| **Testnet Trading** | Phase 31→40 — Testnet Probe API (6-point check), Session Control API (POST/GET/DELETE), Testnet Session Orchestrator (5-phase: PROBE→SEED→EVOLVE→TRADE→REPORT), **Boot Resilience Sentinel** (4-tier auto-recovery), **useSessionStore** (Zustand wrapper), **TestnetSessionPanel** (500L, config form + 5-phase progress + live stats + start/stop + report), **Session Execution Intelligence (SEI)** (session-signal-stream.ts, 230L — observable AI decision stream with 5 event types, 7 skip reasons, real-time signal feed) |
+| **Testnet Trading** | Phase 31→43 — Testnet Probe API, Session Control API, TestnetSessionOrchestrator (5-phase: PROBE→SEED→EVOLVE→TRADE→REPORT, Phase 41: Ignite-aware SEED, forced evolution, autoTrade always-on), Boot Resilience Sentinel, useSessionStore, TestnetSessionPanel (TRD: 6-check diagnostic), SEI (signal stream). **Phase 43**: Default M5 timeframe (12x faster signals), minConfidence 0.15, AFTM (first 15min: 5% threshold) |
+| **Live Trade Execution** | Phase 26→43 — `LiveTradeExecutor` + **Phase 42**: `TradeLifecycleObserver` (position open/close/emergency tracking, P&L calc, pub/sub), `LiveTradeJournalPanel` (open positions, trade history, execution summary, Trade Decision Replay) |
 | **Current Generation** | N/A (awaiting Binance API connection) |
 | **Best Fitness Score** | N/A |
 | **Active Strategy** | Demo: "Nova Tiger" (Score: 67) |
@@ -337,6 +338,17 @@
 190. **SignalStreamDisplay** (+85L in TestnetSessionPanel): Real-time AI decision feed with execution stats header (🔥 executed, ⏭ skipped, 📤 exits, exec rate %), reverse-chronological event list with timestamps and color-coded event types
 191. **Dashboard Integration**: TestnetSessionPanel added to `pipeline/page.tsx` between StressMatrixPanel and GenerationFitnessPanel
 192. **Session CSS** (+390L in `globals.css`): Config form grid, phase progress bar with connectors and pulse animation, stat tiles, trading badge, signal stream feed with scrollable event list and hover states
+
+### Session: 2026-03-11 — Trade Execution Transparency (Phase 41-43, 7-Expert Council)
+193. **TSO Ignite-Aware Rewrite (Phase 41)**: `testnet-session-orchestrator.ts` — SEED detects pre-booted engine (skip re-init), EVOLVE forces `island.evolve()` if no champion, TRADE always enables autoTrade, stopSession preserves pre-booted engine
+194. **Trade Readiness Diagnostic (Phase 41 RADICAL)**: 6-check real-time checklist in TestnetSessionPanel (Engine Online, Candle Data, Champion Ready, Fitness>0, AutoTrade On, Risk Clear) + TRD CSS
+195. **TradeLifecycleObserver (Phase 42)**: `trade-lifecycle-observer.ts` (280L) — Event-driven position state tracker: `recordOpen()`/`recordClose()`/`recordEmergency()`/`recordDryRunSignal()`, P&L calculation, win rate summary, pub/sub
+196. **LiveTradeExecutor Wiring (Phase 42)**: 5-point observer integration (import, recordOpen after AOLE success, recordClose on exit, recordEmergency in callback, recordDryRunSignal)
+197. **LiveTradeJournalPanel (Phase 42)**: `LiveTradeJournalPanel.tsx` (310L) — 3-section real-time trade blotter: Open Positions (live cards with SL/TP, direction badges, elapsed timer), Trade History (P&L coloring, duration), Execution Summary (6-stat grid)
+198. **Trade Decision Replay (Phase 42 RADICAL)**: Expandable decision chain per trade — correlates with SessionSignalStream events (±5s window) showing full AI reasoning
+199. **M5 Timeframe Default (Phase 43)**: `DEFAULT_SESSION_CONFIG.timeframe` H1→M5 — 12x more signal evaluations (every 5 min vs 60 min)
+200. **Aggressive Confidence (Phase 43)**: `DEFAULT_LIVE_TRADE_CONFIG.minConfidence` 0.3→0.15 — 2x more signals pass threshold
+201. **Aggressive First-Trade Mode (Phase 43 RADICAL)**: AFTM — first 15 minutes uses 5% confidence threshold, then reverts to 15%. Guarantees visible trade attempts within minutes of session start
 
 ---
 

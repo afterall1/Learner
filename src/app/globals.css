@@ -4561,4 +4561,455 @@ body::before {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+/* ─── Trade Readiness Diagnostic (Phase 41 Radical Innovation) ── */
+
+.trd {
+  margin-top: 12px;
+  padding: 10px 12px;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 8px;
+}
+
+.trd-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.trd-title {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  letter-spacing: 0.3px;
+}
+
+.trd-score {
+  font-size: 0.7rem;
+  font-weight: 700;
+  font-family: var(--font-mono);
+  padding: 2px 8px;
+  border-radius: 10px;
+  background: rgba(239, 68, 68, 0.15);
+  color: var(--danger);
+  transition: all 0.3s ease;
+}
+
+.trd-score.trd-all-pass {
+  background: rgba(34, 197, 94, 0.15);
+  color: var(--success);
+  box-shadow: 0 0 8px rgba(34, 197, 94, 0.2);
+}
+
+.trd-checks {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px;
+}
+
+.trd-check {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 6px;
+  border-radius: 4px;
+  font-size: 0.65rem;
+  transition: all 0.2s ease;
+}
+
+.trd-check.trd-pass {
+  background: rgba(34, 197, 94, 0.06);
+  color: var(--success);
+}
+
+.trd-check.trd-fail {
+  background: rgba(239, 68, 68, 0.06);
+  color: var(--danger);
+}
+
+.trd-check-status {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+}
+
+.trd-check-emoji {
+  flex-shrink: 0;
+  font-size: 0.6rem;
+}
+
+.trd-check-label {
+  font-weight: 600;
+  white-space: nowrap;
+  font-size: 0.6rem;
+}
+
+.trd-check-detail {
+  margin-left: auto;
+  font-family: var(--font-mono);
+  font-size: 0.55rem;
+  color: var(--text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100px;
+}
+
+/* ─── Live Trade Journal (Phase 42) ───────────────────── */
+
+.tj-summary {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 6px;
+  margin-bottom: 12px;
+}
+
+.tj-summary-stat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 6px 4px;
+  background: rgba(255, 255, 255, 0.02);
+  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+.tj-summary-label {
+  font-size: 0.55rem;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.tj-summary-value {
+  font-size: 0.8rem;
+  font-weight: 700;
+  font-family: var(--font-mono);
+  color: var(--text-primary);
+}
+
+.tj-win { color: var(--success) !important; }
+.tj-loss { color: var(--danger) !important; }
+.tj-dry { color: var(--warning) !important; }
+
+.tj-open-count {
+  color: var(--info) !important;
+}
+
+.tj-section {
+  margin-bottom: 12px;
+}
+
+.tj-section-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  margin-bottom: 8px;
+  padding-bottom: 4px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.tj-positions-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 8px;
+}
+
+/* Position Card */
+.tj-position-card {
+  padding: 10px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  transition: border-color 0.2s ease;
+}
+
+.tj-position-card.tj-long {
+  border-left: 3px solid var(--success);
+}
+
+.tj-position-card.tj-short {
+  border-left: 3px solid var(--danger);
+}
+
+.tj-position-card:hover {
+  border-color: rgba(255, 255, 255, 0.12);
+}
+
+.tj-position-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.tj-pair-badge {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.tj-pair {
+  font-weight: 700;
+  font-size: 0.8rem;
+  color: var(--text-primary);
+}
+
+.tj-direction-badge {
+  padding: 1px 6px;
+  border-radius: 4px;
+  font-size: 0.55rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.tj-badge-long {
+  background: rgba(34, 197, 94, 0.15);
+  color: var(--success);
+}
+
+.tj-badge-short {
+  background: rgba(239, 68, 68, 0.15);
+  color: var(--danger);
+}
+
+.tj-small {
+  font-size: 0.5rem;
+  padding: 1px 4px;
+}
+
+.tj-elapsed {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 0.6rem;
+  font-family: var(--font-mono);
+  color: var(--text-muted);
+}
+
+.tj-position-details {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 2px 8px;
+}
+
+.tj-detail-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1px 0;
+}
+
+.tj-detail-label {
+  font-size: 0.55rem;
+  color: var(--text-muted);
+  text-transform: uppercase;
+}
+
+.tj-detail-value {
+  font-size: 0.65rem;
+  font-family: var(--font-mono);
+  color: var(--text-primary);
+}
+
+.tj-sl { color: var(--danger) !important; }
+.tj-tp { color: var(--success) !important; }
+
+.tj-position-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 6px;
+  padding-top: 4px;
+  border-top: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+.tj-strategy-tag {
+  font-size: 0.55rem;
+  color: var(--text-secondary);
+}
+
+.tj-confidence {
+  font-size: 0.55rem;
+  font-family: var(--font-mono);
+  color: var(--info);
+}
+
+/* Trade History */
+.tj-history-list {
+  max-height: 280px;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255,255,255,0.1) transparent;
+}
+
+.tj-history-row {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+}
+
+.tj-history-row.tj-dry-run {
+  opacity: 0.6;
+}
+
+.tj-history-row.tj-emergency {
+  background: rgba(239, 68, 68, 0.05);
+}
+
+.tj-history-main {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 6px;
+  cursor: pointer;
+  transition: background 0.15s ease;
+  font-size: 0.65rem;
+}
+
+.tj-history-main:hover {
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.tj-history-time {
+  font-family: var(--font-mono);
+  font-size: 0.55rem;
+  color: var(--text-muted);
+  flex-shrink: 0;
+  width: 55px;
+}
+
+.tj-history-pair {
+  font-weight: 600;
+  color: var(--text-primary);
+  flex-shrink: 0;
+  width: 65px;
+}
+
+.tj-history-entry,
+.tj-history-exit {
+  font-family: var(--font-mono);
+  font-size: 0.6rem;
+  color: var(--text-secondary);
+}
+
+.tj-history-arrow {
+  color: var(--text-muted);
+  font-size: 0.55rem;
+}
+
+.tj-history-pnl {
+  font-family: var(--font-mono);
+  font-weight: 700;
+  font-size: 0.65rem;
+  margin-left: auto;
+  flex-shrink: 0;
+}
+
+.tj-history-duration {
+  font-family: var(--font-mono);
+  font-size: 0.55rem;
+  color: var(--text-muted);
+  width: 40px;
+  text-align: right;
+  flex-shrink: 0;
+}
+
+.tj-history-expand {
+  color: var(--text-muted);
+  flex-shrink: 0;
+}
+
+/* Decision Replay */
+.tj-decision-replay {
+  padding: 8px 10px;
+  margin: 2px 6px 6px;
+  background: rgba(255, 255, 255, 0.02);
+  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.tj-replay-title {
+  font-size: 0.65rem;
+  font-weight: 600;
+  color: var(--info);
+  margin-bottom: 6px;
+}
+
+.tj-replay-empty {
+  font-size: 0.6rem;
+  color: var(--text-muted);
+  font-style: italic;
+}
+
+.tj-replay-events {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-bottom: 6px;
+}
+
+.tj-replay-event {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 4px;
+  border-radius: 3px;
+  font-size: 0.58rem;
+}
+
+.tj-replay-signal_evaluated { background: rgba(59, 130, 246, 0.06); }
+.tj-replay-trade_executed { background: rgba(34, 197, 94, 0.06); }
+.tj-replay-trade_skipped { background: rgba(234, 179, 8, 0.06); }
+.tj-replay-exit_triggered { background: rgba(168, 85, 247, 0.06); }
+.tj-replay-error_occurred { background: rgba(239, 68, 68, 0.06); }
+
+.tj-replay-time {
+  font-family: var(--font-mono);
+  font-size: 0.5rem;
+  color: var(--text-muted);
+  flex-shrink: 0;
+}
+
+.tj-replay-msg {
+  font-size: 0.58rem;
+  color: var(--text-secondary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tj-replay-meta {
+  display: flex;
+  gap: 12px;
+  font-size: 0.55rem;
+  color: var(--text-muted);
+  padding-top: 4px;
+  border-top: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+/* Empty State */
+.tj-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 24px;
+  color: var(--text-muted);
+  font-size: 0.7rem;
+}
+
+/* Pulse animation for open badge */
+.tj-pulse {
+  animation: tj-pulse 2s ease-in-out infinite;
+}
+
+@keyframes tj-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.6; }
 }

@@ -4,6 +4,53 @@ All notable changes to this project are documented here.
 
 ---
 
+## [v1.8.0] — 2026-03-11
+
+### Added
+- **TSO Ignite-Aware Rewrite (Phase 41)**
+  - SEED detects pre-booted engine and skips re-init
+  - EVOLVE forces `island.evolve()` if no champion after 15s wait
+  - TRADE always enables autoTrade (executor handles dryRun internally)
+  - stopSession preserves pre-booted engine (`engineWasPreBooted` flag)
+
+- **Trade Readiness Diagnostic (Phase 41 RADICAL INNOVATION)**
+  - 6-check real-time pre-trade checklist in TestnetSessionPanel
+  - Checks: Engine Online, Candle Data, Champion Ready, Fitness>0, AutoTrade On, Risk Clear
+  - TRD CSS (+95L in `globals.css`)
+
+- **Trade Lifecycle Observer (Phase 42)**
+  - `trade-lifecycle-observer.ts` (280L) — Event-driven position state tracker
+  - 4 event types: POSITION_OPENED, POSITION_CLOSED, POSITION_EMERGENCY, DRY_RUN_SIGNAL
+  - P&L calculation, win rate summary, pub/sub for real-time UI updates
+  - LiveTradeExecutor wired at 5 points (open, close, emergency, dryRun, import)
+
+- **Live Trade Journal Panel (Phase 42)**
+  - `LiveTradeJournalPanel.tsx` (310L) — 3-section real-time trade blotter
+  - Open Positions: live cards with direction badges, SL/TP, elapsed timer
+  - Trade History: P&L coloring, entry→exit, duration
+  - Execution Summary: 6-stat grid (Trades, Win Rate, Total P&L, Open, Best, Worst)
+
+- **Trade Decision Replay (Phase 42 RADICAL INNOVATION)**
+  - Expandable decision chain per trade card
+  - Correlates with SessionSignalStream events (±5s window)
+
+- **M5 Timeframe + AFTM (Phase 43)**
+  - Default session timeframe H1→M5 (12x faster signal evaluation)
+  - minConfidence 0.3→0.15 (2x more signals pass)
+  - Aggressive First-Trade Mode: first 15 min uses 5% confidence threshold
+
+### Changed
+- `testnet-session-orchestrator.ts` — Ignite-aware rewrite, M5 default
+- `live-trade-executor.ts` (~480→500L) — Observer wiring + AFTM logic
+- `TestnetSessionPanel.tsx` — TRD component added (+115L)
+- `pipeline/page.tsx` — LiveTradeJournalPanel added
+- `globals.css` (~4660→5020L) — TRD + Trade Journal CSS (+360L)
+
+### Build Status
+✅ Passing (zero errors)
+
+---
+
 ## [v1.7.0] — 2026-03-11
 
 ### Added
