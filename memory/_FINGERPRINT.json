@@ -1,7 +1,7 @@
 {
   "version": "1.0.0",
-  "generatedAt": "2026-03-10T22:42:45.495Z",
-  "projectVersion": "v1.8.0",
+  "generatedAt": "2026-03-11T10:19:25.617Z",
+  "projectVersion": "v1.8.1",
   "sourceHashes": {
     "src/types/index.ts": "31defc671a3853cb",
     "src/types/trading-slot.ts": "61c7ed64286070fb",
@@ -35,10 +35,10 @@
   },
   "memoryHashes": {
     "memory/overview.md": "0737d0b1051ddabb",
-    "memory/active_context.md": "cd9591e40c36269f",
+    "memory/active_context.md": "d8ee781c661ec54b",
     "memory/architecture/system_design.md": "f28d9d0c4e7ceba9",
-    "memory/file_map.md": "882219f97b05af28",
-    "memory/changelog.md": "0bd448d19a2c252f",
+    "memory/file_map.md": "c249b3ed79ae26bf",
+    "memory/changelog.md": "648b09e6e9f5d4a2",
     "memory/_SYNC_CHECKLIST.md": "db74a75eb0511be8"
   },
   "lineCounts": {

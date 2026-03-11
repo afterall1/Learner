@@ -7,7 +7,7 @@
 ## 📅 Current State
 
 **Date**: 2026-03-11
-**Phase**: Phase 43 — M5 Timeframe + Aggressive Confidence + Trade Journal
+**Phase**: Phase 44 — TSO Probe Fix + Resilient Probe + File Map Update
 **Build Status**: ✅ Passing (zero errors)
 **Version**: v1.8.0
 **Dev Server**: `http://localhost:3000`
@@ -349,6 +349,9 @@
 199. **M5 Timeframe Default (Phase 43)**: `DEFAULT_SESSION_CONFIG.timeframe` H1→M5 — 12x more signal evaluations (every 5 min vs 60 min)
 200. **Aggressive Confidence (Phase 43)**: `DEFAULT_LIVE_TRADE_CONFIG.minConfidence` 0.3→0.15 — 2x more signals pass threshold
 201. **Aggressive First-Trade Mode (Phase 43 RADICAL)**: AFTM — first 15 minutes uses 5% confidence threshold, then reverts to 15%. Guarantees visible trade attempts within minutes of session start
+202. **TSO Server-Side Probe Fix (Phase 44 CRITICAL)**: Replaced client-side `BinanceRestClient` instantiation with `fetch('/api/trading/testnet-probe')` — Next.js doesn't expose server env vars to browser, causing "Missing Binance API credentials" error
+203. **Resilient Probe (Phase 44 RADICAL)**: 3-attempt retry with 2s exponential backoff + smart failure classification: only `credentials`+`testnet_mode` are hard failures, `account_access` drift errors are non-critical warnings
+204. **File Map Update (Phase 44)**: 4 new sections (Live Engine, Bootstrap, Testnet Trading, Trade Execution) with 14 files added to `file_map.md`
 
 ---
 

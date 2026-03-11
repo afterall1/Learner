@@ -4,6 +4,21 @@ All notable changes to this project are documented here.
 
 ---
 
+## [v1.8.1] — 2026-03-11
+
+### Fixed
+- **CRITICAL: TSO Probe Fix (Phase 44)** — Replaced client-side `BinanceRestClient` with `fetch('/api/trading/testnet-probe')`. Next.js doesn't expose server env vars to browser (`process.env.BINANCE_API_KEY = undefined`)
+- **Resilient Probe**: 3-attempt retry, 2s exponential backoff, smart failure classification (credentials=critical, account_access=non-critical)
+
+### Changed
+- `testnet-session-orchestrator.ts` — Removed `BinanceRestClient` import, server-side probe with retry
+- `file_map.md` — 4 new sections, 14 files for Phase 20-44
+
+### Build Status
+✅ Passing (zero errors)
+
+---
+
 ## [v1.8.0] — 2026-03-11
 
 ### Added
