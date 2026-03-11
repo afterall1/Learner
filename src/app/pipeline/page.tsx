@@ -5152,6 +5152,9 @@ export default function PipelinePage() {
                         <Link href="/pipeline" className="nav-tab active">
                             <GitBranch size={14} /> Pipeline
                         </Link>
+                        <Link href="/command" className="nav-tab">
+                            <Shield size={14} /> Komuta
+                        </Link>
                     </nav>
                 </div>
             </header>

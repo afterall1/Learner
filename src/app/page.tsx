@@ -1330,6 +1330,9 @@ export default function DashboardPage() {
             <Link href="/pipeline" className="nav-tab">
               <GitBranch size={14} /> Pipeline
             </Link>
+            <Link href="/command" className="nav-tab">
+              <Shield size={14} /> Komuta
+            </Link>
           </nav>
           <ConnectionStatusBadge />
           <BrainStateIndicator state={brainState} />
